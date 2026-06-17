@@ -88,7 +88,6 @@ Items are independent — work them in any order. Strip completed items as they 
 ### Before first release
 
 **CI/CD** — closed testing mandates shipping ≥1 update from the pipeline during the 14-day window. Also the portfolio's most visible technical signal.
-- [ ] Workflow 1 — push/PR: build + lint + unit tests (`./gradlew test`)
 - [ ] Workflow 2 — UI tests on emulator: `reactivecircus/android-emulator-runner` + `./gradlew connectedAndroidTest`; unblocked now that `UiHappyPathTest.kt` and Hilt test infra exist. Pin the emulator to a stable API level (34 or 35) — instrumented tests can't currently run live on Android 16 (API 36) physical devices (`ComposeTestRule` throws `IllegalStateException: No compose hierarchies found in the app` after a successful `MainActivity` launch; reproduces on pre-existing tests too, not a new-test bug; espresso-core version, compose-bom patch version, and timing were all ruled out as causes — see `TESTING.md` Deferrals). A pinned stable API level sidesteps this rather than chasing API-36 compatibility.
 - [ ] Workflow 3 — on tag: build and sign release AAB; upload keystore credentials as GitHub Secrets (never in repo)
 

@@ -16,6 +16,21 @@ This repo is also a portfolio piece. It's built with heavy AI assistance, and th
 - Before the repo has a GitHub remote: one local feature branch per logical unit of work, merged locally only once the user says go.
 - Once the repo is published: open a PR per unit of work instead of merging locally. The user reviews and merges PRs themselves on GitHub.
 
+## Branch and PR workflow (post-publish SOP)
+
+1. **Create a branch** — `git checkout -b type/topic` from `main`
+2. **Make changes** — confirm rationale with user before non-trivial changes
+3. **Test locally** — run the relevant commands:
+   - Lint: `./gradlew ktlintCheck`
+   - Unit tests: `./gradlew test`
+   - Build: `./gradlew assembleDebug`
+4. **Human reviews diff and does exploratory/manual testing** — inspect the changes, run the app, test affected flows
+5. **Commit** — one subject-line commit per logical change (`type: description`)
+6. **Push** — `git push -u origin branch-name`
+7. **Open PR** — `gh pr create` with title and summary; CI runs automatically
+8. **Human reviews on GitHub and merges** — never merge without explicit go-ahead
+9. **Pull and clean up locally** — `git checkout main && git pull origin main && git branch -d branch-name`
+
 ## Source-of-truth docs (`docs/`)
 
 - [EARNIT_SPEC.md](docs/EARNIT_SPEC.md) — what the app does, architecture, deferred ideas
