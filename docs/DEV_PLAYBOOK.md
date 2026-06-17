@@ -1,0 +1,173 @@
+# EarnIt — Developer Playbook
+
+---
+
+## 1. Post-Work Cleanup
+
+Run this after any significant feature work or refactor. Copy the checklist into a new entry in [CLEANUP_LOG.md](CLEANUP_LOG.md), tick off what you found and fixed, note anything deferred with a reason.
+
+### Duplication
+- [ ] Are any composables copy-pasted with minor variation? Extract a shared component or parameter.
+- [ ] Are any styling patterns (colors, gradients, padding sequences) repeated inline instead of using the design system (`LocalEarnItAccents`, `EarnItButtons.kt`, theme colors)?
+- [ ] Are any strings duplicated across `Strings.kt` and call sites?
+- [ ] Does any ViewModel logic appear in more than one place?
+- [ ] Does any new `Repository` function overlap with an existing one that could be parameterised instead?
+- [ ] Does any new `Dao` query duplicate the result of an existing query with a Kotlin-side filter that could be pushed into SQL?
+
+### Decoupling
+- [ ] Do composables contain business logic that belongs in the ViewModel or Repository?
+- [ ] Does the ViewModel directly reference UI types (Color, Dp, Composable functions)?
+- [ ] Does the data layer (`Repository`, `Dao`) reference ViewModel or UI concerns?
+- [ ] Are new screens receiving the full ViewModel when they only need a subset of state/actions? Consider passing specific lambdas or state instead.
+
+### Complexity & Pattern Health
+- [ ] Are there composables over ~150 lines that could be split into focused sub-composables?
+- [ ] Are there deeply nested lambdas or modifier chains that are hard to follow?
+- [ ] Are `LaunchedEffect` keys correct — do they re-trigger exactly when needed and no more?
+- [ ] Is `remember` vs `rememberSaveable` correct for each piece of state? (Saveable = survives rotation.)
+- [ ] Are coroutine scopes (`rememberCoroutineScope`, `viewModelScope`) used in the right layer?
+- [ ] Do new buttons, dialogs, rows, or list items use the established components (`EarnItPrimaryButton`, `EarnItOutlinedButton`, `RadioRow`, `CollapsibleGroupHeader`, `AboutActionRow`, etc.) rather than reimplementing equivalent layouts inline?
+- [ ] Does any new composable reimplement something M3 already provides (custom checkbox, custom progress bar, custom switch behaviour)?
+- [ ] Does any new helper or extracted composable have only one caller? If so, is the extraction actually earning its keep, or would the code be clearer inline?
+- [ ] Could any new helper absorb nearby duplication that already existed before this change?
+
+### Dead Code & Hygiene
+- [ ] Are there unused imports, variables, parameters, or functions? (Check IDE warnings.)
+- [ ] Are there commented-out code blocks that should be deleted?
+- [ ] Are there resources (drawables, strings, colors) that are declared but never referenced?
+- [ ] Are there TODO/FIXME comments that have since been resolved?
+- [ ] Are there test/debug helpers (seed data, logging functions) still present that are marked for pre-release removal?
+- [ ] Are there inline user-visible strings in composables (dialog titles, placeholders, empty-state messages) that should live in `Strings.kt`?
+- [ ] Is `git status` clean — no stray untracked files that should be gitignored, nothing accidentally staged?
+
+### Naming Consistency
+- [ ] Do new files follow the established naming pattern (`*Screen.kt`, `*ViewModel.kt`, `*Repository.kt`)?
+- [ ] Does any new file sit in the right package (`data/`, `di/`, `ui/`, `viewmodel/`, `widget/`) rather than loose at the package root?
+- [ ] Do new composables use consistent naming (PascalCase, descriptive, no abbreviations)?
+- [ ] Do new constants live in `Strings.kt` and follow the existing naming style?
+- [ ] Does any symbol name conflict with or shadow a standard library or Compose name?
+
+### Hardcoded Values
+- [ ] Are new colors hardcoded as `Color(0xFF...)` where a theme color or `LocalEarnItAccents` value should be used?
+- [ ] Are new magic numbers (sizes, durations, thresholds) inline where a named constant would be clearer?
+
+### Accessibility
+- [ ] Do icon-only buttons (`IconButton` with no visible label) have a non-empty `contentDescription`?
+- [ ] Are all tappable targets at least 48 dp × 48 dp?
+
+### Deprecated APIs
+- [ ] Do any new calls produce deprecation warnings in the IDE? Resolve or document with a reason.
+
+### Spec Review
+- [ ] Does [EARNIT_SPEC.md](EARNIT_SPEC.md) still accurately describe what was built? Walk through any sections touched by the work and verify the description matches the current behaviour.
+- [ ] If the implementation diverged from the spec intentionally (better idea found during build, constraint discovered, UX changed) — update the spec to reflect reality.
+- [ ] If the implementation diverged unintentionally (something was missed or done wrong) — log it as a bug or task to fix, do not silently update the spec to match broken behaviour.
+- [ ] Are any new patterns, components, or flows undocumented in the spec? Add them.
+- [ ] Were any Deferred Ideas implemented? Remove or update the corresponding entry in the Deferred Ideas section.
+
+### Tests
+- [ ] Does any new logic in `Repository` or `ViewModel` lack unit test coverage? Check the relevant test file; add cases if the new path isn't exercised.
+- [ ] Were any existing `Repository` or `ViewModel` methods changed in a way that makes current tests pass for the wrong reason (e.g. mock expectations now match new signatures by coincidence)? Review affected test files, not just CI green.
+- [ ] If a bug was fixed, is there a regression test that would have caught it?
+- [ ] Were any features removed or renamed? Remove or update the corresponding tests so they don't silently pass against dead code.
+- [ ] Do new edge cases belong to an existing test class, or do they warrant a new file? (New file threshold: 3+ tests for a cohesive new behaviour.)
+- [ ] Were any new instrumented tests added? Confirm they run on a device before committing (a test that never ran may have a compile error hidden by Gradle's incremental build).
+- [ ] Is [TESTING.md](TESTING.md) still accurate?
+  - Update counts in the unit/instrumented tables if they changed.
+  - Add a row to the relevant table for any new test file.
+  - Move items out of **Deferrals** if they are now covered.
+  - Add new gaps to **Deferrals** with a reason if this pass knowingly skips coverage.
+- [ ] Does any new flow cross a system-process boundary instrumented tests can't drive (system file picker, widget activity chain, Play Store-only API)? Add it to [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) with rationale, cadence, and steps instead of leaving it untested.
+
+---
+
+## 2. Ship Checklist
+
+Items are independent — work them in any order. Strip completed items as they are done — this list should only ever contain open work.
+
+### Before first release
+
+**CI/CD** — closed testing mandates shipping ≥1 update from the pipeline during the 14-day window. Also the portfolio's most visible technical signal.
+- [ ] Workflow 1 — push/PR: build + lint + unit tests (`./gradlew test`)
+- [ ] Workflow 2 — UI tests on emulator: `reactivecircus/android-emulator-runner` + `./gradlew connectedAndroidTest`; unblocked now that `UiHappyPathTest.kt` and Hilt test infra exist. Pin the emulator to a stable API level (34 or 35) — instrumented tests can't currently run live on Android 16 (API 36) physical devices (`ComposeTestRule` throws `IllegalStateException: No compose hierarchies found in the app` after a successful `MainActivity` launch; reproduces on pre-existing tests too, not a new-test bug; espresso-core version, compose-bom patch version, and timing were all ruled out as causes — see `TESTING.md` Deferrals). A pinned stable API level sidesteps this rather than chasing API-36 compatibility.
+- [ ] Workflow 3 — on tag: build and sign release AAB; upload keystore credentials as GitHub Secrets (never in repo)
+
+**Play Store**
+- [ ] Screenshots for all required form factors (also fills the README placeholder)
+- [ ] Short and long store description
+- [ ] Content rating questionnaire completed and data-safety form submitted (truthfully: no data collected, all local)
+
+**Manual Testing**
+- [ ] Run the full Manual Test Plan before each release candidate — see [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md)
+
+**Closed Testing**
+- [ ] Share [CLOSED_TESTING_GUIDE.md](CLOSED_TESTING_GUIDE.md) with testers when the Play closed testing track opens
+
+### Post-launch
+
+- [ ] CI badge + Play Store link in README (once CI and store listing are live)
+- [ ] Test result artifacts published; badge(s) in README
+- [ ] Stretch: auto-upload AAB to Play internal testing track (r0adkll/upload-google-play or Fastlane)
+
+---
+
+## 3. Known Limitations
+
+Permanent, accepted constraints — not open work, nothing here gets checked off. Document in release notes or the store listing if relevant. For testing gaps that are manual by design rather than a temporary environment issue, see [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) instead — this section is for product/code constraints, not test strategy.
+
+- Widget colors hardcoded warm-gold — Glance limitation.
+- `taskState` (RewardEditScreen) and `rewardLinkState` (TaskEditScreen) lose checkbox state on rotation — would require a custom `mapSaver`.
+
+---
+
+## 4. Tooling Upgrade Reference
+
+Update this section each upgrade cycle. The version matrix and gotchas below reflect the June 2026 upgrade; update in place rather than appending.
+
+### Current working version matrix
+
+| Tool | Version | Constraint |
+|---|---|---|
+| AGP | 9.2.0 | Requires Gradle 9.4.1+ |
+| Gradle | 9.4.1 | Minimum for AGP 9.2 |
+| Kotlin | 2.3.20 | Pinned via `buildscript classpath` (see gotcha 1) |
+| KSP | 2.3.9 | Decoupled from Kotlin versioning since KSP 2.3.0 |
+| Hilt | 2.59.2 | First version supporting and requiring AGP 9 |
+| Room | 2.8.4 | Required for Kotlin 2.3.x KSP2 compatibility |
+| foojay-resolver-convention | 1.0.0 | Pre-1.0 versions reference Gradle 9-removed internals |
+| Compose BOM | 2026.05.00 | |
+| ktlint (org.jlleitschuh.gradle.ktlint) | 14.2.0 | Default style enforced; see `.editorconfig` for the two narrow exceptions (`@Composable` naming, test naming) |
+
+### Gotchas
+
+**1. AGP 9 built-in Kotlin — classloader conflict**
+AGP 9 provides built-in Kotlin (KGP 2.2.10). Adding an explicit `kotlin.android` plugin alongside it loads `ApplicationExtensionImpl` from two classloaders, producing a `ClassCastException` on every sync. Fix: remove `id("org.jetbrains.kotlin.android")` from all `plugins {}` blocks. To pin a higher Kotlin version, add to root `build.gradle.kts`:
+```kotlin
+buildscript {
+    dependencies { classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.20") }
+}
+```
+
+**2. `kotlinOptions` removed**
+Without the `kotlin.android` plugin, `kotlinOptions { jvmTarget }` inside `android {}` is no longer available. AGP 9 automatically aligns the Kotlin JVM target to `compileOptions`. Delete the `kotlinOptions` block entirely.
+
+**3. Hilt minimum version for AGP 9**
+Hilt 2.51.1–2.58 fail with AGP 9. Hilt 2.59.x is the first release that supports and requires AGP 9.
+
+**4. Room KSP2 crash on Kotlin 2.3.x**
+`room-compiler` below 2.8.x crashes with `unexpected jvm signature V` when processing DAOs under Kotlin 2.3.x. Update all three Room artifacts (`room-runtime`, `room-compiler`, `room-ktx`) together to 2.8.x.
+
+**5. foojay pre-1.0 incompatibility**
+`foojay-resolver-convention` below 1.0.0 references `IBM_SEMERU` and `FoojayToolchainsPlugin`, both removed in Gradle 9. Update to 1.0.0 in `settings.gradle.kts`.
+
+**6. Compose API removals**
+`animateItemPlacement()` was removed from Compose Foundation — replace with `animateItem()` in all `LazyColumn`/`LazyRow` item scopes. Check BOM release notes for other removals when bumping.
+
+### Next upgrade checklist
+- [ ] Check AGP ↔ Gradle compatibility matrix before changing either
+- [ ] Check Hilt release notes for AGP compatibility (github.com/google/dagger/releases)
+- [ ] Check KSP releases for Kotlin compatibility (github.com/google/ksp/releases)
+- [ ] Bump Room, Hilt, and foojay together with AGP — they have hard minimum version dependencies
+- [ ] Do the upgrade on a dedicated branch; expect 3–5 sync/build errors on a major version jump
+- [ ] Run `./gradlew assembleDebug` from terminal to confirm — IDE sync errors and build errors differ
+- [ ] Run tests after a clean build to catch silent regressions

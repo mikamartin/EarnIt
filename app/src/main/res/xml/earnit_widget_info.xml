@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="com.earnit.app.widget.WidgetConfigActivity"
+    android:minWidth="250dp"
+    android:minHeight="80dp"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:description="@string/widget_description"
+    android:widgetCategory="home_screen" />

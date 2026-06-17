@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">EarnIt</string>
+    <string name="widget_description">Go after your wants in a productive way</string>
+    <string name="widget_description_compact">Track a reward privately — name and log button only</string>
+</resources>

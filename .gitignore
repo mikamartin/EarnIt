@@ -1,0 +1,36 @@
+# Built application files
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Build directories
+build/
+.gradle/
+captures/
+
+# Local configuration
+local.properties
+*.iml
+.idea/
+*.idea/
+
+# Kotlin
+*.class
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Signing keys — never commit
+*.keystore
+*.jks
+keystore.properties
+
+# Python (tools/)
+__pycache__/
+*.pyc
+
+# IDE / local tooling
+.vscode/
+.claude/

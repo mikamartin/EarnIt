@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background>
+        <layer-list>
+            <item android:drawable="@color/ic_launcher_border" />
+            <item
+                android:left="12dp"
+                android:top="12dp"
+                android:right="12dp"
+                android:bottom="12dp"
+                android:drawable="@color/ic_launcher_background" />
+        </layer-list>
+    </background>
+    <foreground>
+        <layer-list>
+            <item
+                android:left="18dp"
+                android:top="22dp"
+                android:right="18dp"
+                android:bottom="14dp"
+                android:drawable="@drawable/ic_trophy" />
+        </layer-list>
+    </foreground>
+</adaptive-icon>

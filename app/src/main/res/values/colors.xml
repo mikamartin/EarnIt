@@ -1,0 +1,23 @@
+<resources>
+    <color name="md_theme_light_primary">#B89B76</color>
+    <color name="md_theme_light_onPrimary">#1B150B</color>
+    <color name="md_theme_light_secondary">#C5A27D</color>
+    <color name="md_theme_light_onSecondary">#1F1400</color>
+    <color name="md_theme_light_background">#FEF9F2</color>
+    <color name="md_theme_light_onBackground">#201A17</color>
+    <color name="md_theme_light_surface">#FEF9F2</color>
+    <color name="md_theme_light_onSurface">#201A17</color>
+
+    <color name="md_theme_dark_primary">#D8C39A</color>
+    <color name="md_theme_dark_onPrimary">#382B18</color>
+    <color name="md_theme_dark_secondary">#D4B58B</color>
+    <color name="md_theme_dark_onSecondary">#3D2A0D</color>
+    <color name="md_theme_dark_background">#201A17</color>
+    <color name="md_theme_dark_onBackground">#F6E7D8</color>
+    <color name="md_theme_dark_surface">#29221C</color>
+    <color name="md_theme_dark_onSurface">#F6E7D8</color>
+
+    <color name="ic_launcher_background">#FFFBF0</color>
+    <color name="ic_launcher_border">#E8A000</color>
+    <color name="splash_icon_background">#FFFBF0</color>
+</resources>
