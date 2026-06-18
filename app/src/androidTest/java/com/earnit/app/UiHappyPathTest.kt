@@ -30,7 +30,7 @@ class UiHappyPathTest {
     @Test
     fun createTask_createReward_linkTask_log_claim_appearsInHistory() {
         // ── Step 1: Create a task ──────────────────────────────────────────────
-        composeTestRule.onNodeWithText("Tasks").performClick()
+        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
         composeTestRule.onNodeWithContentDescription("New Task").performClick()
 
         composeTestRule.onNodeWithText("Task name").performClick()
@@ -39,7 +39,7 @@ class UiHappyPathTest {
         composeTestRule.onNodeWithText("SAVE").performClick()
 
         // ── Step 2: Create a reward ────────────────────────────────────────────
-        composeTestRule.onNodeWithText("Prizes").performClick()
+        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithContentDescription("New Reward").performClick()
 
         composeTestRule.onNodeWithText("Reward name").performClick()
@@ -51,7 +51,7 @@ class UiHappyPathTest {
         composeTestRule.onNodeWithText("SAVE").performClick()
 
         // ── Step 3: Navigate back to home and open the reward detail ───────────
-        composeTestRule.onNodeWithText("Prizes").performClick()
+        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithText("Coffee Treat").performClick()
 
         // ── Step 4: Link the task from Reward Detail ───────────────────────────
@@ -76,7 +76,7 @@ class UiHappyPathTest {
         composeTestRule.onNodeWithText("Archive Only").performClick()
 
         // ── Step 7: Verify History ─────────────────────────────────────────────
-        composeTestRule.onNodeWithText("History").performClick()
+        composeTestRule.onNodeWithContentDescription("History").performClick()
         composeTestRule.onNodeWithText("Claimed Rewards").performClick()
 
         composeTestRule.onNodeWithText("Coffee Treat").assertIsDisplayed()
