@@ -39,7 +39,7 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 ./gradlew connectedDebugAndroidTest
 ```
 
-**CI:** Unit tests run on every build. Instrumented tests require a hardware-backed Android environment and are run manually before each release candidate; wiring them into CI is a known gap.
+**CI:** Unit tests run on every build (Workflow 1). Instrumented tests run on every push/PR via an API 34 emulator (Workflow 2) and manually before each release candidate.
 
 ---
 
@@ -133,7 +133,7 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
 | Unit (79 tests) | Every build/push | `./gradlew test` |
-| Integration + UI, instrumented (26 tests) | Manually before every release candidate today; CI wiring pending (see Deferrals below) | `./gradlew connectedDebugAndroidTest` |
+| Integration + UI, instrumented (26 tests) | Every push/PR via CI (API 34 emulator, Workflow 2); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (3) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 
 See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the three journeys that are deliberately never automated (not just deferred) — each crosses a system-process boundary (system file picker, Play Core API, widget activity chain) that instrumented UI tests cannot drive reliably.
