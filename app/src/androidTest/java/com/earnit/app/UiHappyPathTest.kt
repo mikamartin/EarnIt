@@ -1,7 +1,10 @@
 package com.earnit.app
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.filterToOne
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -66,7 +69,8 @@ class UiHappyPathTest {
         composeTestRule.onNodeWithText("+ LOG").performClick()
 
         // LogTaskDialog: select the task and confirm
-        composeTestRule.onNodeWithText("Morning Run").performClick()
+        // Two nodes match "Morning Run" (dialog row + background); filter to the clickable dialog row.
+        composeTestRule.onAllNodesWithText("Morning Run").filterToOne(hasClickAction()).performClick()
         composeTestRule.onNodeWithText("LOG").performClick()
 
         // ── Step 6: Claim the reward ───────────────────────────────────────────

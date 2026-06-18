@@ -78,7 +78,10 @@ class SettingsUiTest {
 
         // Enable Notes required in Settings
         composeTestRule.onNodeWithContentDescription("Settings").performClick()
-        composeTestRule.onNodeWithContentDescription("Notes required").performScrollTo().performClick()
+        // Text label is findable in the lazy list even off-screen; scroll to it first,
+        // then click the Switch (findable by contentDescription once the item is composed).
+        composeTestRule.onNodeWithText("Notes required").performScrollTo()
+        composeTestRule.onNodeWithContentDescription("Notes required").performClick()
 
         // Back to reward detail and open log dialog
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()
