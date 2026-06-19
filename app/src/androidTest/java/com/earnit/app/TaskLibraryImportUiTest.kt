@@ -1,7 +1,8 @@
 package com.earnit.app
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -27,7 +28,7 @@ class TaskLibraryImportUiTest {
     @Test
     fun importTemplate_addsTasksToTaskList() {
         // ── Open the Task Library from the Tasks tab ────────────────────────────
-        composeTestRule.onNodeWithText("Tasks").performClick()
+        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
         composeTestRule.onNodeWithText("Library").performClick()
 
         // ── Expand the "Healthy Living" template and add all 10 tasks ───────────

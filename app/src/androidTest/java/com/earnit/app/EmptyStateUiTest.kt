@@ -1,7 +1,8 @@
 package com.earnit.app
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -31,12 +32,12 @@ class EmptyStateUiTest {
         composeTestRule.onNodeWithText(Strings.HOME_EMPTY_REWARDS).assertIsDisplayed()
 
         // ── Tasks tab ────────────────────────────────────────────────────────
-        composeTestRule.onNodeWithText("Tasks").performClick()
+        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
         composeTestRule.onNodeWithText(Strings.TASKS_EMPTY_TITLE).assertIsDisplayed()
         composeTestRule.onNodeWithText(Strings.TASKS_EMPTY_BODY).assertIsDisplayed()
 
         // ── History tab — Completed Tasks (default sub-tab) ────────────────────
-        composeTestRule.onNodeWithText("History").performClick()
+        composeTestRule.onNodeWithContentDescription("History").performClick()
         composeTestRule.onNodeWithText(Strings.HISTORY_NO_TASKS).assertIsDisplayed()
 
         // ── History tab — Claimed Rewards ───────────────────────────────────────

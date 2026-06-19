@@ -28,6 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -232,7 +234,8 @@ fun EarnItBottomBar(navController: NavHostController) {
             NavigationBarItem(
                 icon = {
                     if (item.emoji != null) {
-                        Text(item.emoji, style = MaterialTheme.typography.titleMedium)
+                        // contentDescription makes this findable via onNodeWithContentDescription in tests.
+                        Text(item.emoji, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { contentDescription = item.label })
                     } else {
                         Icon(item.icon!!, contentDescription = item.label)
                     }

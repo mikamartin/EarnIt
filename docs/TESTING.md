@@ -39,7 +39,7 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 ./gradlew connectedDebugAndroidTest
 ```
 
-**CI:** Unit tests run on every build. Instrumented tests require a hardware-backed Android environment and are run manually before each release candidate; wiring them into CI is a known gap.
+**CI:** Unit tests run on every build (Workflow 1). Instrumented tests run on every push/PR via an API 34 emulator (Workflow 2) and manually before each release candidate.
 
 ---
 
@@ -72,7 +72,7 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 | `ClearCascadeTest` (5) | Repository | `clearAllLogs` removes active + archived logs and history entries; `clearAllTasks` removes cross-refs, leaves reward; `clearAllRewards` removes cross-refs + active logs, leaves task; `deleteTask` / `deleteReward` cascade |
 | `ExportImportTest` (5) | Repository | Export → clear → import(replace) round-trip preserving all entity types; import(replace) preserves archived history; import(merge) preserves existing + adds new; file-based variants via temp `Uri` |
 | `WidgetFlashTest` (7) | Utility | `WidgetFlash` — set/isActive round-trip; false for different reward ID; false after expiry; false when nothing set; `remainingMs` positive when active, zero after expiry, zero for wrong reward |
-| `UiHappyPathTest` (1) | UI | Full Compose UI flow: create task → create reward → link from Reward Detail → log → claim → verify claimed reward appears in History |
+| `UiHappyPathTest` (1) | UI | Full Compose UI flow: create task → create reward → link from Reward Detail → log from Prizes home card → open detail → claim → verify claimed reward appears in History |
 | `SettingsUiTest` (2) | UI | Colour scheme selection persists after `activityRule.scenario.recreate()`; Notes required toggle disables LOG until a note is entered, enables it after |
 | `EmptyStateUiTest` (1) | UI | Fresh-install empty-state copy on all three tabs: Prizes ("No rewards yet"), Tasks ("No tasks yet"), History — both Completed Tasks and Claimed Rewards sub-tabs |
 | `TaskLibraryImportUiTest` (1) | UI | Task Library: expand "Healthy Living" template, add all 10 tasks, verify they appear in the Tasks list |
@@ -133,7 +133,7 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
 | Unit (79 tests) | Every build/push | `./gradlew test` |
-| Integration + UI, instrumented (26 tests) | Manually before every release candidate today; CI wiring pending (see Deferrals below) | `./gradlew connectedDebugAndroidTest` |
+| Integration + UI, instrumented (26 tests) | Every push/PR via CI (API 34 emulator, Workflow 2); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (3) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 
 See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the three journeys that are deliberately never automated (not just deferred) — each crosses a system-process boundary (system file picker, Play Core API, widget activity chain) that instrumented UI tests cannot drive reliably.

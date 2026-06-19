@@ -12,6 +12,7 @@ import dagger.Provides
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
+import kotlinx.coroutines.Dispatchers
 import javax.inject.Singleton
 
 @Module
@@ -25,6 +26,7 @@ object TestAppModule {
         Room
             .inMemoryDatabaseBuilder(context, EarnItDatabase::class.java)
             .allowMainThreadQueries()
+            .setQueryCoroutineContext(Dispatchers.Main.immediate)
             .build()
 
     @Provides

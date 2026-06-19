@@ -2,11 +2,15 @@ package com.earnit.app
 
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.filterToOne
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.AppColorScheme
@@ -45,7 +49,7 @@ class SettingsUiTest {
 
     @Test
     fun colorScheme_selectionPersistsAfterRecreate() {
-        composeTestRule.onNodeWithText("Settings").performClick()
+        composeTestRule.onNodeWithContentDescription("Settings").performClick()
         composeTestRule.onNodeWithText("Ocean Blue").performScrollTo().performClick()
 
         composeTestRule.activityRule.scenario.recreate()
@@ -57,34 +61,37 @@ class SettingsUiTest {
     @Test
     fun notesMandatory_logButtonDisabledUntilNoteEntered() {
         // Create task
-        composeTestRule.onNodeWithText("Tasks").performClick()
+        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
         composeTestRule.onNodeWithContentDescription("New Task").performClick()
         composeTestRule.onNodeWithText("Task name").performTextInput("Push-ups")
         composeTestRule.onNodeWithText("SAVE").performClick()
 
         // Create reward
-        composeTestRule.onNodeWithText("Prizes").performClick()
+        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithContentDescription("New Reward").performClick()
         composeTestRule.onNodeWithText("Reward name").performTextInput("Movie Night")
+        composeTestRule.onNodeWithText("Point cost").performTextClearance()
         composeTestRule.onNodeWithText("Point cost").performTextInput("5")
         composeTestRule.onNodeWithText("SAVE").performClick()
 
         // Link task to reward via Reward Detail
-        composeTestRule.onNodeWithText("Prizes").performClick()
+        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithText("Movie Night").performClick()
         composeTestRule.onNodeWithText("Add task").performClick()
         composeTestRule.onNodeWithText("Push-ups").performClick()
         composeTestRule.onNodeWithText("ADD SELECTED").performClick()
 
         // Enable Notes required in Settings
-        composeTestRule.onNodeWithText("Settings").performClick()
-        composeTestRule.onNodeWithContentDescription("Notes required").performScrollTo().performClick()
+        composeTestRule.onNodeWithContentDescription("Settings").performClick()
+        composeTestRule.onNodeWithText("Notes required").performScrollTo()
+        composeTestRule.onNodeWithContentDescription("Notes required").performClick()
 
         // Back to reward detail and open log dialog
-        composeTestRule.onNodeWithText("Prizes").performClick()
+        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithText("Movie Night").performClick()
         composeTestRule.onNodeWithText("+ LOG").performClick()
-        composeTestRule.onNodeWithText("Push-ups").performClick()
+        // Two nodes match "Push-ups" (dialog row + linked task in background); filter to the clickable row.
+        composeTestRule.onAllNodesWithText("Push-ups").filterToOne(hasClickAction()).performClick()
 
         // LOG must be disabled with no note entered
         composeTestRule.onNodeWithText("LOG").assertIsNotEnabled()
