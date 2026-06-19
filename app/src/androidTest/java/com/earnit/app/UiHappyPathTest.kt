@@ -23,7 +23,12 @@ import javax.inject.Inject
 /**
  * End-to-end UI test using a real in-memory Room database (no mocks).
  * Exercises the full happy path through the live Compose UI:
- *   create task → create reward → link task → log task → claim reward → verify History
+ *   create task → create reward → link task → log from Prizes home card → open detail → claim → verify History
+ *
+ * Logging happens on the Prizes home screen (reward card + LOG button) so that the reward detail
+ * is opened AFTER the log write, avoiding a race between the async Room insert and the CLAIM
+ * button appearing on the same screen that triggered the log. waitUntil polls until canClaim
+ * propagates through the ViewModel StateFlow before the click.
  */
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
@@ -65,11 +70,10 @@ class UiHappyPathTest {
 
         composeTestRule.onNodeWithText("SAVE").performClick()
 
-        // ── Step 3: Navigate back to home and open the reward detail ───────────
+        // ── Step 3: Open reward detail and link the task ───────────────────────
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithText("Coffee Treat").performClick()
 
-        // ── Step 4: Link the task from Reward Detail ───────────────────────────
         composeTestRule.onNodeWithText("Add task").performClick()
 
         // AddTaskToRewardDialog: check the task checkbox
@@ -77,17 +81,23 @@ class UiHappyPathTest {
 
         composeTestRule.onNodeWithText("ADD SELECTED").performClick()
 
-        // ── Step 5: Log the task ───────────────────────────────────────────────
+        // ── Step 4: Log from the Prizes home-screen card ───────────────────────
+        // Navigate back to the Prizes home screen where the reward card exposes + LOG.
+        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithText("+ LOG").performClick()
 
-        // LogTaskDialog: select the task and confirm
-        // Two nodes match "Morning Run" (dialog row + background); filter to the clickable dialog row.
+        // LogTaskDialog: two nodes match "Morning Run" (dialog row + card background);
+        // filter to the clickable dialog row.
         composeTestRule.onAllNodesWithText("Morning Run").filterToOne(hasClickAction()).performClick()
         composeTestRule.onNodeWithText("LOG").performClick()
 
-        // Navigate away and back so screen transitions flush Room IO through the UI.
-        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
+        // ── Step 5: Open reward detail; wait for canClaim to propagate ─────────
+        // Room IO from the log is async — open the detail then poll until CLAIM appears
+        // rather than assuming the navigation completes after the write.
         composeTestRule.onNodeWithText("Coffee Treat").performClick()
+        composeTestRule.waitUntil(timeoutMillis = 10_000) {
+            composeTestRule.onAllNodesWithText("CLAIM").fetchSemanticsNodes().isNotEmpty()
+        }
 
         // ── Step 6: Claim the reward ───────────────────────────────────────────
         composeTestRule.onNodeWithText("CLAIM").performClick()
