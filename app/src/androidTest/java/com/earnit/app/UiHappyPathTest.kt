@@ -49,7 +49,7 @@ class UiHappyPathTest {
         composeTestRule.onNodeWithText("Reward name").performTextInput("Coffee Treat")
 
         composeTestRule.onNodeWithText("Point cost").performClick()
-        composeTestRule.onNodeWithText("Point cost").performTextInput("5")
+        composeTestRule.onNodeWithText("Point cost").performTextInput("4")
 
         composeTestRule.onNodeWithText("SAVE").performClick()
 
