@@ -3,7 +3,7 @@ package com.earnit.app
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.filterToOne
 import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -25,9 +25,11 @@ import javax.inject.Inject
  * Exercises the full happy path through the live Compose UI:
  *   create task → create reward → link task → log from Prizes home card → open detail → claim → verify History
  *
- * Intermediate assertIsDisplayed() calls act as sync barriers (each triggers waitForIdle()) and
- * as diagnostic checkpoints — if a step fails silently upstream, the first failing assertion
- * identifies exactly where the chain broke rather than timing out at the CLAIM step.
+ * Uses Compose test v2 (StandardTestDispatcher) + Room setQueryCoroutineContext(Dispatchers.Main.immediate)
+ * so that waitForIdle() drains Room writes and StateFlow updates synchronously — no sleeps or polling needed.
+ *
+ * Intermediate assertIsDisplayed() calls act as diagnostic checkpoints: if a step fails silently
+ * upstream, the first failing assertion identifies exactly where the chain broke.
  */
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
