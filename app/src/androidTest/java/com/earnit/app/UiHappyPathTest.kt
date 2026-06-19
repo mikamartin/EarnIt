@@ -85,11 +85,11 @@ class UiHappyPathTest {
         composeTestRule.onAllNodesWithText("Morning Run").filterToOne(hasClickAction()).performClick()
         composeTestRule.onNodeWithText("LOG").performClick()
 
+        // Navigate away and back so screen transitions flush Room IO through the UI.
+        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
+        composeTestRule.onNodeWithText("Coffee Treat").performClick()
+
         // ── Step 6: Claim the reward ───────────────────────────────────────────
-        // Room insert is async; wait until canClaim propagates and CLAIM button appears.
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.onAllNodesWithText("CLAIM").fetchSemanticsNodes().isNotEmpty()
-        }
         composeTestRule.onNodeWithText("CLAIM").performClick()
 
         // ClaimDialog: archive without starting over
