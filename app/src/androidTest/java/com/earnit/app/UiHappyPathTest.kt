@@ -10,11 +10,15 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.earnit.app.data.SettingsRepository
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
+import kotlinx.coroutines.runBlocking
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import javax.inject.Inject
 
 /**
  * End-to-end UI test using a real in-memory Room database (no mocks).
@@ -29,6 +33,14 @@ class UiHappyPathTest {
 
     @get:Rule(order = 1)
     val composeTestRule = createAndroidComposeRule<MainActivity>()
+
+    @Inject lateinit var settingsRepository: SettingsRepository
+
+    @Before
+    fun setUp() {
+        hiltRule.inject()
+        runBlocking { settingsRepository.updateNotesMandatory(false) }
+    }
 
     @Test
     fun createTask_createReward_linkTask_log_claim_appearsInHistory() {
