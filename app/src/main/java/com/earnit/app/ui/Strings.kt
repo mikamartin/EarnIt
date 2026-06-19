@@ -41,6 +41,7 @@ object Strings {
     const val MASCOT_PICKER_TITLE = "Show mascot"
     const val MASCOT_PICKER_DONE = "Done"
     const val MASCOT_NEW_BADGE = "NEW"
+    const val MASCOT_SETTINGS_BADGE = "!"
 
     fun mascotUnlocked(name: String) = "You unlocked $name!"
 

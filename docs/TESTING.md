@@ -26,7 +26,7 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
                  [ Manual — 3 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
             [ UI — 5 tests ]           ComposeTestRule + Hilt, real DataStore
        [ Integration — 21 tests ]      Real in-memory Room, no mocks
-     [ Unit — 79 tests ]               JVM, MockK DAOs, fast
+     [ Unit — 82 tests ]               JVM, MockK DAOs, fast
 ```
 
 **Run unit tests** (JVM, no device needed)
@@ -43,7 +43,7 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 
 ---
 
-## Unit Tests — `app/src/test/` (79 tests)
+## Unit Tests — `app/src/test/` (82 tests)
 
 | File | What it covers |
 |---|---|
@@ -60,6 +60,7 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 | `JsonExportTest` (5) | `toJson` / `fromJson` round-trip for tasks, rewards, cross-refs, logs; empty JSON returns empty export |
 | `MascotUnlockTest` (8) | `Mascots.computeNewlyUnlocked` — each condition type (`ClaimsReached`, `PointsReached`, `TasksCompleted`) unlocks at threshold and not below; already-unlocked mascots not re-returned; multiple thresholds crossed simultaneously returns all |
 | `InAppReviewTriggerTest` (2) | `EarnItViewModel.claimReward` — emits `triggerInAppReview` on first claim (empty history); does not emit on subsequent claims |
+| `MascotNotificationTest` (3) | `claimReward` sets `hasNewMascot` when a mascot is newly unlocked; does not set it when all already unlocked; `importFromFile` silently seeds unlocked mascots without emitting a notification or setting the badge |
 
 ---
 
@@ -132,7 +133,7 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
-| Unit (79 tests) | Every build/push | `./gradlew test` |
+| Unit (82 tests) | Every build/push | `./gradlew test` |
 | Integration + UI, instrumented (26 tests) | Every push/PR via CI (API 34 emulator, Workflow 2); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (3) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 

@@ -254,7 +254,7 @@ fun EarnItBottomBar(
                     } else {
                         BadgedBox(badge = {
                             if (item.screen == Screen.Settings && hasNewMascot) {
-                                Badge { Text("!") }
+                                Badge { Text(Strings.MASCOT_SETTINGS_BADGE) }
                             }
                         }) {
                             Icon(item.icon!!, contentDescription = item.label)

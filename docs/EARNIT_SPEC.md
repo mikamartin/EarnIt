@@ -231,6 +231,19 @@ Settings are persisted via DataStore Preferences.
 | Show Quote | Boolean | true | Shows or hides the daily quote on the home screen |
 | Tasks Group View | Boolean | false | When true, the Tasks screen shows tasks in collapsible group sections instead of a flat list |
 
+### Mascot Unlock Notifications
+
+When a reward claim triggers a new mascot unlock, a snackbar appears at the bottom of the screen:
+
+- **Message:** "You unlocked [Name]!"
+- **Action label:** "Mascots"
+- Navigating to any other screen dismisses the snackbar automatically.
+- Tapping the action label navigates to Settings and opens the mascot picker dialog with the newly unlocked mascot highlighted with a "NEW" badge.
+
+A `!` badge appears on the Settings icon in the bottom nav bar whenever a mascot has been unlocked and the user has not yet opened Settings. The badge clears as soon as the user navigates to any Settings-family screen (Settings, About, Data & Backup, Clean Up).
+
+**Import/restore suppression:** When the user restores data via import (replace or merge), the app silently seeds the unlocked-mascot list from the restored history without firing a snackbar or badge. This prevents spurious "new mascot" notifications for mascots the user already earned before the backup.
+
 ### Colour Schemes
 
 | Scheme | Primary | Secondary | Surface |
@@ -294,7 +307,7 @@ Each template card is collapsible. Individual tasks can be deselected before imp
 
 See [TESTING.md](TESTING.md) for the full picture — current coverage, known gaps, and what to write next.
 
-**Summary:** 79 unit tests across 13 test files. 26 instrumented tests across 9 files (requires device/emulator) — including 4 Compose UI tests.
+**Summary:** 82 unit tests across 14 test files. 26 instrumented tests across 9 files (requires device/emulator) — including 4 Compose UI tests.
 
 ---
 
@@ -310,7 +323,7 @@ Main App
 │   ├── Task Edit            — name, icon, group, repeatable toggle, manual or auto points (sliders); group field is a collapsible section (expanded by default, collapses to "Group · [name]" summary) with a bordered radio-button list of existing groups; "New group..." is the last row in the list — a radio + inline text field; selecting a radio clears the new-group field and vice versa; duplicate name blocked with inline error on the name field; shows "Task saved" snackbar on save; Save does not auto-navigate back
 │   └── Task Library         — 3 collapsible template cards with per-task checkboxes; imported tasks auto-assigned to template group; tasks with duplicate names are skipped and listed in a post-import dialog
 ├── History                  — claimed rewards tab + completed tasks tab
-└── Settings
+└── Settings                 — nav tab shows a `!` badge when a mascot is newly unlocked and the user has not yet opened Settings
     ├── About                — app name, version, "The idea" copy; Rate the app (opens Play Store); Get in touch (email); Support the developer (Tip Jar — two price buttons, loading state, thank-you snackbar; mock until RevenueCat integrated)
     ├── Appearance           — nickname input + random-nickname toggle, Mascot picker, Show Quote toggle
     ├── Colour Scheme        — 3 theme chips (Warm Gold, Ocean Blue, Forest)
