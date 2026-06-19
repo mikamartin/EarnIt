@@ -2,7 +2,10 @@ package com.earnit.app
 
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.filterToOne
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -85,7 +88,8 @@ class SettingsUiTest {
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithText("Movie Night").performClick()
         composeTestRule.onNodeWithText("+ LOG").performClick()
-        composeTestRule.onNodeWithText("Push-ups").performClick()
+        // Two nodes match "Push-ups" (dialog row + linked task in background); filter to the clickable row.
+        composeTestRule.onAllNodesWithText("Push-ups").filterToOne(hasClickAction()).performClick()
 
         // LOG must be disabled with no note entered
         composeTestRule.onNodeWithText("LOG").assertIsNotEnabled()
