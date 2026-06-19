@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.AppColorScheme
@@ -69,6 +70,7 @@ class SettingsUiTest {
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithContentDescription("New Reward").performClick()
         composeTestRule.onNodeWithText("Reward name").performTextInput("Movie Night")
+        composeTestRule.onNodeWithText("Point cost").performTextClearance()
         composeTestRule.onNodeWithText("Point cost").performTextInput("5")
         composeTestRule.onNodeWithText("SAVE").performClick()
 

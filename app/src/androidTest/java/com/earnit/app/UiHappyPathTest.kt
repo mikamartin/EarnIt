@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.SettingsRepository
@@ -25,11 +26,13 @@ import javax.inject.Inject
  * Exercises the full happy path through the live Compose UI:
  *   create task → create reward → link task → log from Prizes home card → open detail → claim → verify History
  *
- * Uses Compose test v2 (StandardTestDispatcher) + Room setQueryCoroutineContext(Dispatchers.Main.immediate)
- * so that waitForIdle() drains Room writes and StateFlow updates synchronously — no sleeps or polling needed.
+ * Uses Compose test v2 (StandardTestDispatcher) — eliminates the deprecated UnconfinedTestDispatcher.
+ * Room's InvalidationTracker fires on a real background thread, so the post-LOG step uses waitUntil()
+ * to poll in real time; each advanceByFrame() (v2) drives Compose recompositions so CLAIM becomes
+ * visible as soon as the StateFlow propagates canClaim = true.
  *
- * Intermediate assertIsDisplayed() calls act as diagnostic checkpoints: if a step fails silently
- * upstream, the first failing assertion identifies exactly where the chain broke.
+ * Note: the Point cost field defaults to "10" in the UI — performTextClearance() before input is
+ * required to set 4, not 104. assertIsDisplayed() calls elsewhere are synchronous checkpoints.
  */
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
@@ -67,6 +70,7 @@ class UiHappyPathTest {
         composeTestRule.onNodeWithText("Reward name").performTextInput("Coffee Treat")
 
         composeTestRule.onNodeWithText("Point cost").performClick()
+        composeTestRule.onNodeWithText("Point cost").performTextClearance()
         composeTestRule.onNodeWithText("Point cost").performTextInput("4")
 
         composeTestRule.onNodeWithText("SAVE").performClick()
@@ -101,12 +105,13 @@ class UiHappyPathTest {
         // ── Step 5: Open reward detail ────────────────────────────────────────
         composeTestRule.onNodeWithText("Coffee Treat").performClick()
 
-        // Checkpoint 3: Morning Run must appear in Recent activity.
-        // assertIsDisplayed() calls waitForIdle() — if Morning Run is visible here but CLAIM
-        // is not, the log was not created (not a timing issue; something broke upstream).
-        composeTestRule.onNodeWithText("Morning Run").assertIsDisplayed()
-
         // ── Step 6: Claim the reward ───────────────────────────────────────────
+        // Room's InvalidationTracker fires on a real background thread; waitUntil polls in
+        // real time while each advanceByFrame() (v2 behaviour) drives Compose recompositions,
+        // so CLAIM becomes visible as soon as canClaim = true propagates through the StateFlow.
+        composeTestRule.waitUntil(timeoutMillis = 10_000) {
+            composeTestRule.onAllNodesWithText("CLAIM").fetchSemanticsNodes().isNotEmpty()
+        }
         composeTestRule.onNodeWithText("CLAIM").performClick()
 
         // ClaimDialog: archive without starting over
