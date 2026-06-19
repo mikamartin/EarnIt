@@ -79,6 +79,7 @@ import com.earnit.app.data.AppSettings
 import com.earnit.app.data.MascotId
 import com.earnit.app.data.Mascots
 import com.earnit.app.viewmodel.EarnItViewModel
+import kotlinx.coroutines.flow.filterNotNull
 
 @Composable
 fun SettingsScreen(
@@ -94,10 +95,13 @@ fun SettingsScreen(
     var highlightedMascot by remember { mutableStateOf<MascotId?>(null) }
 
     LaunchedEffect(Unit) {
-        viewModel.openMascotPicker.collect { mascotId ->
-            highlightedMascot = mascotId
-            showMascotPicker = true
-        }
+        viewModel.openMascotPicker
+            .filterNotNull()
+            .collect { mascotId ->
+                highlightedMascot = mascotId
+                showMascotPicker = true
+                viewModel.consumeMascotPickerId()
+            }
     }
 
     Column(

@@ -30,6 +30,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -65,14 +67,25 @@ class EarnItViewModel
         private val _triggerMascotBounce = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
         val triggerMascotBounce: SharedFlow<Unit> = _triggerMascotBounce.asSharedFlow()
 
-        private val _openMascotPicker = MutableSharedFlow<MascotId>(extraBufferCapacity = 1)
-        val openMascotPicker: SharedFlow<MascotId> = _openMascotPicker.asSharedFlow()
+        private val _openMascotPicker = MutableStateFlow<MascotId?>(null)
+        val openMascotPicker: StateFlow<MascotId?> = _openMascotPicker.asStateFlow()
+
+        private val _hasNewMascot = MutableStateFlow(false)
+        val hasNewMascot: StateFlow<Boolean> = _hasNewMascot.asStateFlow()
 
         private val _triggerInAppReview = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
         val triggerInAppReview: SharedFlow<Unit> = _triggerInAppReview.asSharedFlow()
 
         fun triggerMascotPickerFor(id: MascotId) {
-            viewModelScope.launch { _openMascotPicker.emit(id) }
+            _openMascotPicker.value = id
+        }
+
+        fun consumeMascotPickerId() {
+            _openMascotPicker.value = null
+        }
+
+        fun clearNewMascotBadge() {
+            _hasNewMascot.value = false
         }
 
         fun saveTask(
@@ -148,7 +161,10 @@ class EarnItViewModel
             }
         }
 
-        private suspend fun checkAndUnlockMascots(pendingClaim: Boolean = false) {
+        private suspend fun checkAndUnlockMascots(
+            pendingClaim: Boolean = false,
+            silent: Boolean = false,
+        ) {
             val state = uiState.value
             val current = settings.value.unlockedMascotIds
             val newlyUnlocked =
@@ -160,7 +176,10 @@ class EarnItViewModel
                 )
             if (newlyUnlocked.isNotEmpty()) {
                 settingsRepository.updateUnlockedMascots(current + newlyUnlocked)
-                _newlyUnlockedMascot.emit(newlyUnlocked.first())
+                if (!silent) {
+                    _newlyUnlockedMascot.emit(newlyUnlocked.first())
+                    _hasNewMascot.value = true
+                }
             }
         }
 
@@ -232,8 +251,12 @@ class EarnItViewModel
         ) {
             viewModelScope.launch {
                 runCatching { repository.importFromFile(context, uri, replace) }
-                    .onSuccess { onComplete(true) }
-                    .onFailure { onComplete(false) }
+                    .onSuccess {
+                        onComplete(true)
+                        // Seed unlocked mascots silently so the startup check finds nothing new.
+                        uiState.drop(1).first()
+                        checkAndUnlockMascots(silent = true)
+                    }.onFailure { onComplete(false) }
             }
         }
 
