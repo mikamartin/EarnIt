@@ -238,7 +238,7 @@ When a reward claim triggers a new mascot unlock, a snackbar appears at the bott
 - **Message:** "You unlocked [Name]!"
 - **Action label:** "Mascots"
 - Navigating to any other screen dismisses the snackbar automatically.
-- Tapping the action label navigates to Settings and opens the mascot picker dialog with the newly unlocked mascot highlighted with a "NEW" badge.
+- Tapping the action label navigates to Settings and opens the mascot picker dialog with the newly unlocked mascot highlighted with a small secondary-colour dot indicator (top-left corner of the mascot cell).
 
 A `!` badge appears on the Settings icon in the bottom nav bar whenever a mascot has been unlocked and the user has not yet opened Settings. The badge clears as soon as the user navigates to any Settings-family screen (Settings, About, Data & Backup, Clean Up).
 

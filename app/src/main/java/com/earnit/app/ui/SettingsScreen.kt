@@ -49,7 +49,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -674,19 +673,11 @@ private fun MascotPickerDialog(
                                     Box(
                                         modifier =
                                             Modifier
-                                                .clip(RoundedCornerShape(4.dp))
+                                                .size(8.dp)
+                                                .clip(CircleShape)
                                                 .background(MaterialTheme.colorScheme.secondary)
-                                                .align(Alignment.TopStart)
-                                                .padding(horizontal = 3.dp, vertical = 1.dp),
-                                    ) {
-                                        Text(
-                                            Strings.MASCOT_NEW_BADGE,
-                                            fontSize = 7.sp,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = MaterialTheme.colorScheme.onSecondary,
-                                            letterSpacing = 0.5.sp,
-                                        )
-                                    }
+                                                .align(Alignment.TopStart),
+                                    )
                                 }
                             }
                             if (unlocked) {
@@ -712,9 +703,7 @@ private fun MascotPickerDialog(
                 }
             }
         },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text(Strings.MASCOT_PICKER_DONE) }
-        },
+        confirmButton = {},
     )
 }
 
