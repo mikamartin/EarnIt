@@ -17,7 +17,8 @@ These three journeys are deliberately never automated, not just temporarily defe
 4. Confirm the empty-state screens appear on Tasks, Prizes, and History.
 5. Tap "Import (Replace)", select the file saved in step 2.
 6. Confirm the success status text appears, and that all tasks, rewards, links, and history are restored exactly as before clearing.
-7. Repeat steps 2–6 using "Import (Merge)" instead, starting from a non-empty state with one extra task added after export. Confirm the merge keeps both the imported and the locally-added task.
+7. Confirm **no** mascot unlock snackbar appears and **no** `!` badge appears on the Settings nav tab after the import — mascots earned before the backup should be silently restored, not treated as new unlocks.
+8. Repeat steps 2–7 using "Import (Merge)" instead, starting from a non-empty state with one extra task added after export. Confirm the merge keeps both the imported and the locally-added task, and again no mascot notification fires.
 
 ---
 

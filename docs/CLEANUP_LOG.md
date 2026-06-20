@@ -642,6 +642,43 @@ Replaced all remaining `Brush.*Gradient(listOf(Color(0xFFFFD060), Color(0xFFE07B
 
 ---
 
+### Pass 27 — mascot unlock UX fixes (June 2026)
+
+#### Duplication ✅
+- No new duplication introduced. Converted `_openMascotPicker` from `SharedFlow` to `StateFlow`, making it consistent with `_pendingTaskId` (already a StateFlow) — removed the one remaining inconsistency in how one-shot ViewModel state is modelled.
+
+#### Decoupling ✅
+- `EarnItBottomBar` receives `hasNewMascot: Boolean` rather than the full ViewModel, keeping the composable's dependency surface minimal.
+
+#### Complexity & Pattern Health ✅
+- `LaunchedEffect(currentRoute)` key is correct: re-triggers on every route change, which is the intended dismissal and badge-clear trigger.
+- `StateFlow` for `openMascotPicker` is simpler and more predictable than the previous SharedFlow — eliminates the replay/buffer edge case that caused Bug 1.
+- The `uiState.drop(1).first()` pattern in `importFromFile` follows the same established pattern in `HomeScreen`'s startup check.
+
+#### Dead Code & Hygiene ✅
+- `ktlintFormat` applied; all imports clean. No unused symbols.
+
+#### Naming Consistency ✅
+- `consumeMascotPickerId`, `clearNewMascotBadge`, `hasNewMascot`, `MASCOT_SETTINGS_BADGE` all follow existing naming patterns in ViewModel and `Strings.kt`.
+
+#### Hardcoded Values ✅
+- Badge label `"!"` extracted to `Strings.MASCOT_SETTINGS_BADGE` (flagged by cleanup checklist; fixed in same pass).
+
+#### Accessibility ✅
+- `BadgedBox` is an M3 component with built-in accessibility semantics. Settings icon retains its `contentDescription = "Settings"`.
+
+#### Spec Review ✅
+- Added "Mascot Unlock Notifications" subsection to `EARNIT_SPEC.md` covering snackbar, badge, and import suppression — these behaviours existed in code but were undocumented.
+- Updated screen map Settings entry to mention the `!` badge.
+- Updated test count (79 → 82, 13 → 14 test files).
+
+#### Tests ✅
+- Added `MascotNotificationTest` (3 tests): badge set on unlock, badge not set when all already unlocked, import silently seeds without notification.
+- Updated `TESTING.md` counts and table.
+- Added import-suppression verification step to `MANUAL_TEST_PLAN.md`.
+
+---
+
 ### Pass 26 — trim Ship Checklist
 
 #### Documentation ✅

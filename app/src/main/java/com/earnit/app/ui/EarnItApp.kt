@@ -8,6 +8,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -122,9 +124,12 @@ fun EarnItApp(
     val settings by viewModel.settings.collectAsState()
     EarnItTheme(colorScheme = settings.colorScheme) {
         val uiState by viewModel.uiState.collectAsState()
+        val hasNewMascot by viewModel.hasNewMascot.collectAsState()
         val navController = rememberNavController()
         val snackbarHostState = remember { SnackbarHostState() }
         val context = LocalContext.current
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentRoute = navBackStackEntry?.destination?.route
 
         LaunchedEffect(startRewardId) {
             if (startRewardId != 0L) {
@@ -139,6 +144,13 @@ fun EarnItApp(
                 manager.requestReviewFlow().addOnCompleteListener { task ->
                     if (task.isSuccessful) manager.launchReviewFlow(activity, task.result)
                 }
+            }
+        }
+
+        LaunchedEffect(currentRoute) {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            if (routeToTab(currentRoute) == Screen.Settings.route) {
+                viewModel.clearNewMascotBadge()
             }
         }
 
@@ -165,7 +177,7 @@ fun EarnItApp(
 
         Scaffold(
             topBar = {},
-            bottomBar = { EarnItBottomBar(navController) },
+            bottomBar = { EarnItBottomBar(navController, hasNewMascot) },
             snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { padding ->
             NavHost(
@@ -225,7 +237,10 @@ fun EarnItApp(
 }
 
 @Composable
-fun EarnItBottomBar(navController: NavHostController) {
+fun EarnItBottomBar(
+    navController: NavHostController,
+    hasNewMascot: Boolean = false,
+) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val activeTab = routeToTab(navBackStackEntry?.destination?.route)
     NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
@@ -237,7 +252,13 @@ fun EarnItBottomBar(navController: NavHostController) {
                         // contentDescription makes this findable via onNodeWithContentDescription in tests.
                         Text(item.emoji, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { contentDescription = item.label })
                     } else {
-                        Icon(item.icon!!, contentDescription = item.label)
+                        BadgedBox(badge = {
+                            if (item.screen == Screen.Settings && hasNewMascot) {
+                                Badge { Text(Strings.MASCOT_SETTINGS_BADGE) }
+                            }
+                        }) {
+                            Icon(item.icon!!, contentDescription = item.label)
+                        }
                     }
                 },
                 selected = selected,
