@@ -12,12 +12,18 @@ import com.earnit.app.data.AppColorScheme
 import com.earnit.app.data.AppSettings
 import com.earnit.app.data.EarnItRepository
 import com.earnit.app.data.EarnItUiState
+import com.earnit.app.data.ImportFileTooLargeException
+import com.earnit.app.data.ImportInvalidJsonException
+import com.earnit.app.data.ImportUnreadableException
+import com.earnit.app.data.ImportWrongFileTypeException
+import com.earnit.app.data.ImportWrongSchemaException
 import com.earnit.app.data.MascotId
 import com.earnit.app.data.Mascots
 import com.earnit.app.data.RewardEntity
 import com.earnit.app.data.SettingsRepository
 import com.earnit.app.data.TaskEntity
 import com.earnit.app.data.TaskTemplate
+import com.earnit.app.ui.Strings
 import com.earnit.app.ui.randomNicknames
 import com.earnit.app.widget.EarnItGlanceWidget
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -78,6 +84,14 @@ class EarnItViewModel
 
         private val _triggerInAppReview = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
         val triggerInAppReview: SharedFlow<Unit> = _triggerInAppReview.asSharedFlow()
+
+        private val _importResult = MutableStateFlow<ImportResult?>(null)
+        val importResult: StateFlow<ImportResult?> = _importResult.asStateFlow()
+
+        data class ImportResult(
+            val message: String,
+            val isError: Boolean,
+        )
 
         fun triggerMascotPickerFor(id: MascotId) {
             _openMascotPicker.value = id
@@ -255,16 +269,30 @@ class EarnItViewModel
             context: Context,
             uri: Uri,
             replace: Boolean,
-            onComplete: (Boolean) -> Unit,
+            onComplete: (String?) -> Unit = {},
         ) {
             viewModelScope.launch {
                 runCatching { repository.importFromFile(context, uri, replace) }
                     .onSuccess {
-                        onComplete(true)
+                        val successMsg = if (replace) Strings.DATA_IMPORT_SUCCESS else Strings.DATA_IMPORT_MERGE_SUCCESS
+                        _importResult.value = ImportResult(successMsg, false)
+                        onComplete(null)
                         // Seed unlocked mascots silently so the startup check finds nothing new.
                         uiState.drop(1).first()
                         checkAndUnlockMascots(silent = true)
-                    }.onFailure { onComplete(false) }
+                    }.onFailure { e ->
+                        val errorMsg =
+                            when (e) {
+                                is ImportFileTooLargeException -> Strings.IMPORT_ERROR_TOO_LARGE
+                                is ImportWrongFileTypeException -> Strings.IMPORT_ERROR_WRONG_TYPE
+                                is ImportInvalidJsonException -> Strings.IMPORT_ERROR_INVALID_JSON
+                                is ImportWrongSchemaException -> Strings.IMPORT_ERROR_WRONG_SCHEMA
+                                is ImportUnreadableException -> Strings.IMPORT_ERROR_UNREADABLE
+                                else -> Strings.DATA_IMPORT_FAIL
+                            }
+                        _importResult.value = ImportResult(errorMsg, true)
+                        onComplete(errorMsg)
+                    }
             }
         }
 

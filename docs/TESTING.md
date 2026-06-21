@@ -24,9 +24,9 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 
 ```
                  [ Manual — 3 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
-            [ UI — 9 tests ]           ComposeTestRule + Hilt, real DataStore
-       [ Integration — 21 tests ]      Real in-memory Room, no mocks
-     [ Unit — 85 tests ]               JVM, MockK DAOs, fast
+            [ UI — 11 tests ]          ComposeTestRule + Hilt, real DataStore
+       [ Integration — 26 tests ]      Real in-memory Room, no mocks
+     [ Unit — 100 tests ]              JVM, MockK DAOs, fast
 ```
 
 **Run unit tests** (JVM, no device needed)
@@ -43,7 +43,7 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 
 ---
 
-## Unit Tests — `app/src/test/` (85 tests)
+## Unit Tests — `app/src/test/` (100 tests)
 
 | File | What it covers |
 |---|---|
@@ -57,7 +57,9 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 | `DeleteCascadeTest` (2) | `deleteTask` clears cross-refs before delete; `deleteReward` clears cross-refs + active logs before delete |
 | `CleanupTest` (3) | `clearAllLogs` deletes all logs (active + archived) **and** all history entries; `clearAllTasks` removes cross-refs then tasks; `clearAllRewards` removes cross-refs + active logs only (history preserved) |
 | `SortOrderTest` (7) | `upsertTask` / `upsertReward` sortOrder assignment (empty and non-empty list); upsert routes existing records to update; `updateRewardsSortOrder` / `updateTasksSortOrder` assign sequential indexes |
-| `JsonExportTest` (5) | `toJson` / `fromJson` round-trip for tasks, rewards, cross-refs, logs; empty JSON returns empty export |
+| `JsonExportTest` (5) | `toJson` / `fromJson` round-trip for tasks, rewards, cross-refs, logs; empty JSON object throws `ImportWrongSchemaException` |
+| `JsonImportValidationTest` (8) | `fromJson` error paths — malformed JSON → `InvalidJsonException`; truncated JSON → `InvalidJsonException`; wrong schema → `ImportWrongSchemaException`; null literal → `WrongSchemaException`; JSON array → `WrongSchemaException`; single EarnIt key present → succeeds; valid export round-trips; all-empty export succeeds |
+| `ImportViewModelErrorTest` (7) | ViewModel error mapping — each exception type (`FileTooLarge`, `WrongFileType`, `InvalidJson`, `WrongSchema`, `Unreadable`, unknown) calls `onComplete` with the correct string; success calls `onComplete(null)` |
 | `MascotUnlockTest` (8) | `Mascots.computeNewlyUnlocked` — each condition type (`ClaimsReached`, `PointsReached`, `TasksCompleted`) unlocks at threshold and not below; already-unlocked mascots not re-returned; multiple thresholds crossed simultaneously returns all |
 | `InAppReviewTriggerTest` (2) | `EarnItViewModel.claimReward` — emits `triggerInAppReview` on first claim (empty history); does not emit on subsequent claims |
 | `MascotNotificationTest` (3) | `claimReward` sets `hasNewMascot` when a mascot is newly unlocked; does not set it when all already unlocked; `importFromFile` silently seeds unlocked mascots without emitting a notification or setting the badge |
@@ -65,20 +67,21 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 
 ---
 
-## Instrumented Tests — `app/src/androidTest/` (30 tests, requires device/emulator)
+## Instrumented Tests — `app/src/androidTest/` (37 tests, requires device/emulator)
 
 | File | Layer | What it covers |
 |---|---|---|
 | `HappyPathTest` (1) | Repository | Create task → create reward → link as mandatory → log → assert `canClaim` → claim → assert history entry + archived log + reward archived |
 | `StartOverTest` (3) | Repository | `startOver=true` — reward stays active, history entry created, point balance resets to zero, second cycle immediately valid |
 | `ClearCascadeTest` (5) | Repository | `clearAllLogs` removes active + archived logs and history entries; `clearAllTasks` removes cross-refs, leaves reward; `clearAllRewards` removes cross-refs + active logs, leaves task; `deleteTask` / `deleteReward` cascade |
-| `ExportImportTest` (5) | Repository | Export → clear → import(replace) round-trip preserving all entity types; import(replace) preserves archived history; import(merge) preserves existing + adds new; file-based variants via temp `Uri` |
+| `ExportImportTest` (10) | Repository | Export → clear → import(replace) round-trip preserving all entity types; import(replace) preserves archived history; import(merge) preserves existing + adds new; file-based variants via temp `Uri`; malformed JSON → `ImportInvalidJsonException`; wrong-schema JSON → `ImportWrongSchemaException`; file-backed bad JSON and wrong-schema variants; wrong-schema replace attempt leaves existing DB data intact |
 | `WidgetFlashTest` (7) | Utility | `WidgetFlash` — set/isActive round-trip; false for different reward ID; false after expiry; false when nothing set; `remainingMs` positive when active, zero after expiry, zero for wrong reward |
 | `UiHappyPathTest` (1) | UI | Full Compose UI flow: create task → create reward → link from Reward Detail → log from Prizes home card → open detail → claim → verify claimed reward appears in History |
 | `SettingsUiTest` (2) | UI | Colour scheme selection persists after `activityRule.scenario.recreate()`; Notes required toggle disables LOG until a note is entered, enables it after |
 | `EmptyStateUiTest` (1) | UI | Fresh-install empty-state copy on all three tabs: Prizes ("No rewards yet"), Tasks ("No tasks yet"), History — both Completed Tasks and Claimed Rewards sub-tabs |
 | `TaskLibraryImportUiTest` (1) | UI | Task Library: expand "Healthy Living" template, add all 10 tasks, verify they appear in the Tasks list |
 | `SaveNavigationUiTest` (4) | UI | Post-save navigation: new task → TaskDetailScreen; new reward → RewardDetailScreen; task created from new-reward form → pops back to reward form (task auto-included), both saved and linked on reward save; Add task button disabled until reward name is entered |
+| `ImportErrorUiTest` (2) | UI | Import error messages appear on Data & Backup screen: invalid JSON file shows "File is not valid JSON"; wrong-schema JSON shows "This doesn't look like an EarnIt backup" |
 
 ---
 
@@ -119,6 +122,9 @@ Full UI path: Tasks tab → Library → expand a template → add all tasks → 
 **Post-save navigation** (`SaveNavigationUiTest`)
 Saving a new task navigates to TaskDetailScreen; saving a new reward navigates to RewardDetailScreen. Creating a task from a new-reward edit form pops back to the reward form (not forward to TaskDetailScreen), auto-includes the task in the form's task list, and persists both entities linked when the reward is subsequently saved.
 
+**Import file validation** (`JsonImportValidationTest`, `ImportViewModelErrorTest`, `ExportImportTest`, `ImportErrorUiTest`)
+Wrong-schema JSON (e.g. a random JSON file) throws `ImportWrongSchemaException` before touching the database — critical in Replace mode where silent failure would wipe user data. `ExportImportTest.importReplace_withWrongSchema_doesNotWipeExistingData` proves at integration level that existing DB rows survive a wrong-schema replace attempt (not just that the exception fires). Malformed JSON (invalid syntax even with an EarnIt key present) throws `ImportInvalidJsonException`. Each exception type maps to a specific user-facing string in the ViewModel and is verified against `importResult` StateFlow as well as the `onComplete` callback. UI tests verify the error messages actually appear on the Data & Backup screen.
+
 ### Not Covered by Automated Tests
 
 **Logging against an archived reward**
@@ -138,8 +144,8 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
-| Unit (85 tests) | Every build/push | `./gradlew test` |
-| Integration + UI, instrumented (30 tests) | Every push/PR via CI (API 34 emulator, Workflow 2); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
+| Unit (100 tests) | Every build/push | `./gradlew test` |
+| Integration + UI, instrumented (37 tests) | Every push/PR via CI (API 34 emulator, Workflow 2); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (3) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 
 See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the three journeys that are deliberately never automated (not just deferred) — each crosses a system-process boundary (system file picker, Play Core API, widget activity chain) that instrumented UI tests cannot drive reliably.

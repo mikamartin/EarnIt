@@ -287,6 +287,15 @@ User picks a `.json` file via `ActivityResultContracts.GetContent`. Two modes:
 | Replace all data | Calls `database.clearAllTables()` then re-inserts everything |
 | Merge | Inserts with `IGNORE` conflict strategy — existing records (same ID) are preserved |
 
+**Validation** — before any data is touched, the file is checked in order:
+
+1. **MIME type** — images, video, and audio are rejected immediately (`ImportWrongFileTypeException`)
+2. **File size** — files larger than 10 MB are rejected (`ImportFileTooLargeException`)
+3. **JSON validity** — Moshi parse failures surface as `ImportInvalidJsonException`
+4. **Schema check** — valid JSON that contains none of the expected top-level keys (`tasks`, `rewards`, `rewardTaskCrossRefs`, `completionLogs`, `historyEntries`) is rejected as `ImportWrongSchemaException`; this prevents a wrong file from silently wiping user data in Replace mode
+
+Each failure shows a specific inline error message beneath the import buttons (in error colour). Success shows "Replaced ✓" or "Merged ✓" in primary colour.
+
 ---
 
 ## 8. Task Templates (Library)
@@ -307,7 +316,7 @@ Each template card is collapsible. Individual tasks can be deselected before imp
 
 See [TESTING.md](TESTING.md) for the full picture — current coverage, known gaps, and what to write next.
 
-**Summary:** 82 unit tests across 14 test files. 26 instrumented tests across 9 files (requires device/emulator) — including 4 Compose UI tests.
+**Summary:** 100 unit tests across 17 test files. 37 instrumented tests across 11 files (requires device/emulator) — including 11 Compose UI tests.
 
 ---
 

@@ -52,7 +52,7 @@ fun DataScreen(
 ) {
     val context = LocalContext.current
     val settings by viewModel.settings.collectAsState()
-    var importStatus by remember { mutableStateOf<String?>(null) }
+    val importResult by viewModel.importResult.collectAsState()
     var exportStatus by remember { mutableStateOf<String?>(null) }
     var testDataLoaded by remember { mutableStateOf(false) }
     var fullTestDataLoaded by remember { mutableStateOf(false) }
@@ -74,22 +74,14 @@ fun DataScreen(
         rememberLauncherForActivityResult(
             ActivityResultContracts.GetContent(),
         ) { uri ->
-            uri?.let {
-                viewModel.importFromFile(context, it, replace = true) { ok ->
-                    importStatus = if (ok) Strings.DATA_IMPORT_SUCCESS else Strings.DATA_IMPORT_FAIL
-                }
-            }
+            uri?.let { viewModel.importFromFile(context, it, replace = true) }
         }
 
     val importMergeLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.GetContent(),
         ) { uri ->
-            uri?.let {
-                viewModel.importFromFile(context, it, replace = false) { ok ->
-                    importStatus = if (ok) "Merged ✓" else "Import failed ✗"
-                }
-            }
+            uri?.let { viewModel.importFromFile(context, it, replace = false) }
         }
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
@@ -191,12 +183,12 @@ fun DataScreen(
                         modifier = Modifier.weight(1f),
                     )
                 }
-                importStatus?.let {
+                importResult?.let {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        it,
+                        it.message,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = if (it.isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                     )
                 }
             }

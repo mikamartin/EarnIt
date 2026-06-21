@@ -6,6 +6,8 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.EarnItDatabase
 import com.earnit.app.data.EarnItRepository
+import com.earnit.app.data.ImportInvalidJsonException
+import com.earnit.app.data.ImportWrongSchemaException
 import com.earnit.app.data.RewardEntity
 import com.earnit.app.data.TaskEntity
 import kotlinx.coroutines.flow.first
@@ -152,6 +154,59 @@ class ExportImportTest {
 
             file.delete()
             Unit
+        }
+
+    @Test(expected = ImportInvalidJsonException::class)
+    fun importFromJson_withMalformedJson_throwsInvalidJsonException() =
+        runBlocking {
+            repository.importFromJson("{\"tasks\": [broken json here}", replace = false)
+        }
+
+    @Test(expected = ImportWrongSchemaException::class)
+    fun importFromJson_withWrongSchemaJson_throwsWrongSchemaException() =
+        runBlocking {
+            repository.importFromJson("{\"name\": \"John\", \"age\": 30}", replace = false)
+        }
+
+    @Test(expected = ImportInvalidJsonException::class)
+    fun importFromFile_withInvalidJsonContent_throwsInvalidJsonException() =
+        runBlocking {
+            val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+            val file = File(context.filesDir, "invalid.json")
+            file.writeText("{\"tasks\": [broken json here}")
+            val uri = Uri.fromFile(file)
+            try {
+                repository.importFromFile(context, uri, replace = false)
+            } finally {
+                file.delete()
+            }
+        }
+
+    @Test(expected = ImportWrongSchemaException::class)
+    fun importFromFile_withWrongSchemaJsonContent_throwsWrongSchemaException() =
+        runBlocking {
+            val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+            val file = File(context.filesDir, "wrong_schema.json")
+            file.writeText("{\"name\": \"John\", \"city\": \"Helsinki\"}")
+            val uri = Uri.fromFile(file)
+            try {
+                repository.importFromFile(context, uri, replace = false)
+            } finally {
+                file.delete()
+            }
+        }
+
+    @Test
+    fun importReplace_withWrongSchema_doesNotWipeExistingData() =
+        runBlocking {
+            repository.upsertTask(TaskEntity(name = "Existing", points = 5))
+            try {
+                repository.importFromJson("{\"name\": \"not earnit\"}", replace = true)
+            } catch (_: ImportWrongSchemaException) {
+            }
+            val tasks = repository.observeUiState().first().tasks
+            assertEquals("Existing data must survive a wrong-schema replace attempt", 1, tasks.size)
+            assertEquals("Existing", tasks[0].name)
         }
 
     @Test
