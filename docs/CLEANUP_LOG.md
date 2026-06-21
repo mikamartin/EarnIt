@@ -686,3 +686,34 @@ Replaced all remaining `Brush.*Gradient(listOf(Color(0xFFFFD060), Color(0xFFE07B
 - Removed the "Tests" subsection from the Pre-Release Checklist — it had already been reduced to a pure pointer ("see TESTING.md / MANUAL_TEST_PLAN.md") with no actionable content of its own, and both docs are already referenced from `CLAUDE.md` and from `§1`'s Tests checklist.
 - Collapsed "Manual Testing" from a paragraph + three itemized journeys down to a single pointer line. The three journeys, their rationale, and their cadence already live in `MANUAL_TEST_PLAN.md`; duplicating the enumeration here just meant two places to keep in sync. Kept one line (rather than removing the section outright) so the Pre-Release Checklist — the actual "what's left before shipping" document — still carries a trigger to run the manual plan, rather than relying on someone independently knowing `MANUAL_TEST_PLAN.md` exists.
 - The pending "untrack `local.properties`" action (previously a Code & Repo Hygiene bullet) isn't duplicated here — it's tracked in Pass 24 above and in the active to-do list for the upcoming Clear Git State pass.
+
+---
+
+### Pass 28 — `fix/save-navigation` branch
+
+#### Bug Fixes ✅
+- **Post-save navigation:** Saving a new task now navigates to TaskDetailScreen via `pendingTaskId` StateFlow; saving a new reward navigates to RewardDetailScreen via `pendingRewardId` StateFlow. Saving an existing task or reward still shows a snackbar and stays on screen. Previously all four cases stayed on screen (Pass 16 behaviour — correct for edits, wrong for creates).
+- **Brief duplicate-name flash after SAVE:** `nameConflict` in both `TaskEditScreen` and `RewardEditScreen` is now gated on `!pendingSaveNav` / `!pendingRewardSaveNav`, so the red error doesn't flash on screen as navigation is composing out.
+- **`pendingTaskId` leaking to unrelated `RewardEditScreen`:** When a standalone task was created and the user navigated to a reward form before the `LaunchedEffect` in `TaskEditScreen` consumed `pendingTaskId`, the reward form auto-included the leaked task. Fixed with an `awaitingNewTask` flag — auto-include only fires when the current reward form initiated the task creation via "Create your own."
+- **`awaitingNewTask` lost on back-navigation:** `awaitingNewTask` was `remember { mutableStateOf(false) }`, which resets when the composable is destroyed. Compose NavHost destroys the outgoing composable on every forward navigation, so the flag was gone by the time the user popped back from `TaskEditScreen`. Changed to `rememberSaveable` — value is saved to the `NavBackStackEntry` saved state and restored on recreation.
+- **Add task dialog checkbox not toggling on text tap:** `TaskRow` in `AddTaskToRewardDialog` had no click handler on the surrounding `Row` — only the `Checkbox` itself was interactive. Tapping the task name text did nothing. Row is now `.clickable { toggle }` with `onCheckedChange = null` on the `Checkbox` (M3 pattern: Row owns the toggle). Pre-existing tests in `SettingsUiTest` and `UiHappyPathTest` that called `.performClick()` on the task name were passing accidentally — auto-include was placing the task behind the dialog filter, so the click landed on the background row, not the dialog.
+
+#### UX Improvement ✅
+- **"Add task" disabled until reward name entered:** `AddTaskToRewardDialog` and "Create your own" are now gated on `name.isNotBlank()` — a reward form without a name can't link tasks yet.
+- **"Will be added to: [reward name]" context line:** `TaskEditScreen` receives the in-progress reward name as a `fromRewardName` nav arg and shows it below the task name field when opened from a new-reward form, so the user knows which reward the task will be attached to.
+
+#### Complexity & Pattern Health ✅
+- `awaitingNewTask by rememberSaveable` is now consistent with the other `RewardEditScreen` form fields (`name`, `cost`, `description`, `icon`) which are already `rememberSaveable`.
+- `TaskRow` using `onCheckedChange = null` + parent `.clickable` is the recommended M3 pattern for checkbox list rows — matches how `LogTaskDialog` rows were fixed in Pass 4.
+
+#### Tests ✅
+- Added `PendingRewardIdTest` (3 unit tests): `saveReward` sets `pendingRewardId` on new reward; leaves it null on edit; `consumePendingRewardId` clears the value.
+- Added `SaveNavigationUiTest` (4 UI tests): new task navigates to TaskDetailScreen; new reward navigates to RewardDetailScreen; task created from new-reward form pops back and auto-includes; "Add task" disabled until reward name entered.
+- `TESTING.md` counts updated (unit 82→85, UI 8→9, instrumented 26→30).
+
+#### Linting ✅
+- `ktlintFormat` run; one violation auto-fixed (`multiline-expression-wrapping` on the new `Modifier` chain in `TaskRow`).
+
+#### Spec ✅
+- Screen map entries for Reward Edit and Task Edit updated to reflect post-save navigation behaviour, the `fromRewardName` context line, and the "Add task" gate.
+- `TESTING.md` "True process death" note updated: `awaitingNewTask` now also protected by `rememberSaveable`.

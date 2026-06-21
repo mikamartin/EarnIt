@@ -24,9 +24,9 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 
 ```
                  [ Manual — 3 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
-            [ UI — 5 tests ]           ComposeTestRule + Hilt, real DataStore
+            [ UI — 9 tests ]           ComposeTestRule + Hilt, real DataStore
        [ Integration — 21 tests ]      Real in-memory Room, no mocks
-     [ Unit — 82 tests ]               JVM, MockK DAOs, fast
+     [ Unit — 85 tests ]               JVM, MockK DAOs, fast
 ```
 
 **Run unit tests** (JVM, no device needed)
@@ -43,7 +43,7 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 
 ---
 
-## Unit Tests — `app/src/test/` (82 tests)
+## Unit Tests — `app/src/test/` (85 tests)
 
 | File | What it covers |
 |---|---|
@@ -61,10 +61,11 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 | `MascotUnlockTest` (8) | `Mascots.computeNewlyUnlocked` — each condition type (`ClaimsReached`, `PointsReached`, `TasksCompleted`) unlocks at threshold and not below; already-unlocked mascots not re-returned; multiple thresholds crossed simultaneously returns all |
 | `InAppReviewTriggerTest` (2) | `EarnItViewModel.claimReward` — emits `triggerInAppReview` on first claim (empty history); does not emit on subsequent claims |
 | `MascotNotificationTest` (3) | `claimReward` sets `hasNewMascot` when a mascot is newly unlocked; does not set it when all already unlocked; `importFromFile` silently seeds unlocked mascots without emitting a notification or setting the badge |
+| `PendingRewardIdTest` (3) | `saveReward` sets `pendingRewardId` to the upserted id when creating a new reward; leaves it null when editing an existing reward; `consumePendingRewardId` clears the value |
 
 ---
 
-## Instrumented Tests — `app/src/androidTest/` (26 tests, requires device/emulator)
+## Instrumented Tests — `app/src/androidTest/` (30 tests, requires device/emulator)
 
 | File | Layer | What it covers |
 |---|---|---|
@@ -77,6 +78,7 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 | `SettingsUiTest` (2) | UI | Colour scheme selection persists after `activityRule.scenario.recreate()`; Notes required toggle disables LOG until a note is entered, enables it after |
 | `EmptyStateUiTest` (1) | UI | Fresh-install empty-state copy on all three tabs: Prizes ("No rewards yet"), Tasks ("No tasks yet"), History — both Completed Tasks and Claimed Rewards sub-tabs |
 | `TaskLibraryImportUiTest` (1) | UI | Task Library: expand "Healthy Living" template, add all 10 tasks, verify they appear in the Tasks list |
+| `SaveNavigationUiTest` (4) | UI | Post-save navigation: new task → TaskDetailScreen; new reward → RewardDetailScreen; task created from new-reward form → pops back to reward form (task auto-included), both saved and linked on reward save; Add task button disabled until reward name is entered |
 
 ---
 
@@ -114,6 +116,9 @@ Fresh-install copy on Prizes, Tasks, and both History sub-tabs is asserted direc
 **Task Library import** (`TaskLibraryImportUiTest`)
 Full UI path: Tasks tab → Library → expand a template → add all tasks → confirm they appear in the Tasks list. `ImportDedupTest` covers the dedup logic itself at the repository level; this test covers the UI wiring (navigation, checkbox state, button enabling) on top of it.
 
+**Post-save navigation** (`SaveNavigationUiTest`)
+Saving a new task navigates to TaskDetailScreen; saving a new reward navigates to RewardDetailScreen. Creating a task from a new-reward edit form pops back to the reward form (not forward to TaskDetailScreen), auto-includes the task in the form's task list, and persists both entities linked when the reward is subsequently saved.
+
 ### Not Covered by Automated Tests
 
 **Logging against an archived reward**
@@ -123,7 +128,7 @@ Once a reward is archived, its detail screen is unreachable through the normal U
 Tapping LOG twice in quick succession could theoretically insert duplicate log entries before ViewModel state updates. In practice, `viewModelScope.launch` serialises DAO writes through a single coroutine dispatcher and the LOG button's enabled state re-evaluates after each Room Flow emission. Not tested; the risk is low in a local single-user app and has not surfaced in manual testing.
 
 **True process death and restore**
-`SettingsUiTest` uses `activityRule.scenario.recreate()` to cover config changes (DataStore and ViewModel re-read). True process death — OS kills the process, user returns from Recents — is not tested; this would require UiAutomator shell commands to force-stop mid-session. `rememberSaveable` guards search query and note text fields. Dialog checkbox state (`taskState` in `RewardEditScreen`) uses `remember` and resets on config change; acknowledged in `DEV_PLAYBOOK.md`.
+`SettingsUiTest` uses `activityRule.scenario.recreate()` to cover config changes (DataStore and ViewModel re-read). True process death — OS kills the process, user returns from Recents — is not tested; this would require UiAutomator shell commands to force-stop mid-session. `rememberSaveable` guards search query, note text fields, all `RewardEditScreen` form fields, and the `awaitingNewTask` flag (so the create-task-from-reward flow survives rotation mid-flow). Dialog checkbox state (`taskState` in `RewardEditScreen`) uses `remember` and resets on config change; acknowledged in `DEV_PLAYBOOK.md`.
 
 ---
 
@@ -133,8 +138,8 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
-| Unit (82 tests) | Every build/push | `./gradlew test` |
-| Integration + UI, instrumented (26 tests) | Every push/PR via CI (API 34 emulator, Workflow 2); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
+| Unit (85 tests) | Every build/push | `./gradlew test` |
+| Integration + UI, instrumented (30 tests) | Every push/PR via CI (API 34 emulator, Workflow 2); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (3) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 
 See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the three journeys that are deliberately never automated (not just deferred) — each crosses a system-process boundary (system file picker, Play Core API, widget activity chain) that instrumented UI tests cannot drive reliably.
