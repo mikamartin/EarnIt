@@ -89,7 +89,10 @@ fun RewardEditScreen(
 
     val taskState = remember { mutableStateMapOf<Long, TaskEditState>() }
     var taskStateReady by remember { mutableStateOf(false) }
+    var awaitingNewTask by rememberSaveable { mutableStateOf(false) }
     val pendingTaskId by viewModel.pendingTaskId.collectAsState()
+    val pendingRewardId by viewModel.pendingRewardId.collectAsState()
+    var pendingRewardSaveNav by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val coroutineScope = rememberCoroutineScope()
     val isNew = rewardId == 0L
@@ -121,12 +124,24 @@ fun RewardEditScreen(
         }
     }
 
-    // Auto-include newly created task from "Create New Task" flow
+    // Auto-include newly created task — only when THIS form initiated the creation.
     LaunchedEffect(pendingTaskId, taskStateReady) {
         val id = pendingTaskId
-        if (id != null && taskStateReady) {
+        if (awaitingNewTask && id != null && taskStateReady) {
+            awaitingNewTask = false
             taskState[id] = TaskEditState(included = true)
             viewModel.consumePendingTaskId()
+        }
+    }
+
+    LaunchedEffect(pendingRewardId) {
+        if (pendingRewardSaveNav && pendingRewardId != null) {
+            pendingRewardSaveNav = false
+            val newId = pendingRewardId!!
+            viewModel.consumePendingRewardId()
+            navController.navigate(Screen.RewardDetail.route(newId)) {
+                popUpTo(Screen.RewardEdit.route) { inclusive = true }
+            }
         }
     }
 
@@ -146,8 +161,9 @@ fun RewardEditScreen(
                 showAddTaskDialog = false
             },
             onCreateNew = {
+                awaitingNewTask = true
                 showAddTaskDialog = false
-                navController.navigate(Screen.TaskEdit.route(0L, rewardId))
+                navController.navigate(Screen.TaskEdit.route(0L, rewardId, name))
             },
             onBrowseLibrary = {
                 showAddTaskDialog = false
@@ -168,7 +184,8 @@ fun RewardEditScreen(
 
     val includedTasks = uiState.tasks.filter { taskState[it.id]?.included == true }
     val nameConflict =
-        name.isNotBlank() &&
+        !pendingRewardSaveNav &&
+            name.isNotBlank() &&
             uiState.rewardProgressList.any {
                 it.reward.name
                     .trim()
@@ -421,6 +438,7 @@ fun RewardEditScreen(
             item {
                 OutlinedButton(
                     onClick = { showAddTaskDialog = true },
+                    enabled = name.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary),
@@ -459,6 +477,11 @@ fun RewardEditScreen(
                     viewModel.saveReward(rewardId, name, cost.toIntOrNull() ?: 10, description, icon, taskTriples)
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar(Strings.REWARD_SAVED, duration = SnackbarDuration.Short)
+                    }
+                    if (!isNew) {
+                        navController.popBackStack()
+                    } else {
+                        pendingRewardSaveNav = true
                     }
                 },
             )

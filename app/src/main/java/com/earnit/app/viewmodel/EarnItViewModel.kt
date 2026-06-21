@@ -61,6 +61,9 @@ class EarnItViewModel
         private val _pendingTaskId = MutableStateFlow<Long?>(null)
         val pendingTaskId: StateFlow<Long?> = _pendingTaskId.asStateFlow()
 
+        private val _pendingRewardId = MutableStateFlow<Long?>(null)
+        val pendingRewardId: StateFlow<Long?> = _pendingRewardId.asStateFlow()
+
         private val _newlyUnlockedMascot = MutableSharedFlow<MascotId>(extraBufferCapacity = 1)
         val newlyUnlockedMascot: SharedFlow<MascotId> = _newlyUnlockedMascot.asSharedFlow()
 
@@ -109,6 +112,10 @@ class EarnItViewModel
             _pendingTaskId.value = null
         }
 
+        fun consumePendingRewardId() {
+            _pendingRewardId.value = null
+        }
+
         fun saveReward(
             rewardId: Long,
             name: String,
@@ -132,6 +139,7 @@ class EarnItViewModel
                 if (reward != null) {
                     val id = repository.upsertReward(reward)
                     repository.saveRewardTasks(id, tasks)
+                    if (rewardId == 0L) _pendingRewardId.value = id
                 }
             }
         }
