@@ -59,6 +59,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -91,6 +92,7 @@ import kotlinx.coroutines.launch
 fun TaskEditScreen(
     taskId: Long,
     fromRewardId: Long,
+    fromRewardName: String = "",
     uiState: EarnItUiState,
     viewModel: EarnItViewModel,
     navController: NavHostController,
@@ -114,8 +116,16 @@ fun TaskEditScreen(
     val rewardLinkState = remember(taskId) { mutableStateMapOf<Long, TaskEditState>() }
     val isNew = taskId == 0L
     val focusManager = LocalFocusManager.current
+    val pendingTaskId by viewModel.pendingTaskId.collectAsState()
+    var pendingSaveNav by remember { mutableStateOf(false) }
+    val fromRewardEditScreen =
+        navController.previousBackStackEntry
+            ?.destination
+            ?.route
+            ?.startsWith("reward_edit") == true
     val nameConflict =
-        name.isNotBlank() &&
+        !pendingSaveNav &&
+            name.isNotBlank() &&
             uiState.tasks.any {
                 it.name.trim().equals(name.trim(), ignoreCase = true) && it.id != taskId
             }
@@ -130,6 +140,17 @@ fun TaskEditScreen(
                     } else {
                         TaskEditState()
                     }
+            }
+        }
+    }
+
+    LaunchedEffect(pendingTaskId) {
+        if (pendingSaveNav && pendingTaskId != null) {
+            pendingSaveNav = false
+            val newId = pendingTaskId!!
+            viewModel.consumePendingTaskId()
+            navController.navigate(Screen.TaskDetail.route(newId)) {
+                popUpTo(Screen.TaskEdit.route) { inclusive = true }
             }
         }
     }
@@ -489,6 +510,12 @@ fun TaskEditScreen(
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
+            } else if (fromRewardEditScreen && fromRewardName.isNotBlank()) {
+                Text(
+                    Strings.taskUsedIn(fromRewardName),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
             } else if (uiState.rewardProgressList.isNotEmpty()) {
                 Spacer(Modifier.height(4.dp))
                 Text(
@@ -638,6 +665,11 @@ fun TaskEditScreen(
                     )
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar(Strings.TASK_SAVED, duration = SnackbarDuration.Short)
+                    }
+                    if (!isNew || fromRewardId != 0L || fromRewardEditScreen) {
+                        navController.popBackStack()
+                    } else {
+                        pendingSaveNav = true
                     }
                 },
             )

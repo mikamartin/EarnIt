@@ -65,11 +65,16 @@ sealed class Screen(
         fun route(taskId: Long) = "task_detail/$taskId"
     }
 
-    object TaskEdit : Screen("task_edit/{taskId}/{fromRewardId}") {
+    object TaskEdit : Screen("task_edit/{taskId}/{fromRewardId}?fromRewardName={fromRewardName}") {
         fun route(
             taskId: Long = 0L,
             fromRewardId: Long = 0L,
-        ) = "task_edit/$taskId/$fromRewardId"
+            fromRewardName: String = "",
+        ) = if (fromRewardName.isBlank()) {
+            "task_edit/$taskId/$fromRewardId"
+        } else {
+            "task_edit/$taskId/$fromRewardId?fromRewardName=${android.net.Uri.encode(fromRewardName)}"
+        }
     }
 
     object History : Screen("history")
@@ -148,7 +153,9 @@ fun EarnItApp(
         }
 
         LaunchedEffect(currentRoute) {
-            snackbarHostState.currentSnackbarData?.dismiss()
+            if (navItems.any { it.screen.route == currentRoute }) {
+                snackbarHostState.currentSnackbarData?.dismiss()
+            }
             if (routeToTab(currentRoute) == Screen.Settings.route) {
                 viewModel.clearNewMascotBadge()
             }
@@ -219,11 +226,16 @@ fun EarnItApp(
                         listOf(
                             navArgument("taskId") { type = NavType.LongType },
                             navArgument("fromRewardId") { type = NavType.LongType },
+                            navArgument("fromRewardName") {
+                                type = NavType.StringType
+                                defaultValue = ""
+                            },
                         ),
                 ) { back ->
                     val taskId = back.arguments?.getLong("taskId") ?: 0L
                     val fromRewardId = back.arguments?.getLong("fromRewardId") ?: 0L
-                    TaskEditScreen(taskId, fromRewardId, uiState, viewModel, navController, snackbarHostState)
+                    val fromRewardName = back.arguments?.getString("fromRewardName") ?: ""
+                    TaskEditScreen(taskId, fromRewardId, fromRewardName, uiState, viewModel, navController, snackbarHostState)
                 }
                 composable(Screen.History.route) { HistoryScreen(uiState, viewModel) }
                 composable(Screen.Settings.route) { SettingsScreen(viewModel, settings, navController) }

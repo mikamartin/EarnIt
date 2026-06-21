@@ -341,10 +341,17 @@ fun AddTaskToRewardDialog(
     ) {
         val isChecked = selected[task.id] == true
         val flags = taskFlags[task.id] ?: TaskEditState()
-        Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Row(
+            verticalAlignment = Alignment.Top,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { selected[task.id] = !isChecked }
+                    .padding(vertical = 4.dp),
+        ) {
             Checkbox(
                 checked = isChecked,
-                onCheckedChange = { selected[task.id] = it },
+                onCheckedChange = null,
                 colors = checkboxColors,
                 modifier = Modifier.padding(top = 10.dp),
             )
