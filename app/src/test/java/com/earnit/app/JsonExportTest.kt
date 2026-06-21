@@ -2,6 +2,7 @@ package com.earnit.app
 
 import com.earnit.app.data.CompletionLogEntity
 import com.earnit.app.data.EarnItExport
+import com.earnit.app.data.ImportWrongSchemaException
 import com.earnit.app.data.JsonExport
 import com.earnit.app.data.RewardEntity
 import com.earnit.app.data.RewardTaskCrossRef
@@ -124,14 +125,8 @@ class JsonExportTest {
         assertNull(result.completionLogs[0].historyEntryId)
     }
 
-    @Test
-    fun `fromJson with empty JSON object returns empty export`() {
-        val result = JsonExport.fromJson("{}")
-
-        assertEquals(0, result.tasks.size)
-        assertEquals(0, result.rewards.size)
-        assertEquals(0, result.completionLogs.size)
-        assertEquals(0, result.rewardTaskCrossRefs.size)
-        assertEquals(0, result.historyEntries.size)
+    @Test(expected = ImportWrongSchemaException::class)
+    fun `fromJson with empty JSON object throws WrongSchemaException`() {
+        JsonExport.fromJson("{}")
     }
 }

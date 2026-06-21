@@ -238,7 +238,13 @@ object Strings {
     const val DATA_EXPORT_SUCCESS = "Backup saved ✓"
     const val DATA_EXPORT_FAIL = "Export failed ✗"
     const val DATA_IMPORT_SUCCESS = "Replaced ✓"
+    const val DATA_IMPORT_MERGE_SUCCESS = "Merged ✓"
     const val DATA_IMPORT_FAIL = "Import failed ✗"
+    const val IMPORT_ERROR_TOO_LARGE = "File is too large (max 10 MB)"
+    const val IMPORT_ERROR_WRONG_TYPE = "This doesn't look like a backup file"
+    const val IMPORT_ERROR_INVALID_JSON = "File is not valid JSON"
+    const val IMPORT_ERROR_WRONG_SCHEMA = "This doesn't look like an EarnIt backup"
+    const val IMPORT_ERROR_UNREADABLE = "Couldn't open the file"
 
     // Clean Up screen
     const val CLEANUP_SCREEN_TITLE = "Clean Up"

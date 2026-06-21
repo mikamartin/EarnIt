@@ -2,6 +2,7 @@ package com.earnit.app.data
 
 import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -240,11 +241,32 @@ class EarnItRepository
             uri: Uri,
             replace: Boolean,
         ) {
+            val mimeType = context.contentResolver.getType(uri)
+            if (mimeType != null && !isMimeTypeAllowed(mimeType)) throw ImportWrongFileTypeException()
+
+            val size =
+                context.contentResolver
+                    .query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)
+                    ?.use { cursor ->
+                        val col = cursor.getColumnIndex(OpenableColumns.SIZE)
+                        if (cursor.moveToFirst() && col >= 0 && !cursor.isNull(col)) cursor.getLong(col) else null
+                    }
+            if (size != null && size > MAX_IMPORT_BYTES) throw ImportFileTooLargeException()
+
             val json =
                 withContext(Dispatchers.IO) {
                     context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
-                } ?: return
+                } ?: throw ImportUnreadableException()
             importFromJson(json, replace)
+        }
+
+        private fun isMimeTypeAllowed(mimeType: String): Boolean =
+            !mimeType.startsWith("image/") &&
+                !mimeType.startsWith("video/") &&
+                !mimeType.startsWith("audio/")
+
+        companion object {
+            private const val MAX_IMPORT_BYTES = 10L * 1024 * 1024
         }
 
         fun computeAutoPoints(
