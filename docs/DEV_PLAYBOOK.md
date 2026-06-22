@@ -88,7 +88,7 @@ Items are independent — work them in any order. Strip completed items as they 
 ### Before first release
 
 **CI/CD** — closed testing mandates shipping ≥1 update from the pipeline during the 14-day window. Also the portfolio's most visible technical signal.
-- [ ] Workflow 3 — on tag: build and sign release AAB; upload keystore credentials as GitHub Secrets (never in repo)
+- [x] Workflow 3 — on tag: build and sign release AAB; keystore credentials stored as GitHub Secrets (never in repo)
 
 **Play Store**
 - [ ] Screenshots for all required form factors (also fills the README placeholder)
@@ -109,7 +109,35 @@ Items are independent — work them in any order. Strip completed items as they 
 
 ---
 
-## 3. Known Limitations
+## 3. How to Cut a Release
+
+Run through this after CI is green on `main` and the Manual Test Plan has passed.
+
+1. Confirm `versionCode` and `versionName` in `app/build.gradle.kts` are correct for this release — increment `versionCode` by 1 and update `versionName` to match the tag (e.g. `"1.0.0"`). Commit and push; let CI go green.
+2. Pull the latest `main` locally:
+   ```
+   git checkout main
+   git pull origin main
+   ```
+3. Create and push the version tag — this triggers Workflow 3:
+   ```
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+4. Go to GitHub → **Actions** → watch the Release workflow run. On success, download the signed AAB from the workflow's Artifacts section.
+5. Upload the AAB to Play Console manually (Internal Testing → Production track, depending on the release type).
+
+**Version naming:** tags follow `vMAJOR.MINOR.PATCH`. `versionCode` must increment on every Play Store upload — Play rejects a lower or equal code. `versionName` is what users see (e.g. "1.0.0").
+
+**To delete a test tag** (e.g. after a trial run):
+```
+git tag -d v0.0.1-test
+git push origin --delete v0.0.1-test
+```
+
+---
+
+## 4. Known Limitations
 
 Permanent, accepted constraints — not open work, nothing here gets checked off. Document in release notes or the store listing if relevant. For testing gaps that are manual by design rather than a temporary environment issue, see [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) instead — this section is for product/code constraints, not test strategy.
 
@@ -118,7 +146,7 @@ Permanent, accepted constraints — not open work, nothing here gets checked off
 
 ---
 
-## 4. Tooling Upgrade Reference
+## 5. Tooling Upgrade Reference
 
 Update this section each upgrade cycle. The version matrix and gotchas below reflect the June 2026 upgrade; update in place rather than appending.
 
