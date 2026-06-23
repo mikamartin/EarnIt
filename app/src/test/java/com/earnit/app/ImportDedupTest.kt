@@ -1,33 +1,16 @@
 package com.earnit.app
 
-import com.earnit.app.data.EarnItDatabase
-import com.earnit.app.data.EarnItRepository
-import com.earnit.app.data.RewardTaskCrossRefDao
-import com.earnit.app.data.TaskDao
 import com.earnit.app.data.TaskEntity
 import com.earnit.app.data.TaskTemplate
 import com.earnit.app.data.TemplateTask
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
-import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class ImportDedupTest {
-    private val database = mockk<EarnItDatabase>(relaxed = true)
-    private val taskDao = mockk<TaskDao>()
-    private val rewardTaskDao = mockk<RewardTaskCrossRefDao>()
-
-    init {
-        every { database.taskDao() } returns taskDao
-        every { database.rewardTaskCrossRefDao() } returns rewardTaskDao
-    }
-
-    private val repository = EarnItRepository(database)
-
+class ImportDedupTest : RepositoryTestBase() {
     private fun template(vararg names: String) =
         TaskTemplate(
             name = "Set",

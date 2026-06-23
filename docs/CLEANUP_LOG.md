@@ -738,3 +738,12 @@ Replaced all remaining `Brush.*Gradient(listOf(Color(0xFFFFD060), Color(0xFFE07B
 
 #### Test data ✅
 - `TestDataSeeder.seed()`: Spa Day reward had a log attributed to `cook` (Cook Healthy Meal) which was never linked to Spa Day via a cross-ref — an orphaned log that inflated the reward balance with a task the user couldn't have seen in the log dialog. Replaced with a `walk` (Evening Walk) log, which is a valid linked task with `isRepeatable = true`.
+
+#### Test suite refactor and coverage (QA pass) ✅
+- Extracted `RepositoryTestBase` (unit): 7 files shared identical MockK setup — now inherit from one base class.
+- Extracted `ViewModelTestBase` (unit): 4 files shared identical dispatcher setup/teardown — now inherit from one base class.
+- Extracted `RoomIntegrationBase` (instrumented): 4 files shared identical in-memory Room setup/teardown — now inherit from one base class.
+- `SaveNavigationUiTest.saveNewReward_navigatesToRewardDetail`: raw `"No tasks added yet."` → `Strings.REWARD_DETAIL_NO_TASKS` so the assertion stays in sync with the constant.
+- `PointFormulaTest`: added `difficulty=5` and `preparation=5` bonus cases — previously only `time=5` was covered, leaving two bonus-trigger paths untested.
+- `RewardLimitUiTest` (new, instrumented UI): verifies that tapping the FAB when `maxRewardCount` is reached shows `MAX_REWARD_BANNER` tooltip and does not navigate to reward edit.
+- `DuplicateNameUiTest` (new, instrumented UI): verifies that entering a duplicate task or reward name (case-insensitive) shows the error string from `Strings.taskDuplicateError` / `Strings.rewardDuplicateError` and disables the SAVE button.

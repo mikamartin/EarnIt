@@ -1,21 +1,16 @@
 package com.earnit.app
 
 import android.net.Uri
-import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.earnit.app.data.EarnItDatabase
-import com.earnit.app.data.EarnItRepository
 import com.earnit.app.data.ImportInvalidJsonException
 import com.earnit.app.data.ImportWrongSchemaException
 import com.earnit.app.data.RewardEntity
 import com.earnit.app.data.TaskEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -25,27 +20,7 @@ import java.io.File
  * Uses a real in-memory Room database; no mocks.
  */
 @RunWith(AndroidJUnit4::class)
-class ExportImportTest {
-    private lateinit var database: EarnItDatabase
-    private lateinit var repository: EarnItRepository
-
-    @Before
-    fun setUp() {
-        database =
-            Room
-                .inMemoryDatabaseBuilder(
-                    ApplicationProvider.getApplicationContext(),
-                    EarnItDatabase::class.java,
-                ).allowMainThreadQueries()
-                .build()
-        repository = EarnItRepository(database)
-    }
-
-    @After
-    fun tearDown() {
-        database.close()
-    }
-
+class ExportImportTest : RoomIntegrationBase() {
     @Test
     fun exportImportReplace_roundTripsTasksRewardsLinksAndLogs() =
         runBlocking {

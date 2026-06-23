@@ -34,9 +34,21 @@ class PointFormulaTest {
     }
 
     @Test
-    fun `auto point formula max single dimension bonus`() {
-        // ceil((6)(2)(2)/8) + 3 = ceil(3) + 3 = 3 + 3 = 6
+    fun `auto point formula max single dimension bonus - time`() {
+        // ceil((6)(2)(2)/8) + 3 = ceil(3) + 3 = 6
         assertEquals(6, repository.computeAutoPoints(5, 1, 1))
+    }
+
+    @Test
+    fun `auto point formula max single dimension bonus - difficulty`() {
+        // ceil((2)(6)(2)/8) + 3 = ceil(3) + 3 = 6
+        assertEquals(6, repository.computeAutoPoints(1, 5, 1))
+    }
+
+    @Test
+    fun `auto point formula max single dimension bonus - preparation`() {
+        // ceil((2)(2)(6)/8) + 3 = ceil(3) + 3 = 6
+        assertEquals(6, repository.computeAutoPoints(1, 1, 5))
     }
 
     @Test

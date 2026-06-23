@@ -11,6 +11,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.SettingsRepository
+import com.earnit.app.ui.Strings
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.runBlocking
@@ -74,7 +75,7 @@ class SaveNavigationUiTest {
         // RewardDetailScreen with no tasks shows "No tasks added yet." — wait for it.
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
             composeTestRule
-                .onAllNodesWithText("No tasks added yet.")
+                .onAllNodesWithText(Strings.REWARD_DETAIL_NO_TASKS)
                 .fetchSemanticsNodes()
                 .isNotEmpty()
         }

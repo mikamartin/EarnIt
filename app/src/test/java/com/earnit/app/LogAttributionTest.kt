@@ -1,41 +1,15 @@
 package com.earnit.app
 
-import com.earnit.app.data.CompletionLogDao
 import com.earnit.app.data.CompletionLogEntity
-import com.earnit.app.data.EarnItDatabase
-import com.earnit.app.data.EarnItRepository
-import com.earnit.app.data.HistoryDao
-import com.earnit.app.data.RewardDao
-import com.earnit.app.data.RewardTaskCrossRefDao
-import com.earnit.app.data.TaskDao
 import com.earnit.app.data.TaskEntity
 import io.mockk.coEvery
-import io.mockk.every
-import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 // Tests how points are attributed at log time (auto vs manual) and what gets snapshotted.
-class LogAttributionTest {
-    private val database = mockk<EarnItDatabase>(relaxed = true)
-    private val taskDao = mockk<TaskDao>()
-    private val logDao = mockk<CompletionLogDao>()
-    private val rewardDao = mockk<RewardDao>()
-    private val rewardTaskDao = mockk<RewardTaskCrossRefDao>()
-    private val historyDao = mockk<HistoryDao>()
-
-    init {
-        every { database.taskDao() } returns taskDao
-        every { database.completionLogDao() } returns logDao
-        every { database.rewardDao() } returns rewardDao
-        every { database.rewardTaskCrossRefDao() } returns rewardTaskDao
-        every { database.historyDao() } returns historyDao
-    }
-
-    private val repository = EarnItRepository(database)
-
+class LogAttributionTest : RepositoryTestBase() {
     // ── Auto points ───────────────────────────────────────────────────────────
 
     @Test

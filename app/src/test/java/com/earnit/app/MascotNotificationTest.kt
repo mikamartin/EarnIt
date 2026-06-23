@@ -14,40 +14,20 @@ import com.earnit.app.viewmodel.EarnItViewModel
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.unmockkAll
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class MascotNotificationTest {
-    private val testDispatcher = UnconfinedTestDispatcher()
-
-    @Before
-    fun setUp() {
-        Dispatchers.setMain(testDispatcher)
-    }
-
-    @After
-    fun tearDown() {
-        Dispatchers.resetMain()
-        unmockkAll()
-    }
-
+class MascotNotificationTest : ViewModelTestBase() {
     private fun makeViewModel(
         historyEntries: List<HistoryEntryWithLogs> = emptyList(),
         unlockedMascots: Set<MascotId> = setOf(MascotId.PUGSLY, MascotId.TABBY),
