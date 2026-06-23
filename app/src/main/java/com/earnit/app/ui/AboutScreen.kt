@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.earnit.app.BuildConfig
 import com.earnit.app.FeatureFlags
 import com.earnit.app.viewmodel.EarnItViewModel
 import com.earnit.app.viewmodel.TipViewModel
@@ -93,7 +94,7 @@ fun AboutScreen(
                 IconButton(onClick = { navController.popBackStack() }) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
+                        contentDescription = Strings.BACK_DESC,
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }
@@ -111,7 +112,7 @@ fun AboutScreen(
             ) {
                 Column {
                     Text(
-                        Strings.APP_VERSION,
+                        "Version: ${BuildConfig.VERSION_NAME}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier =

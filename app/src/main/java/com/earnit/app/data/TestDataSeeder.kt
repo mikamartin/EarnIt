@@ -762,13 +762,13 @@ object TestDataSeeder {
         )
         logDao.insertLog(
             CompletionLogEntity(
-                taskId = cook,
-                taskName = "Cook Healthy Meal",
+                taskId = walk,
+                taskName = "Evening Walk",
                 rewardId = spa,
                 timestamp =
                     now - 1 * day,
-                detail = "Salad",
-                points = 3,
+                detail = "Riverside path",
+                points = 2,
             ),
         )
 

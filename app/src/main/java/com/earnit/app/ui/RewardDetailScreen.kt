@@ -491,7 +491,7 @@ fun RewardDetailScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "Complete to earn points${if (rp.allTasks.isNotEmpty()) " (${rp.allTasks.size})" else ""}",
+                        Strings.rewardEarnTasksTitle(rp.allTasks.size),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.secondary,
                     )
@@ -584,12 +584,9 @@ fun RewardDetailScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                val actBase = if (rp.canClaim) Strings.REWARD_ROAD_TO_GLORY else Strings.REWARD_RECENT_ACTIVITY
                 Text(
-                    if (rp.canClaim) {
-                        "Road to Glory${if (rp.activeLogs.isNotEmpty()) " (${rp.activeLogs.size})" else ""}"
-                    } else {
-                        "Recent activity${if (rp.activeLogs.isNotEmpty()) " (${rp.activeLogs.size})" else ""}"
-                    },
+                    "$actBase${if (rp.activeLogs.isNotEmpty()) " (${rp.activeLogs.size})" else ""}",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )

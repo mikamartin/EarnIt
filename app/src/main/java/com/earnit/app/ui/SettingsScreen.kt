@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavHostController
+import com.earnit.app.BuildConfig
 import com.earnit.app.data.AppColorScheme
 import com.earnit.app.data.AppSettings
 import com.earnit.app.data.MascotId
@@ -131,7 +132,7 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.primary,
                         )
                         Text(
-                            Strings.APP_VERSION,
+                            "Version: ${BuildConfig.VERSION_NAME}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

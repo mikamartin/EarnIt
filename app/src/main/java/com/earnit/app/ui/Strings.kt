@@ -5,8 +5,6 @@ object Strings {
 
     fun appTitle(nickname: String) = if (nickname.isNotBlank()) "Earn It, $nickname!" else "Earn It!"
 
-    const val APP_VERSION = "Version: 1.0"
-
     const val ABOUT_TEASER = "the idea, support and feedback options"
     const val ABOUT_THE_IDEA_TITLE = "The idea"
     const val ABOUT_THE_IDEA_BODY =
@@ -203,9 +201,18 @@ object Strings {
     const val REWARD_DETAIL_CLAIM_BTN = "CLAIM"
     const val REWARD_DETAIL_NO_TASKS = "No tasks added yet."
 
+    fun rewardEarnTasksTitle(count: Int) = if (count > 0) "Complete to earn points ($count)" else "Complete to earn points"
+
+    const val REWARD_ROAD_TO_GLORY = "Road to Glory"
+    const val REWARD_RECENT_ACTIVITY = "Recent activity"
+
     // Log / claim dialogs (SharedDialogs.kt)
     const val LOG_DIALOG_TITLE = "Log"
     const val LOG_SEARCH_LABEL = "Search tasks"
+    const val DIALOG_LOG_BTN = "LOG"
+    const val DIALOG_CANCEL = "CANCEL"
+
+    fun claimDialogTitle(name: String) = "Claim \"$name\""
 
     fun logNoMatch(q: String) = "No tasks match \"$q\""
 
