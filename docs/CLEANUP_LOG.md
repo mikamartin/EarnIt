@@ -717,3 +717,33 @@ Replaced all remaining `Brush.*Gradient(listOf(Color(0xFFFFD060), Color(0xFFE07B
 #### Spec ✅
 - Screen map entries for Reward Edit and Task Edit updated to reflect post-save navigation behaviour, the `fromRewardName` context line, and the "Add task" gate.
 - `TESTING.md` "True process death" note updated: `awaitingNewTask` now also protected by `rememberSaveable`.
+
+---
+
+### Pass 29 — `chore/pre-release-cleanup` branch (pre-release code review, June 2026)
+
+#### Dynamic version string ✅
+- `Strings.APP_VERSION = "Version: 1.0"` removed — would have drifted silently when `versionName` was incremented.
+- `buildConfig = true` added to `buildFeatures` in `app/build.gradle.kts`; both `AboutScreen` and `SettingsScreen` now read `"Version: ${BuildConfig.VERSION_NAME}"` at runtime — always matches the build.
+
+#### Inline strings → Strings.kt ✅
+- Added `DIALOG_LOG_BTN = "LOG"` and `DIALOG_CANCEL = "CANCEL"` — `LogTaskDialog` and `AddTaskToRewardDialog` dismiss/confirm buttons were raw string literals.
+- Added `fun claimDialogTitle(name: String)` — `ClaimDialog` title was an inline string template.
+- Added `fun rewardEarnTasksTitle(count: Int)` — "Complete to earn points (N)" section header in `RewardDetailScreen` was inline.
+- Added `REWARD_ROAD_TO_GLORY` and `REWARD_RECENT_ACTIVITY` — activity section header toggle in `RewardDetailScreen` was inline.
+- `AboutScreen` Back arrow `contentDescription = "Back"` → `Strings.BACK_DESC` (constant already existed).
+
+#### Known Limitations documented ✅
+- Progress bar track backgrounds, disabled LOG button fill/border, detail dividers, and activity-log task name color are hardcoded warm-gold hex values that do not adapt to Ocean Blue or Forest themes. Added to `DEV_PLAYBOOK.md §4 Known Limitations`.
+
+#### Test data ✅
+- `TestDataSeeder.seed()`: Spa Day reward had a log attributed to `cook` (Cook Healthy Meal) which was never linked to Spa Day via a cross-ref — an orphaned log that inflated the reward balance with a task the user couldn't have seen in the log dialog. Replaced with a `walk` (Evening Walk) log, which is a valid linked task with `isRepeatable = true`.
+
+#### Test suite refactor and coverage (QA pass) ✅
+- Extracted `RepositoryTestBase` (unit): 7 files shared identical MockK setup — now inherit from one base class.
+- Extracted `ViewModelTestBase` (unit): 4 files shared identical dispatcher setup/teardown — now inherit from one base class.
+- Extracted `RoomIntegrationBase` (instrumented): 4 files shared identical in-memory Room setup/teardown — now inherit from one base class.
+- `SaveNavigationUiTest.saveNewReward_navigatesToRewardDetail`: raw `"No tasks added yet."` → `Strings.REWARD_DETAIL_NO_TASKS` so the assertion stays in sync with the constant.
+- `PointFormulaTest`: added `difficulty=5` and `preparation=5` bonus cases — previously only `time=5` was covered, leaving two bonus-trigger paths untested.
+- `RewardLimitUiTest` (new, instrumented UI): verifies that tapping the FAB when `maxRewardCount` is reached shows `MAX_REWARD_BANNER` tooltip and does not navigate to reward edit.
+- `DuplicateNameUiTest` (new, instrumented UI): verifies that entering a duplicate task or reward name (case-insensitive) shows the error string from `Strings.taskDuplicateError` / `Strings.rewardDuplicateError` and disables the SAVE button.

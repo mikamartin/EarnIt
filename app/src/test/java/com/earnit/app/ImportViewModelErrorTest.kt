@@ -16,17 +16,11 @@ import com.earnit.app.viewmodel.EarnItViewModel
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.unmockkAll
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -35,8 +29,7 @@ import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class ImportViewModelErrorTest {
-    private val testDispatcher = UnconfinedTestDispatcher()
+class ImportViewModelErrorTest : ViewModelTestBase() {
     private lateinit var repository: EarnItRepository
     private lateinit var viewModel: EarnItViewModel
     private val uri = mockk<Uri>(relaxed = true)
@@ -44,18 +37,11 @@ class ImportViewModelErrorTest {
 
     @Before
     fun setUp() {
-        Dispatchers.setMain(testDispatcher)
         repository = mockk(relaxed = true)
         val settingsRepository = mockk<SettingsRepository>(relaxed = true)
         every { repository.observeUiState() } returns flowOf(EarnItUiState())
         every { settingsRepository.settings } returns flowOf(AppSettings())
         viewModel = EarnItViewModel(repository, settingsRepository, context)
-    }
-
-    @After
-    fun tearDown() {
-        Dispatchers.resetMain()
-        unmockkAll()
     }
 
     private suspend fun TestScope.captureError(replace: Boolean = true): String? {

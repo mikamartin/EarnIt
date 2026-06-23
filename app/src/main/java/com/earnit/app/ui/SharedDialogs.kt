@@ -194,7 +194,7 @@ fun LogTaskDialog(
         },
         confirmButton = {
             EarnItPrimaryButton(
-                text = "LOG",
+                text = Strings.DIALOG_LOG_BTN,
                 enabled = logEnabled,
                 onClick = {
                     selectedTask?.let { task ->
@@ -207,7 +207,7 @@ fun LogTaskDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(
-                    "CANCEL",
+                    Strings.DIALOG_CANCEL,
                     style = MaterialTheme.typography.labelSmall,
                     letterSpacing = 0.8.sp,
                     fontWeight = FontWeight.ExtraBold,
@@ -240,7 +240,7 @@ fun ClaimDialog(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(
-                    "Claim \"$rewardName\"",
+                    Strings.claimDialogTitle(rewardName),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -592,7 +592,7 @@ fun AddTaskToRewardDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(
-                    "CANCEL",
+                    Strings.DIALOG_CANCEL,
                     style = MaterialTheme.typography.labelSmall,
                     letterSpacing = 0.8.sp,
                     fontWeight = FontWeight.ExtraBold,

@@ -1,20 +1,14 @@
 package com.earnit.app
 
-import androidx.room.Room
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.earnit.app.data.EarnItDatabase
-import com.earnit.app.data.EarnItRepository
 import com.earnit.app.data.RewardEntity
 import com.earnit.app.data.TaskEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -24,27 +18,7 @@ import org.junit.runner.RunWith
  * Uses a real in-memory Room database; no mocks.
  */
 @RunWith(AndroidJUnit4::class)
-class StartOverTest {
-    private lateinit var database: EarnItDatabase
-    private lateinit var repository: EarnItRepository
-
-    @Before
-    fun setUp() {
-        database =
-            Room
-                .inMemoryDatabaseBuilder(
-                    ApplicationProvider.getApplicationContext(),
-                    EarnItDatabase::class.java,
-                ).allowMainThreadQueries()
-                .build()
-        repository = EarnItRepository(database)
-    }
-
-    @After
-    fun tearDown() {
-        database.close()
-    }
-
+class StartOverTest : RoomIntegrationBase() {
     @Test
     fun claimStartOver_createsHistoryEntry_andRewardRemainsActive() =
         runBlocking {
