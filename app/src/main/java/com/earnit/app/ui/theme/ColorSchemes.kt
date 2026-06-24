@@ -11,6 +11,7 @@ data class EarnItAccents(
     val gradientStart: Color,
     val gradientEnd: Color,
     val cardPalette: List<Color>,
+    val notification: Color,
 )
 
 val LocalEarnItAccents =
@@ -19,6 +20,7 @@ val LocalEarnItAccents =
             gradientStart = Color(0xFFFFBF00),
             gradientEnd = Color(0xFFE07B00),
             cardPalette = listOf(Color(0xFFE8A000), Color(0xFF2A9D8F), Color(0xFF8E7CC3)),
+            notification = Color(0xFF8B5CF6),
         )
     }
 
@@ -44,18 +46,21 @@ object ColorSchemes {
                     gradientStart = Color(0xFFFFBF00),
                     gradientEnd = Color(0xFFE07B00),
                     cardPalette = listOf(Color(0xFFE8A000), Color(0xFF2A9D8F), Color(0xFF8E7CC3)),
+                    notification = Color(0xFF8B5CF6),
                 )
             AppColorScheme.OCEAN_BLUE ->
                 EarnItAccents(
                     gradientStart = Color(0xFF42A5F5),
                     gradientEnd = Color(0xFF1565C0),
                     cardPalette = listOf(Color(0xFF1976D2), Color(0xFF0097A7), Color(0xFF546E7A)),
+                    notification = Color(0xFF8B5CF6),
                 )
             AppColorScheme.FOREST ->
                 EarnItAccents(
                     gradientStart = Color(0xFF66BB6A),
                     gradientEnd = Color(0xFF2E7D32),
                     cardPalette = listOf(Color(0xFF2E7D32), Color(0xFF795548), Color(0xFF0097A7)),
+                    notification = Color(0xFF8B5CF6),
                 )
         }
 

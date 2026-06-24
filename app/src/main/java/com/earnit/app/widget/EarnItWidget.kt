@@ -321,6 +321,8 @@ private fun StandardContent(
             val ref = taskRefsMap[task.id]
             ref?.isRepeatable == true || task.id !in completedIds
         }
+    val showMandatoryHint = !progress.canClaim && progress.totalPoints >= progress.reward.cost
+    val noTasks = progress.allTasks.isEmpty()
 
     val logIntent =
         Intent(context, WidgetTaskLogActivity::class.java).apply {
@@ -345,12 +347,20 @@ private fun StandardContent(
             modifier = GlanceModifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                displayName,
-                modifier = GlanceModifier.defaultWeight(),
-                maxLines = 1,
-                style = TextStyle(color = colors.primary, fontSize = 15.sp, fontWeight = FontWeight.Bold),
-            )
+            Column(modifier = GlanceModifier.defaultWeight()) {
+                Text(
+                    displayName,
+                    maxLines = 1,
+                    style = TextStyle(color = colors.primary, fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                )
+                if (showMandatoryHint) {
+                    Spacer(GlanceModifier.height(2.dp))
+                    Text(
+                        "Required tasks needed to claim",
+                        style = TextStyle(color = colors.onSurfaceVar, fontSize = 11.sp),
+                    )
+                }
+            }
             Spacer(GlanceModifier.width(8.dp))
             when {
                 progress.canClaim ->
@@ -381,15 +391,22 @@ private fun StandardContent(
                             modifier = GlanceModifier.size(20.dp),
                         )
                     }
-                else ->
-                    Text(
-                        "Done ✓",
-                        style = TextStyle(color = colors.secondary, fontSize = 12.sp, fontWeight = FontWeight.Medium),
-                    )
+                noTasks ->
+                    Box(
+                        modifier =
+                            GlanceModifier
+                                .background(colors.track)
+                                .cornerRadius(16.dp)
+                                .padding(horizontal = 10.dp, vertical = 7.dp)
+                                .clickable(actionStartActivity(mainIntent)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("ADD TASK", style = TextStyle(color = colors.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold))
+                    }
             }
         }
 
-        Spacer(GlanceModifier.height(8.dp))
+        Spacer(GlanceModifier.defaultWeight())
         ProgressBar(fraction, current, colors)
     }
 }

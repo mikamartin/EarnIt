@@ -87,16 +87,10 @@ Items are independent — work them in any order. Strip completed items as they 
 
 ### Before first release
 
-**CI/CD** — closed testing mandates shipping ≥1 update from the pipeline during the 14-day window. Also the portfolio's most visible technical signal.
-- [x] Workflow 3 — on tag: build and sign release AAB; keystore credentials stored as GitHub Secrets (never in repo)
-
 **Play Store**
 - [ ] Screenshots for all required form factors (also fills the README placeholder)
 - [ ] Short and long store description
 - [ ] Content rating questionnaire completed and data-safety form submitted (truthfully: no data collected, all local)
-
-**Manual Testing**
-- [ ] Run the full Manual Test Plan before each release candidate — see [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md)
 
 **Closed Testing**
 - [ ] Share [CLOSED_TESTING_GUIDE.md](CLOSED_TESTING_GUIDE.md) with testers when the Play closed testing track opens

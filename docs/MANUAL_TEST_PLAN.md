@@ -36,11 +36,13 @@ These three journeys are deliberately never automated, not just temporarily defe
 4. Tap **+ LOG**: pick a task, add a note, confirm. Confirm the in-activity success screen appears for ~1.5 s then auto-closes.
 5. Confirm the widget briefly shows "✓ Logged!" (flash), then reverts to normal state. Confirm a notification appeared ("Task name / Logged! +X pts").
 6. Force-stop the app (`adb shell am force-stop com.earnit.app` or via Android Settings). Reopen and confirm the flash revert still triggers correctly on the next log — the timer is self-contained in Glance, not tied to the app process.
-7. Log tasks until all non-repeatable tasks for the tracked reward are done. Confirm the **+ LOG** button is hidden and the **Done ✓** state is shown.
-8. Log enough tasks to reach the reward's point cost and complete all mandatory tasks. Confirm the **CLAIM** button replaces the log button. Tap it and confirm it opens the app to the reward detail screen.
-9. Claim the reward. Confirm the widget shows the **Claimed/archived** state ("Earned and Claimed" subtitle) and that tapping the widget body opens the app.
-10. Reconfigure the widget (long-press → configure) and select a new reward. Confirm the widget updates.
-11. Switch the app colour scheme (Settings → Colour Scheme). Confirm the widget and both widget activities (`WidgetTaskLogActivity`, `WidgetConfigActivity`) reflect the new theme in both light and dark mode.
+7. Configure the widget with a reward that has **no tasks linked**. Confirm the **ADD TASK** button appears (styled with a lighter background). Tap it and confirm it opens the app to that reward's detail screen.
+8. Configure the widget with a reward that has tasks. Log enough points to meet the point cost **without** completing all mandatory (★) tasks. Confirm the **+ LOG** button is still shown and a "Required tasks needed to claim" subtitle appears below the reward name.
+9. Log tasks until all non-repeatable tasks for the tracked reward are done. Confirm the **+ LOG** button is hidden and **no "Done ✓" text appears** — the widget shows only the reward name and progress bar.
+10. Log enough tasks to reach the reward's point cost and complete all mandatory tasks. Confirm the **CLAIM** button replaces the log button. Tap it and confirm it opens the app to the reward detail screen.
+11. Claim the reward. Confirm the widget shows the **Claimed/archived** state ("Earned and Claimed" subtitle) and that tapping the widget body opens the app.
+12. Remove the widget from the home screen and add a new one. Confirm the config flow runs again and selecting a different reward produces a correctly configured widget. Note: long-pressing an existing widget only offers resizing — re-adding is the only way to change the tracked reward.
+13. Switch the app colour scheme (Settings → Colour Scheme). Confirm both widget activities (`WidgetTaskLogActivity`, `WidgetConfigActivity`) reflect the new theme in both light and dark mode. Note: the existing widget on the home screen does **not** re-theme automatically — remove and re-add it to confirm a newly placed widget uses the updated scheme.
 
 ---
 
