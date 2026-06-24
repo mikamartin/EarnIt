@@ -105,6 +105,10 @@ class EarnItViewModel
             _hasNewMascot.value = false
         }
 
+        fun clearImportResult() {
+            _importResult.value = null
+        }
+
         fun saveTask(
             task: TaskEntity,
             rewardLinks: Map<Long, Pair<Boolean, Boolean>> = emptyMap(),

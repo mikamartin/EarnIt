@@ -200,6 +200,7 @@ object Strings {
     // Reward detail screen
     const val REWARD_DETAIL_CLAIM_BTN = "CLAIM"
     const val REWARD_DETAIL_NO_TASKS = "No tasks added yet."
+    const val REWARD_MANDATORY_TASKS_HINT = "Point goal reached, complete the ★ tasks to claim."
 
     fun rewardEarnTasksTitle(count: Int) = if (count > 0) "Complete to earn points ($count)" else "Complete to earn points"
 

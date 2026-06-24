@@ -29,6 +29,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,6 +57,10 @@ fun DataScreen(
     var exportStatus by remember { mutableStateOf<String?>(null) }
     var testDataLoaded by remember { mutableStateOf(false) }
     var fullTestDataLoaded by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        onDispose { viewModel.clearImportResult() }
+    }
 
     val dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 

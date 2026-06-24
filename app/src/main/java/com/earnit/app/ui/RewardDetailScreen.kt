@@ -142,6 +142,7 @@ fun RewardDetailScreen(
     val rawProgress = (rp.totalPoints.toFloat() / rp.reward.cost.toFloat()).coerceIn(0f, 1f)
     val progress by animateFloatAsState(rawProgress, tween(500, easing = FastOutSlowInEasing), label = "barProgress")
     val logEnabled = rp.loggableTasks.isNotEmpty() && !rp.canClaim
+    val showMandatoryHint = !rp.canClaim && rp.totalPoints >= rp.reward.cost
 
     val infiniteTransition = rememberInfiniteTransition(label = "claimPulse")
     val claimBorderAlpha by infiniteTransition.animateFloat(
@@ -473,6 +474,16 @@ fun RewardDetailScreen(
                         letterSpacing = 0.8.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = if (logEnabled) accentColor else Color(0xFFB0A898),
+                    )
+                }
+                if (showMandatoryHint) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        Strings.REWARD_MANDATORY_TASKS_HINT,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = accents.notification,
+                        modifier = Modifier.padding(horizontal = 4.dp),
                     )
                 }
             }

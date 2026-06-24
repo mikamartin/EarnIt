@@ -11,8 +11,9 @@ This repo is also a portfolio piece. It's built with heavy AI assistance, and th
 ## Collaboration rules
 
 - Confirm before making non-trivial changes, and explain the rationale for technical and UX decisions before implementing.
+- Always confirm the branch name and proposed commit message with the user before committing — never commit without explicit approval of both.
 - Never merge a branch or PR without the user's explicit go-ahead. Commit, present a summary of what changed and why, then stop and wait.
-- Branch naming follows the existing convention: `type/topic` (e.g. `feature/ui-tests`, `fix/about-screen-design-review`, `chore/ktlint-setup`).
+- Branch naming follows the convention: `type/topic` (e.g. `feature/ui-tests`, `fix/about-screen-design-review`, `chore/ktlint-setup`). The topic should describe the work, not the date or session — no timestamps in branch names.
 - Before the repo has a GitHub remote: one local feature branch per logical unit of work, merged locally only once the user says go.
 - Once the repo is published: open a PR per unit of work instead of merging locally. The user reviews and merges PRs themselves on GitHub.
 
@@ -66,3 +67,5 @@ Follows [Conventional Commits](https://www.conventionalcommits.org/).
 - Instrumented tests: `./gradlew connectedDebugAndroidTest` (requires a device/emulator — see `docs/TESTING.md` Deferrals for a known Android 16 compatibility gap)
 - Lint check / autofix: `./gradlew ktlintCheck` / `./gradlew ktlintFormat`
 - Debug build: `./gradlew assembleDebug`
+
+**Important — never run Gradle tasks in parallel.** Launching `ktlintCheck`, `assembleDebug`, and `test` as concurrent background commands causes multiple Kotlin daemon sessions to collide on the same incremental build cache files (Windows `AccessDeniedException`), leaving the build in a broken state that requires `./gradlew clean` to recover. Always run build, lint, and test sequentially.

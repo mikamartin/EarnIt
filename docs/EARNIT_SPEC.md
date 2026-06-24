@@ -179,18 +179,21 @@ One entry in the home screen widget picker:
 
 ### Display States
 
-- **Active:** reward name, progress bar, log or CLAIM button depending on state
-- **Done ✓:** all tasks logged but points still short — no button shown
+- **Active:** reward name, progress bar, and + LOG or CLAIM button depending on state
+- **No tasks linked:** reward name, progress bar, and ADD TASK button (lighter style); tapping opens the app to the reward detail screen
+- **Mandatory tasks blocking claim:** Active state with "Required tasks needed to claim" subtitle below the reward name — shown when point goal is reached but not all mandatory (★) tasks are logged
+- **All tasks done, points still short:** reward name and progress bar only; no button shown
 - **Claimed / archived:** reward name + "Earned and Claimed" subtitle; tapping opens the app
 - **Empty:** "Long-press to configure" — reward not yet selected
 - Tapping anywhere on the widget body (outside buttons) opens the app to the tracked reward
 
 ### Configuration
 
-`WidgetConfigActivity` is launched on widget placement (and from long-press):
+`WidgetConfigActivity` is launched on widget placement:
 1. **Pick reward** — lists all active rewards; user taps to select
 2. **Edit label** — text field pre-filled with the reward name; user can change it to anything (e.g. "Personal Goal") for privacy. The label is what appears on the home screen widget — the actual reward name in the app is unchanged.
 - Reward ID and custom label persisted in widget prefs (`widget_reward_id`, `widget_reward_name`)
+- Long-pressing an existing widget only offers resizing — to change the tracked reward the widget must be removed and re-added
 
 ### Task Logging from Widget
 
@@ -201,7 +204,7 @@ One entry in the home screen widget picker:
 
 ### Widget Theme
 
-Colors follow the app's selected color scheme (Warm Gold / Ocean Blue / Forest) and respect system dark mode. Colors are resolved at draw time from `ColorSchemes.lightColors` / `darkColors`.
+Colors follow the app's selected color scheme (Warm Gold / Ocean Blue / Forest) and respect system dark mode. Colors are resolved at draw time from `ColorSchemes.lightColors` / `darkColors`. Existing widgets on the home screen do not re-theme automatically when the scheme changes — a newly placed widget will use the current scheme.
 
 `WidgetTaskLogActivity` and `WidgetConfigActivity` both read the user's selected scheme via `viewModel.settings.collectAsState()` and pass it explicitly to `EarnItTheme` — without this, the widget activities would always render in Warm Gold.
 
