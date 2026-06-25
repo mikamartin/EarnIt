@@ -27,7 +27,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -41,6 +40,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.earnit.app.ui.theme.EarnItTheme
+import com.earnit.app.ui.theme.LocalEarnItAccents
 import com.earnit.app.viewmodel.EarnItViewModel
 import com.google.android.play.core.review.ReviewManagerFactory
 
@@ -95,15 +95,15 @@ private data class NavItem(
     val label: String,
     val icon: ImageVector? = null,
     val emoji: String? = null,
-    val unselectedColor: Color = Color.Unspecified,
+    val paletteIndex: Int = 0,
 )
 
 private val navItems =
     listOf(
-        NavItem(Screen.Home, "Prizes", Icons.Default.EmojiEvents, unselectedColor = Color(0xFFE8A000)),
-        NavItem(Screen.Tasks, "Tasks", emoji = "⚔️", unselectedColor = Color(0xFF2A9D8F)),
-        NavItem(Screen.History, "History", Icons.Default.History, unselectedColor = Color(0xFF2A9D8F)),
-        NavItem(Screen.Settings, "Settings", Icons.Default.Settings, unselectedColor = Color(0xFF8E7CC3)),
+        NavItem(Screen.Home, "Prizes", Icons.Default.EmojiEvents, paletteIndex = 0),
+        NavItem(Screen.Tasks, "Tasks", emoji = "⚔️", paletteIndex = 1),
+        NavItem(Screen.History, "History", Icons.Default.History, paletteIndex = 1),
+        NavItem(Screen.Settings, "Settings", Icons.Default.Settings, paletteIndex = 2),
     )
 
 private fun routeToTab(route: String?): String =
@@ -255,9 +255,11 @@ fun EarnItBottomBar(
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val activeTab = routeToTab(navBackStackEntry?.destination?.route)
+    val cardPalette = LocalEarnItAccents.current.cardPalette
     NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
         navItems.forEach { item ->
             val selected = activeTab == item.screen.route
+            val unselectedColor = cardPalette[item.paletteIndex]
             NavigationBarItem(
                 icon = {
                     if (item.emoji != null) {
@@ -279,8 +281,8 @@ fun EarnItBottomBar(
                         selectedIconColor = MaterialTheme.colorScheme.primary,
                         selectedTextColor = MaterialTheme.colorScheme.primary,
                         indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                        unselectedIconColor = item.unselectedColor,
-                        unselectedTextColor = item.unselectedColor,
+                        unselectedIconColor = unselectedColor,
+                        unselectedTextColor = unselectedColor,
                     ),
                 onClick = {
                     navController.navigate(item.screen.route) {

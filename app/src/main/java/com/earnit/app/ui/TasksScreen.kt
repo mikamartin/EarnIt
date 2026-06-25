@@ -75,6 +75,7 @@ import com.earnit.app.data.EarnItUiState
 import com.earnit.app.data.RewardProgress
 import com.earnit.app.data.TaskEntity
 import com.earnit.app.ui.theme.LocalEarnItAccents
+import com.earnit.app.ui.theme.cardSurface
 import com.earnit.app.viewmodel.EarnItViewModel
 
 @Composable
@@ -435,7 +436,10 @@ private fun TaskCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = if (isDragging) 8.dp else 2.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.cardSurface,
+            ),
     ) {
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
             Box(modifier = Modifier.width(5.dp).fillMaxHeight().background(accent))

@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.earnit.app.data.EarnItUiState
 import com.earnit.app.ui.theme.LocalEarnItAccents
+import com.earnit.app.ui.theme.cardSurface
 import com.earnit.app.viewmodel.EarnItViewModel
 
 @Composable
@@ -89,7 +90,7 @@ fun TaskDetailScreen(
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(20.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .background(MaterialTheme.cardSurface)
                     .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -211,7 +212,7 @@ fun TaskDetailScreen(
                         style = MaterialTheme.typography.labelSmall,
                         letterSpacing = 0.8.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = if (logEnabled) Color(0xFF9A5C00) else Color(0xFFB0A898),
+                        color = if (logEnabled) accents.gradientEnd else Color(0xFFB0A898),
                     )
                 }
             }
