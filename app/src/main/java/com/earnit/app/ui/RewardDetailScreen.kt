@@ -74,6 +74,7 @@ import androidx.navigation.NavHostController
 import com.earnit.app.data.EarnItUiState
 import com.earnit.app.data.RewardProgress
 import com.earnit.app.ui.theme.LocalEarnItAccents
+import com.earnit.app.ui.theme.cardSurface
 import com.earnit.app.viewmodel.EarnItViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -206,7 +207,7 @@ fun RewardDetailScreen(
                             Modifier
                         },
                     ).clip(cardShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .background(MaterialTheme.cardSurface)
                     .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {

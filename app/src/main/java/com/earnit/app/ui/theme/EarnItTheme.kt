@@ -5,6 +5,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -137,6 +139,12 @@ private val NunitoTypography =
                 letterSpacing = 0.5.sp,
             ),
     )
+
+val MaterialTheme.cardSurface: Color
+    @Composable get() =
+        colorScheme.primaryContainer
+            .copy(alpha = 0.4f)
+            .compositeOver(colorScheme.surfaceVariant)
 
 @Composable
 fun EarnItTheme(

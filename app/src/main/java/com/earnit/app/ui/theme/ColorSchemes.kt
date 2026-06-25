@@ -20,7 +20,7 @@ val LocalEarnItAccents =
             gradientStart = Color(0xFFFFBF00),
             gradientEnd = Color(0xFFE07B00),
             cardPalette = listOf(Color(0xFFE8A000), Color(0xFF2A9D8F), Color(0xFF8E7CC3)),
-            notification = Color(0xFF8B5CF6),
+            notification = Color(0xFFE53935),
         )
     }
 
@@ -46,21 +46,21 @@ object ColorSchemes {
                     gradientStart = Color(0xFFFFBF00),
                     gradientEnd = Color(0xFFE07B00),
                     cardPalette = listOf(Color(0xFFE8A000), Color(0xFF2A9D8F), Color(0xFF8E7CC3)),
-                    notification = Color(0xFF8B5CF6),
+                    notification = Color(0xFFE53935),
                 )
             AppColorScheme.OCEAN_BLUE ->
                 EarnItAccents(
                     gradientStart = Color(0xFF42A5F5),
                     gradientEnd = Color(0xFF1565C0),
                     cardPalette = listOf(Color(0xFF1976D2), Color(0xFF0097A7), Color(0xFF546E7A)),
-                    notification = Color(0xFF8B5CF6),
+                    notification = Color(0xFFE8A000),
                 )
             AppColorScheme.FOREST ->
                 EarnItAccents(
                     gradientStart = Color(0xFF66BB6A),
                     gradientEnd = Color(0xFF2E7D32),
                     cardPalette = listOf(Color(0xFF2E7D32), Color(0xFF795548), Color(0xFF0097A7)),
-                    notification = Color(0xFF8B5CF6),
+                    notification = Color(0xFFE53935),
                 )
         }
 
@@ -69,7 +69,7 @@ object ColorSchemes {
     private val warmGoldLight =
         lightColorScheme(
             primary = Color(0xFFE8A000),
-            onPrimary = Color(0xFF3D2900),
+            onPrimary = Color(0xFFFFFFFF),
             primaryContainer = Color(0xFFFFEFAA),
             onPrimaryContainer = Color(0xFF261A00),
             secondary = Color(0xFF2A9D8F),
@@ -87,7 +87,7 @@ object ColorSchemes {
     private val warmGoldDark =
         darkColorScheme(
             primary = Color(0xFFFFD060),
-            onPrimary = Color(0xFF3D2900),
+            onPrimary = Color(0xFFFFFFFF),
             primaryContainer = Color(0xFF574400),
             onPrimaryContainer = Color(0xFFFFE082),
             secondary = Color(0xFF4DB6AC),

@@ -84,6 +84,7 @@ import com.earnit.app.data.EarnItUiState
 import com.earnit.app.data.Mascots
 import com.earnit.app.data.RewardProgress
 import com.earnit.app.ui.theme.LocalEarnItAccents
+import com.earnit.app.ui.theme.cardSurface
 import com.earnit.app.viewmodel.EarnItViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.drop
@@ -426,13 +427,13 @@ fun HomeScreen(
                                     .padding(bottom = 8.dp)
                                     .shadow(2.dp, RoundedCornerShape(8.dp))
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFF5C3D00))
+                                    .background(MaterialTheme.colorScheme.primary)
                                     .padding(horizontal = 10.dp, vertical = 6.dp),
                         ) {
                             Text(
                                 Strings.MAX_REWARD_BANNER,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onPrimary,
                             )
                         }
                     }
@@ -522,14 +523,14 @@ fun RewardProgressCard(
         prevPoints = rp.totalPoints
     }
 
-    val warmBase = MaterialTheme.colorScheme.surfaceVariant
+    val cardBase = MaterialTheme.cardSurface
     val cardColor =
         if (isTopTier) {
-            MaterialTheme.colorScheme.primaryContainer
-                .copy(alpha = 0.55f)
-                .compositeOver(warmBase)
+            MaterialTheme.colorScheme.primary
+                .copy(alpha = 0.18f)
+                .compositeOver(cardBase)
         } else {
-            warmBase
+            cardBase
         }
 
     val cardShape = RoundedCornerShape(20.dp)
