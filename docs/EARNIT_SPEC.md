@@ -319,7 +319,7 @@ Each template card is collapsible. Individual tasks can be deselected before imp
 
 See [TESTING.md](TESTING.md) for the full picture — current coverage, known gaps, and what to write next.
 
-**Summary:** 100 unit tests across 17 test files. 37 instrumented tests across 11 files (requires device/emulator) — including 11 Compose UI tests.
+**Summary:** 100+ unit tests across ~20 test files. ~40 instrumented tests across ~15 files (requires device/emulator) — including ~10 Compose UI tests.
 
 ---
 
