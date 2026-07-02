@@ -24,9 +24,9 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 
 ```
                  [ Manual — 3 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
-            [ UI — 11 tests ]          ComposeTestRule + Hilt, real DataStore
-       [ Integration — 26 tests ]      Real in-memory Room, no mocks
-     [ Unit — 100 tests ]              JVM, MockK DAOs, fast
+            [ UI — ~10 tests ]          ComposeTestRule + Hilt, real DataStore
+       [ Integration — ~30 tests ]      Real in-memory Room, no mocks
+     [ Unit — 100+ tests ]              JVM, MockK DAOs, fast
 ```
 
 **Run unit tests** (JVM, no device needed)
@@ -43,7 +43,7 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 
 ---
 
-## Unit Tests — `app/src/test/` (100 tests)
+## Unit Tests — `app/src/test/` (100+ tests)
 
 | File | What it covers |
 |---|---|
@@ -67,7 +67,7 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 
 ---
 
-## Instrumented Tests — `app/src/androidTest/` (37 tests, requires device/emulator)
+## Instrumented Tests — `app/src/androidTest/` (~40 tests, requires device/emulator)
 
 | File | Layer | What it covers |
 |---|---|---|
@@ -144,8 +144,8 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
-| Unit (100 tests) | Every build/push | `./gradlew test` |
-| Integration + UI, instrumented (37 tests) | Every push/PR via CI (API 34 emulator, Workflow 2); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
+| Unit (100+ tests) | Every build/push | `./gradlew test` |
+| Integration + UI, instrumented (~40 tests) | Every push/PR via CI (API 34 emulator, Workflow 2); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (3) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 
 See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the three journeys that are deliberately never automated (not just deferred) — each crosses a system-process boundary (system file picker, Play Core API, widget activity chain) that instrumented UI tests cannot drive reliably.

@@ -97,7 +97,7 @@ graph LR
 
 Every feature was defined in `EARNIT_SPEC.md` before any code was written, and the AI implemented from that. Claude (via Claude Code) generated first-draft implementations, maintained documentation, ran cleanup passes, and set up tooling. All product decisions, UX direction, and architectural choices were made by the human product owner. Every branch was reviewed and approved before merging.
 
-Quality is maintained through a documented test strategy: 79 unit tests and 26 instrumented tests (including 4 Compose UI tests) plus a manual test plan for flows that cross system boundaries. Structured cleanup passes are done after every feature. 
+Quality is maintained through a documented test strategy: 100+ unit tests and 40+ instrumented tests (including Compose UI tests) plus a manual test plan for flows that cross system boundaries. Structured cleanup passes are done after every feature. 
 
 ---
 
