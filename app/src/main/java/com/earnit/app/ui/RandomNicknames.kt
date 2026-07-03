@@ -61,4 +61,23 @@ val randomNicknames =
         "Dream Chaser",
         "Chief Hopper",
         "Toad Tamer",
+        // Friendly & casual
+        "Buddy",
+        "Friend",
+        "Chief",
+        "Boss",
+        // Mock-official & silly titles
+        "Chief Executive of Awesome",
+        "Your Magnificence",
+        "Destroyer of To-Do Lists",
+        "Master of the Universe (Local Branch)",
+        "Chaos Coordinator",
+        "Chaos Sensei",
+        "Energy Emperor",
+        "Groove Guru",
+        "Sarcasm Sommelier",
+        "Big W",
+        "Player One",
+        "Vibe Maestro",
+        "Vibe Tactician",
     )
