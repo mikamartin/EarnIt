@@ -30,7 +30,7 @@ These three journeys are deliberately never automated, not just temporarily defe
 
 **Steps:**
 
-1. Add the EarnIt widget to the home screen (long-press → Widgets → EarnIt). Confirm the **Empty/unconfigured** state shows "Long-press to configure."
+1. Add the EarnIt widget to the home screen (long-press → Widgets → EarnIt). Confirm the **Empty/unconfigured** state shows "Long-press to configure." Also confirm the widget occupies a compact single-row footprint, not an oversized cell with dead space — launchers quantize `minWidth`/`minHeight` (in `earnit_widget_info.xml`) into grid rows/columns using their own formula, so this can vary by device/launcher and silently regress if those values change.
 2. Long-press the widget → configure: select a reward, edit the label to something different from the reward name. Confirm the widget shows the custom label and that the reward name inside the app is unchanged.
 3. Confirm the widget shows the **Active** state: reward label, progress bar, and **+ LOG** button.
 4. Tap **+ LOG**: pick a task, add a note, confirm. Confirm the in-activity success screen appears for ~1.5 s then auto-closes.

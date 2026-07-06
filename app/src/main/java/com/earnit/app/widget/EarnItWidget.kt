@@ -337,77 +337,80 @@ private fun StandardContent(
 
     val displayName = rewardName.ifBlank { progress.reward.name }
 
-    Column(
+    Box(
         modifier =
             GlanceModifier
                 .fillMaxSize()
                 .clickable(actionStartActivity(mainIntent)),
+        contentAlignment = Alignment.Center,
     ) {
-        Row(
-            modifier = GlanceModifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = GlanceModifier.defaultWeight()) {
-                Text(
-                    displayName,
-                    maxLines = 1,
-                    style = TextStyle(color = colors.primary, fontSize = 15.sp, fontWeight = FontWeight.Bold),
-                )
-                if (showMandatoryHint) {
-                    Spacer(GlanceModifier.height(2.dp))
+        Column(modifier = GlanceModifier.fillMaxWidth()) {
+            Row(
+                modifier = GlanceModifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = GlanceModifier.defaultWeight()) {
                     Text(
-                        "Required tasks needed to claim",
-                        style = TextStyle(color = colors.onSurfaceVar, fontSize = 11.sp),
+                        displayName,
+                        maxLines = 1,
+                        style = TextStyle(color = colors.primary, fontSize = 15.sp, fontWeight = FontWeight.Bold),
                     )
-                }
-            }
-            Spacer(GlanceModifier.width(8.dp))
-            when {
-                progress.canClaim ->
-                    Box(
-                        modifier =
-                            GlanceModifier
-                                .background(colors.primary)
-                                .cornerRadius(16.dp)
-                                .padding(horizontal = 12.dp, vertical = 7.dp)
-                                .clickable(actionStartActivity(mainIntent)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text("CLAIM", style = TextStyle(color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold))
-                    }
-                hasTasks ->
-                    Box(
-                        modifier =
-                            GlanceModifier
-                                .size(32.dp)
-                                .background(colors.primary)
-                                .cornerRadius(16.dp)
-                                .clickable(actionStartActivity(logIntent)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Image(
-                            provider = ImageProvider(R.drawable.ic_add),
-                            contentDescription = "Log task",
-                            modifier = GlanceModifier.size(20.dp),
+                    if (showMandatoryHint) {
+                        Spacer(GlanceModifier.height(2.dp))
+                        Text(
+                            "Required tasks needed to claim",
+                            style = TextStyle(color = colors.onSurfaceVar, fontSize = 11.sp),
                         )
                     }
-                noTasks ->
-                    Box(
-                        modifier =
-                            GlanceModifier
-                                .background(colors.track)
-                                .cornerRadius(16.dp)
-                                .padding(horizontal = 10.dp, vertical = 7.dp)
-                                .clickable(actionStartActivity(mainIntent)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text("ADD TASK", style = TextStyle(color = colors.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold))
-                    }
+                }
+                Spacer(GlanceModifier.width(8.dp))
+                when {
+                    progress.canClaim ->
+                        Box(
+                            modifier =
+                                GlanceModifier
+                                    .background(colors.primary)
+                                    .cornerRadius(16.dp)
+                                    .padding(horizontal = 12.dp, vertical = 7.dp)
+                                    .clickable(actionStartActivity(mainIntent)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text("CLAIM", style = TextStyle(color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold))
+                        }
+                    hasTasks ->
+                        Box(
+                            modifier =
+                                GlanceModifier
+                                    .size(32.dp)
+                                    .background(colors.primary)
+                                    .cornerRadius(16.dp)
+                                    .clickable(actionStartActivity(logIntent)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Image(
+                                provider = ImageProvider(R.drawable.ic_add),
+                                contentDescription = "Log task",
+                                modifier = GlanceModifier.size(20.dp),
+                            )
+                        }
+                    noTasks ->
+                        Box(
+                            modifier =
+                                GlanceModifier
+                                    .background(colors.track)
+                                    .cornerRadius(16.dp)
+                                    .padding(horizontal = 10.dp, vertical = 7.dp)
+                                    .clickable(actionStartActivity(mainIntent)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text("ADD TASK", style = TextStyle(color = colors.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold))
+                        }
+                }
             }
-        }
 
-        Spacer(GlanceModifier.defaultWeight())
-        ProgressBar(fraction, current, colors)
+            Spacer(GlanceModifier.height(8.dp))
+            ProgressBar(fraction, current, colors)
+        }
     }
 }
 

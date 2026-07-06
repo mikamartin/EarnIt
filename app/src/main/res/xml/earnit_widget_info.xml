@@ -2,7 +2,7 @@
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:configure="com.earnit.app.widget.WidgetConfigActivity"
     android:minWidth="250dp"
-    android:minHeight="80dp"
+    android:minHeight="40dp"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="0"
     android:description="@string/widget_description"
