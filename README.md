@@ -14,7 +14,12 @@ You've got your wants and a list of tasks you keep putting off. EarnIt connects 
 
 ---
 
-<!-- TODO: Add 3–4 screenshots or a short GIF before publishing -->
+<p align="center">
+  <img src="docs/screenshots/01-home.jpg" width="200" alt="Prizes home screen with rewards and progress bars" />
+  <img src="docs/screenshots/02-reward-detail.jpg" width="200" alt="Reward detail screen with task checklist and activity log" />
+  <img src="docs/screenshots/03-tasks.jpg" width="200" alt="Tasks list screen" />
+  <img src="docs/screenshots/07-widget.jpg" width="200" alt="Home screen widgets tracking reward progress" />
+</p>
 
 ---
 
