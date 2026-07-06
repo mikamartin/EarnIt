@@ -88,7 +88,6 @@ Items are independent — work them in any order. Strip completed items as they 
 ### Before first release
 
 **Play Store**
-- [ ] Screenshots for all required form factors (also fills the README placeholder)
 - [ ] Short and long store description
 - [ ] Content rating questionnaire completed and data-safety form submitted (truthfully: no data collected, all local)
 
