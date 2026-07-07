@@ -72,6 +72,7 @@ Run this after any significant feature work or refactor. Copy the checklist into
 - [ ] Were any features removed or renamed? Remove or update the corresponding tests so they don't silently pass against dead code.
 - [ ] Do new edge cases belong to an existing test class, or do they warrant a new file? (New file threshold: 3+ tests for a cohesive new behaviour.)
 - [ ] Were any new instrumented tests added? Confirm they run on a device before committing (a test that never ran may have a compile error hidden by Gradle's incremental build).
+- [ ] Did this change touch `AppModule`, `TestAppModule`, or add a new `@Inject` site? Run `./gradlew assembleDebugAndroidTest` — `test` and `assembleDebug` don't compile the androidTest variant, so a binding missing only from `TestAppModule` (which fully replaces `AppModule` for instrumented tests) won't surface otherwise.
 - [ ] Is [TESTING.md](TESTING.md) still accurate?
   - Update counts in the unit/instrumented tables if they changed.
   - Add a row to the relevant table for any new test file.
