@@ -144,6 +144,8 @@ Permanent, accepted constraints — not open work, nothing here gets checked off
 
 Update this section each upgrade cycle. The version matrix and gotchas below reflect the June 2026 upgrade; update in place rather than appending.
 
+`gradle/libs.versions.toml` is the source of truth for dependency and plugin versions — update it there first, then reflect the change in the matrix below. The one exception is the `buildscript classpath` Kotlin override (gotcha 1), which must stay a literal since catalog accessors aren't available in that block.
+
 ### Current working version matrix
 
 | Tool | Version | Constraint |
