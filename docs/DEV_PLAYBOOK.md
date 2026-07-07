@@ -191,3 +191,15 @@ Hilt 2.51.1–2.58 fail with AGP 9. Hilt 2.59.x is the first release that suppor
 - [ ] Do the upgrade on a dedicated branch; expect 3–5 sync/build errors on a major version jump
 - [ ] Run `./gradlew assembleDebug` from terminal to confirm — IDE sync errors and build errors differ
 - [ ] Run tests after a clean build to catch silent regressions
+
+---
+
+## 6. Database Schema Migrations
+
+The DB schema was reset to `version = 1` as the launch baseline (versions 1–10 were internal dev-only churn — renames, added columns — with no real install to ever migrate; see `CLEANUP_LOG.md`). From this baseline onward, the app has (or will soon have) real installs, so the rule changes:
+
+**Every future bump to `EarnItDatabase.kt`'s `version` must ship a real `Migration(oldVersion, newVersion)`, registered via `.addMigrations(...)` in `AppModule.kt`.**
+
+Why this matters: `EarnItDatabase`'s builder also has `.fallbackToDestructiveMigration(dropAllTables = true)`. That fallback exists to keep local dev/emulator resets convenient — but if a version bump ships to a real device without a matching migration, it silently drops every table: every task, reward, and the permanent History log a user has earned, gone, with no error and no cloud backup as a safety net (Android auto-backup is conditional — daily, charging, Wi-Fi — not a guarantee).
+
+Treat "forgot to write the migration" as a release-blocking bug, not something the destructive fallback should be relied on to absorb. When adding a `Migration`, add a matching entry to `EARNIT_SPEC.md`'s schema version note and, where practical, a manual verification pass (install old schema → upgrade → confirm data survives) before merging — there's no automated migration test harness in this project yet (`exportSchema = false`, no `MigrationTestHelper` usage), so this is presently a manual discipline, not a CI-enforced one.
