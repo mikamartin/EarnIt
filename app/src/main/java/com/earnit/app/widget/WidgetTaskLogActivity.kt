@@ -54,6 +54,7 @@ import com.earnit.app.MainActivity
 import com.earnit.app.R
 import com.earnit.app.data.EarnItRepository
 import com.earnit.app.data.TaskEntity
+import com.earnit.app.di.ApplicationScope
 import com.earnit.app.ui.NOTE_MAX_CHARS
 import com.earnit.app.ui.Strings
 import com.earnit.app.ui.theme.EarnItTheme
@@ -61,7 +62,6 @@ import com.earnit.app.viewmodel.EarnItViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -73,6 +73,10 @@ private const val WIDGET_LOG_NOTIF_ID = 1001
 @AndroidEntryPoint
 class WidgetTaskLogActivity : ComponentActivity() {
     @Inject lateinit var repository: EarnItRepository
+
+    @Inject
+    @ApplicationScope
+    lateinit var appScope: CoroutineScope
 
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -91,7 +95,7 @@ class WidgetTaskLogActivity : ComponentActivity() {
         val rewardId = intent?.getLongExtra("rewardId", 0L) ?: 0L
 
         // Clear any stale flash from a prior process that never got to revert it.
-        CoroutineScope(SupervisorJob() + Dispatchers.Main).launch {
+        appScope.launch(Dispatchers.Main) {
             EarnItGlanceWidget().updateAll(applicationContext)
         }
 
@@ -104,9 +108,9 @@ class WidgetTaskLogActivity : ComponentActivity() {
                     triggerHaptic()
                     showNotification(task, pts)
                     WidgetFlash.set(appCtx, rewardId)
-                    // Detached scope outlives the activity: writes DB, then triggers widget re-render.
+                    // appScope outlives the activity: writes DB, then triggers widget re-render.
                     // The widget's own produceState handles the flash revert after 3 s.
-                    CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+                    appScope.launch(Dispatchers.IO) {
                         repository.logCompletion(task, rewardId, note)
                         withContext(Dispatchers.Main) {
                             EarnItGlanceWidget().updateAll(appCtx)
@@ -121,12 +125,7 @@ class WidgetTaskLogActivity : ComponentActivity() {
 
     private fun triggerHaptic() {
         val vibrator = getSystemService(Vibrator::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator?.vibrate(VibrationEffect.createOneShot(60, VibrationEffect.DEFAULT_AMPLITUDE))
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator?.vibrate(60)
-        }
+        vibrator?.vibrate(VibrationEffect.createOneShot(60, VibrationEffect.DEFAULT_AMPLITUDE))
     }
 
     private fun showNotification(
@@ -161,15 +160,13 @@ class WidgetTaskLogActivity : ComponentActivity() {
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel =
-                NotificationChannel(
-                    WIDGET_LOG_CHANNEL_ID,
-                    Strings.WIDGET_NOTIF_CHANNEL_NAME,
-                    NotificationManager.IMPORTANCE_LOW,
-                )
-            getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
-        }
+        val channel =
+            NotificationChannel(
+                WIDGET_LOG_CHANNEL_ID,
+                Strings.WIDGET_NOTIF_CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_LOW,
+            )
+        getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
     }
 }
 

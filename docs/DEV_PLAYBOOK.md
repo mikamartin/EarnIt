@@ -72,6 +72,7 @@ Run this after any significant feature work or refactor. Copy the checklist into
 - [ ] Were any features removed or renamed? Remove or update the corresponding tests so they don't silently pass against dead code.
 - [ ] Do new edge cases belong to an existing test class, or do they warrant a new file? (New file threshold: 3+ tests for a cohesive new behaviour.)
 - [ ] Were any new instrumented tests added? Confirm they run on a device before committing (a test that never ran may have a compile error hidden by Gradle's incremental build).
+- [ ] Did this change touch `AppModule`, `TestAppModule`, or add a new `@Inject` site? Run `./gradlew assembleDebugAndroidTest` — `test` and `assembleDebug` don't compile the androidTest variant, so a binding missing only from `TestAppModule` (which fully replaces `AppModule` for instrumented tests) won't surface otherwise.
 - [ ] Is [TESTING.md](TESTING.md) still accurate?
   - Update counts in the unit/instrumented tables if they changed.
   - Add a row to the relevant table for any new test file.
@@ -144,6 +145,8 @@ Permanent, accepted constraints — not open work, nothing here gets checked off
 
 Update this section each upgrade cycle. The version matrix and gotchas below reflect the June 2026 upgrade; update in place rather than appending.
 
+`gradle/libs.versions.toml` is the source of truth for dependency and plugin versions — update it there first, then reflect the change in the matrix below. The one exception is the `buildscript classpath` Kotlin override (gotcha 1), which must stay a literal since catalog accessors aren't available in that block.
+
 ### Current working version matrix
 
 | Tool | Version | Constraint |
@@ -191,3 +194,15 @@ Hilt 2.51.1–2.58 fail with AGP 9. Hilt 2.59.x is the first release that suppor
 - [ ] Do the upgrade on a dedicated branch; expect 3–5 sync/build errors on a major version jump
 - [ ] Run `./gradlew assembleDebug` from terminal to confirm — IDE sync errors and build errors differ
 - [ ] Run tests after a clean build to catch silent regressions
+
+---
+
+## 6. Database Schema Migrations
+
+The DB schema was reset to `version = 1` as the launch baseline (versions 1–10 were internal dev-only churn — renames, added columns — with no real install to ever migrate; see `CLEANUP_LOG.md`). From this baseline onward, the app has (or will soon have) real installs, so the rule changes:
+
+**Every future bump to `EarnItDatabase.kt`'s `version` must ship a real `Migration(oldVersion, newVersion)`, registered via `.addMigrations(...)` in `AppModule.kt`.**
+
+Why this matters: `EarnItDatabase`'s builder also has `.fallbackToDestructiveMigration(dropAllTables = true)`. That fallback exists to keep local dev/emulator resets convenient — but if a version bump ships to a real device without a matching migration, it silently drops every table: every task, reward, and the permanent History log a user has earned, gone, with no error and no cloud backup as a safety net (Android auto-backup is conditional — daily, charging, Wi-Fi — not a guarantee).
+
+Treat "forgot to write the migration" as a release-blocking bug, not something the destructive fallback should be relied on to absorb. When adding a `Migration`, add a matching entry to `EARNIT_SPEC.md`'s schema version note and, where practical, a manual verification pass (install old schema → upgrade → confirm data survives) before merging — there's no automated migration test harness in this project yet (`exportSchema = false`, no `MigrationTestHelper` usage), so this is presently a manual discipline, not a CI-enforced one.

@@ -14,7 +14,7 @@
 | UI | Jetpack Compose + Material 3 |
 | Theme | 3 colour schemes (Warm Gold, Ocean Blue, Forest) |
 | Widget | Jetpack Glance |
-| Storage | Room (SQLite, schema v10) — local only, no cloud |
+| Storage | Room (SQLite, schema v1 — launch baseline) — local only, no cloud |
 | DI | Hilt |
 | Navigation | Navigation Compose |
 | Settings | DataStore Preferences |

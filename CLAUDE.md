@@ -65,6 +65,7 @@ Follows [Conventional Commits](https://www.conventionalcommits.org/).
 
 - Unit tests: `./gradlew test`
 - Instrumented tests: `./gradlew connectedDebugAndroidTest` (requires a device/emulator — see `docs/TESTING.md` Deferrals for a known Android 16 compatibility gap)
+- Hilt/DI graph validation (no device needed): `./gradlew assembleDebugAndroidTest` — compiles the androidTest variant and validates the full Hilt graph, including `TestAppModule`. Run this whenever a change touches `AppModule`, `TestAppModule`, or adds a new `@Inject` site — `test` and `assembleDebug` don't compile the androidTest source set, so a binding that's missing only from `TestAppModule` won't surface otherwise.
 - Lint check / autofix: `./gradlew ktlintCheck` / `./gradlew ktlintFormat`
 - Debug build: `./gradlew assembleDebug`
 
