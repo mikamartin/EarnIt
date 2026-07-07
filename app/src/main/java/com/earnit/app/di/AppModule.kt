@@ -24,7 +24,9 @@ object AppModule {
     ): EarnItDatabase =
         Room
             .databaseBuilder(context, EarnItDatabase::class.java, "earnit.db")
-            .addMigrations(EarnItDatabase.MIGRATION_9_10)
+            // No migrations registered yet — v1 is the launch baseline. The next version bump
+            // MUST add a real Migration here (see docs/DEV_PLAYBOOK.md §6): this fallback drops
+            // every table — every task, reward, and permanent History entry — with no warning.
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 

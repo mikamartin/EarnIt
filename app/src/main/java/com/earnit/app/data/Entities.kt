@@ -2,6 +2,7 @@ package com.earnit.app.data
 
 import androidx.room.Embedded
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
@@ -56,7 +57,24 @@ data class RewardEntity(
 @Entity(
     primaryKeys = ["rewardId", "taskId"],
     tableName = "reward_task_cross_ref",
-    indices = [Index(value = ["taskId"])],
+    indices = [Index(value = ["taskId"]), Index(value = ["rewardId"])],
+    // A cross-ref with no reward or no task is always a bug, never a feature (unlike
+    // CompletionLogEntity/HistoryEntryEntity, which deliberately snapshot names so they
+    // survive their source task/reward being deleted) — safe to enforce with cascade.
+    foreignKeys = [
+        ForeignKey(
+            entity = RewardEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["rewardId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+        ForeignKey(
+            entity = TaskEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["taskId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
 )
 data class RewardTaskCrossRef(
     val rewardId: Long,

@@ -2,9 +2,11 @@ package com.earnit.app.data
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
 
+// Schema versions 1-10 were internal dev-only churn (renames, added columns) with no real
+// install to ever migrate — collapsed here into a single v1 launch baseline. From this point
+// on, every version bump MUST ship a real Migration (see docs/DEV_PLAYBOOK.md §6) — otherwise
+// AppModule's fallbackToDestructiveMigration silently wipes a real user's entire database.
 @Database(
     entities = [
         TaskEntity::class,
@@ -13,7 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         RewardTaskCrossRef::class,
         HistoryEntryEntity::class,
     ],
-    version = 10,
+    version = 1,
     exportSchema = false,
 )
 abstract class EarnItDatabase : RoomDatabase() {
@@ -26,13 +28,4 @@ abstract class EarnItDatabase : RoomDatabase() {
     abstract fun rewardTaskCrossRefDao(): RewardTaskCrossRefDao
 
     abstract fun historyDao(): HistoryDao
-
-    companion object {
-        val MIGRATION_9_10 =
-            object : Migration(9, 10) {
-                override fun migrate(db: SupportSQLiteDatabase) {
-                    db.execSQL("ALTER TABLE tasks ADD COLUMN `group` TEXT DEFAULT NULL")
-                }
-            }
-    }
 }
