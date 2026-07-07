@@ -747,3 +747,31 @@ Replaced all remaining `Brush.*Gradient(listOf(Color(0xFFFFD060), Color(0xFFE07B
 - `PointFormulaTest`: added `difficulty=5` and `preparation=5` bonus cases — previously only `time=5` was covered, leaving two bonus-trigger paths untested.
 - `RewardLimitUiTest` (new, instrumented UI): verifies that tapping the FAB when `maxRewardCount` is reached shows `MAX_REWARD_BANNER` tooltip and does not navigate to reward edit.
 - `DuplicateNameUiTest` (new, instrumented UI): verifies that entering a duplicate task or reward name (case-insensitive) shows the error string from `Strings.taskDuplicateError` / `Strings.rewardDuplicateError` and disables the SAVE button.
+
+---
+
+### Pass 30 — `fix/data-safety-and-cleanup` branch (senior-Android review follow-up)
+
+#### Data safety ✅
+- `EarnItRepository`'s multi-step mutations (`importFromJson`, `deleteReward`, `clearAllTasks`/`clearAllRewards`/`clearAllLogs`, `importTemplate`, `copyRewardFromEntry`) were sequences of independent DAO calls with no transaction — a crash or process death mid-sequence (e.g. mid-"Replace all data" import) could leave the DB half-mutated with the original data already gone. Wrapped each in `database.withTransaction { }`.
+- `AppModule`'s `fallbackToDestructiveMigration(dropAllTables = true)` had only one real migration (`MIGRATION_9_10`) behind it — any future version bump without a matching migration would silently wipe every user's tasks, rewards, and permanent History. Documented the risk and the required discipline in `DEV_PLAYBOOK.md §6` (new section), with inline warnings at both load-bearing call sites (`EarnItDatabase.kt`, `AppModule.kt`).
+
+#### Schema baseline reset ✅
+- Confirmed (user-verified) this app has never been installed outside dev/emulator environments — no real device has schema v1–v10 data to preserve. Collapsed the dev-only migration history: `EarnItDatabase` version reset from 10 to 1 as the launch baseline; `MIGRATION_9_10` deleted (confirmed unreferenced by any test). `EARNIT_SPEC.md`'s schema version note updated to match.
+- Added declarative `@ForeignKey` (cascade delete) + a matching index to `RewardTaskCrossRef` for both `rewardId` and `taskId` — baked directly into the v1 baseline rather than a migration, since there's no prior schema to migrate from. Scoped narrowly to this table only: `CompletionLogEntity.taskId` and `HistoryEntryEntity.rewardId` are deliberate historical snapshots (survive their source task/reward being deleted) and must not cascade.
+
+#### Coroutine scope consistency ✅
+- `WidgetTaskLogActivity` hand-rolled `CoroutineScope(SupervisorJob() + Dispatchers.X)` at two call sites to outlive its own `finish()` — correct behaviour, but not swappable in tests and with no shared error handling. Replaced with a single injected `@ApplicationScope`-qualified `CoroutineScope` singleton (`AppModule`).
+
+#### Dead code ✅
+- `WidgetTaskLogActivity`: removed two `Build.VERSION.SDK_INT >= Build.VERSION_CODES.O` guards — minSdk is 31, already exceeding O (26), so the branches were always true. Also removed the only deprecated-API call in the file (`vibrator.vibrate(Int)`) along with its `@Suppress("DEPRECATION")`, since it lived in the now-dead branch.
+
+#### Tooling ✅
+- Migrated every hardcoded dependency/plugin version across both `build.gradle.kts` files into `gradle/libs.versions.toml`. The `buildscript classpath` Kotlin override stays a literal (catalog accessors aren't available in that block) but is commented to flag the sync requirement. Noted the catalog as source of truth in `DEV_PLAYBOOK.md §5`.
+
+#### Test infrastructure fix ✅
+- The `withTransaction` wrapping above hung every test touching a wrapped method indefinitely: Room's real transaction executor never runs on a bare MockK mock, so `runBlocking` waited forever instead of failing fast. Root-caused via a `jstack` thread dump (not assumption) after an earlier misdiagnosis. Fixed centrally in `RepositoryTestBase` with a `mockkStatic`-based stub that runs the block directly — covers `CleanupTest`, `DeleteCascadeTest`, `ImportDedupTest`, and `RepositoryBehaviourTest` in one place.
+
+#### Tests ✅ (deferred item logged)
+- All 102 unit tests pass; `ktlintCheck` and `assembleDebug` both green on the final branch state.
+- Real transaction rollback (as opposed to DAO call sequencing) isn't covered — MockK can't simulate it. Logged as a new gap in `TESTING.md` Deferrals rather than silently left uncovered.

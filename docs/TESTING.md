@@ -165,3 +165,6 @@ Covered by manual testing, not automation — see [MANUAL_TEST_PLAN.md](MANUAL_T
 
 **Group view UI**
 Collapse/expand state, "Other" section behaviour, and select-all checkbox logic in `AddTaskToRewardDialog` are pure UI state with no database writes at risk. The instrumented test setup required to drive these interactions is disproportionate to the risk. Verified manually before each release.
+
+**Transaction rollback on partial failure**
+`EarnItRepository`'s multi-step mutations (`importFromJson`, `deleteReward`, `clearAllTasks`/`clearAllRewards`/`clearAllLogs`, `importTemplate`, `copyRewardFromEntry`) are wrapped in `database.withTransaction { }` so a crash mid-sequence can't leave the DB half-mutated. The unit tests (MockK-mocked database) verify DAO call sequencing, not real rollback — MockK can't simulate Room's actual transaction/rollback behaviour. An instrumented test against a real in-memory Room database, forcing one DAO call in a wrapped sequence to throw and asserting the rest never committed, would close this gap. Not yet written.
