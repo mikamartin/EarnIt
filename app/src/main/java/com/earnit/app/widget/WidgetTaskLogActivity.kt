@@ -125,12 +125,7 @@ class WidgetTaskLogActivity : ComponentActivity() {
 
     private fun triggerHaptic() {
         val vibrator = getSystemService(Vibrator::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator?.vibrate(VibrationEffect.createOneShot(60, VibrationEffect.DEFAULT_AMPLITUDE))
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator?.vibrate(60)
-        }
+        vibrator?.vibrate(VibrationEffect.createOneShot(60, VibrationEffect.DEFAULT_AMPLITUDE))
     }
 
     private fun showNotification(
@@ -165,15 +160,13 @@ class WidgetTaskLogActivity : ComponentActivity() {
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel =
-                NotificationChannel(
-                    WIDGET_LOG_CHANNEL_ID,
-                    Strings.WIDGET_NOTIF_CHANNEL_NAME,
-                    NotificationManager.IMPORTANCE_LOW,
-                )
-            getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
-        }
+        val channel =
+            NotificationChannel(
+                WIDGET_LOG_CHANNEL_ID,
+                Strings.WIDGET_NOTIF_CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_LOW,
+            )
+        getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
     }
 }
 
