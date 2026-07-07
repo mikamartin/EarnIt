@@ -121,9 +121,6 @@ interface RewardTaskCrossRefDao {
     @Query("DELETE FROM reward_task_cross_ref WHERE rewardId = :rewardId")
     suspend fun clearTasksForReward(rewardId: Long)
 
-    @Query("DELETE FROM reward_task_cross_ref WHERE taskId = :taskId")
-    suspend fun clearRewardsForTask(taskId: Long)
-
     @Query("DELETE FROM reward_task_cross_ref WHERE rewardId = :rewardId AND taskId = :taskId")
     suspend fun deleteCrossRef(
         rewardId: Long,

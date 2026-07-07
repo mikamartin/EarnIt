@@ -62,11 +62,8 @@ class EarnItRepository
 
         suspend fun getTaskOrNull(id: Long) = taskDao.getTask(id)
 
-        suspend fun deleteTask(taskId: Long) =
-            database.withTransaction {
-                rewardTaskDao.clearRewardsForTask(taskId)
-                taskDao.deleteTask(taskId)
-            }
+        // Cross-ref rows for this task are removed by the FK cascade on RewardTaskCrossRef.taskId.
+        suspend fun deleteTask(taskId: Long) = taskDao.deleteTask(taskId)
 
         // ── Rewards ───────────────────────────────────────────────────────────────
 
@@ -83,9 +80,9 @@ class EarnItRepository
 
         suspend fun getRewardOrNull(id: Long) = rewardDao.getReward(id)
 
+        // Cross-ref rows for this reward are removed by the FK cascade on RewardTaskCrossRef.rewardId.
         suspend fun deleteReward(rewardId: Long) =
             database.withTransaction {
-                rewardTaskDao.clearTasksForReward(rewardId)
                 logDao.deleteActiveLogsForReward(rewardId)
                 rewardDao.deleteReward(rewardId)
             }
