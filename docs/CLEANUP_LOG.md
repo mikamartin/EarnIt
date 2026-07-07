@@ -775,3 +775,8 @@ Replaced all remaining `Brush.*Gradient(listOf(Color(0xFFFFD060), Color(0xFFE07B
 #### Tests ✅ (deferred item logged)
 - All 102 unit tests pass; `ktlintCheck` and `assembleDebug` both green on the final branch state.
 - Real transaction rollback (as opposed to DAO call sequencing) isn't covered — MockK can't simulate it. Logged as a new gap in `TESTING.md` Deferrals rather than silently left uncovered.
+
+#### Follow-up: transaction-wrapping completeness ✅ (second-round senior-Android review)
+- The original data-safety pass above scoped `database.withTransaction { }` to a specific method list rather than sweeping the whole file — `claimReward` (the core "earn a reward" flow: insert History entry → archive logs → conditionally archive the reward), `deleteTask`, `saveRewardTasks`, and `updateTaskRewards` had the identical multi-DAO-call risk profile but were missed. `DeleteCascadeTest` had `deleteTask` and `deleteReward` tests sitting side by side — only `deleteReward` had been fixed. Wrapped all four; `TESTING.md`'s Transaction rollback deferral list updated to match.
+- The `@ForeignKey` cascade added above (Schema baseline reset) made the manual `rewardTaskDao.clearTasksForReward`/`clearRewardsForTask` calls in `deleteReward`/`deleteTask` redundant — SQLite now removes the cross-ref rows declaratively. Removed both call sites, deleted the now-unused `clearRewardsForTask` DAO method, and dropped `deleteTask`'s transaction wrapper since it's now a single statement. `DeleteCascadeTest` updated to assert the manual clear no longer happens instead of asserting call order; new `TESTING.md` Deferrals entry notes cascade behaviour itself isn't verified against a real DB.
+- All unit tests and `ktlintCheck` re-verified green after each change.
