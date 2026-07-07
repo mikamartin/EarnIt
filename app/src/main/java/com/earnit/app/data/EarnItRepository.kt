@@ -62,10 +62,11 @@ class EarnItRepository
 
         suspend fun getTaskOrNull(id: Long) = taskDao.getTask(id)
 
-        suspend fun deleteTask(taskId: Long) {
-            rewardTaskDao.clearRewardsForTask(taskId)
-            taskDao.deleteTask(taskId)
-        }
+        suspend fun deleteTask(taskId: Long) =
+            database.withTransaction {
+                rewardTaskDao.clearRewardsForTask(taskId)
+                taskDao.deleteTask(taskId)
+            }
 
         // ── Rewards ───────────────────────────────────────────────────────────────
 
@@ -92,7 +93,7 @@ class EarnItRepository
         suspend fun saveRewardTasks(
             rewardId: Long,
             tasks: List<Triple<Long, Boolean, Boolean>>,
-        ) {
+        ) = database.withTransaction {
             rewardTaskDao.clearTasksForReward(rewardId)
             tasks.forEach { (taskId, isMandatory, isRepeatable) ->
                 rewardTaskDao.insertCrossRef(RewardTaskCrossRef(rewardId, taskId, isMandatory, isRepeatable))
@@ -111,7 +112,7 @@ class EarnItRepository
         suspend fun updateTaskRewards(
             taskId: Long,
             rewardLinks: Map<Long, Pair<Boolean, Boolean>>,
-        ) {
+        ) = database.withTransaction {
             val currentRewardIds =
                 rewardTaskDao
                     .getAllCrossRefs()
@@ -151,8 +152,8 @@ class EarnItRepository
         suspend fun claimReward(
             rewardId: Long,
             startOver: Boolean,
-        ) {
-            val reward = rewardDao.getReward(rewardId) ?: return
+        ) = database.withTransaction {
+            val reward = rewardDao.getReward(rewardId) ?: return@withTransaction
             val entryId =
                 historyDao.insertEntry(
                     HistoryEntryEntity(
