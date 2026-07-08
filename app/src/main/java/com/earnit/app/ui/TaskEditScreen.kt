@@ -146,7 +146,9 @@ fun TaskEditScreen(
 
     LaunchedEffect(pendingTaskId) {
         if (pendingSaveNav && pendingTaskId != null) {
-            pendingSaveNav = false
+            // Leave pendingSaveNav = true — this screen stays composed during the nav
+            // transition, and resetting it here re-enables nameConflict for one frame, flashing
+            // the duplicate-name error just before the detail screen replaces this one.
             val newId = pendingTaskId!!
             viewModel.consumePendingTaskId()
             navController.navigate(Screen.TaskDetail.route(newId)) {
