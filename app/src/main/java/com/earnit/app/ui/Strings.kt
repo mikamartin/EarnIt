@@ -294,4 +294,10 @@ object Strings {
     const val WIDGET_ADD_BTN = "ADD WIDGET"
 
     fun widgetRewardName(name: String) = "Reward: $name"
+
+    // Widget (Glance) — EarnItWidget.kt
+    // Keep short and single-line. The widget box has a fixed, non-scrolling height;
+    // on narrow (e.g. 3-column) layouts a wrapped second line overflows the box and
+    // clips the progress bar beneath it (see fix/widget-hint-overflow).
+    const val WIDGET_MANDATORY_HINT = "Finish mandatory tasks to claim"
 }

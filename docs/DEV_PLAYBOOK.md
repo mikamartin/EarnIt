@@ -138,6 +138,7 @@ Permanent, accepted constraints — not open work, nothing here gets checked off
 - Widget colors hardcoded warm-gold — Glance limitation.
 - Progress bar track backgrounds (`Color(0xFFFFFBF0)`, `Color(0xFFFFF5DC)`), disabled LOG button fill and border, detail dividers (`Color(0xFFD5C9B0)`), the activity-log task name color (`Color(0xFF8E7CC3)`), and the reward target cost label (`Color(0xFFB06000)`) are hardcoded hex values that do not adapt to Ocean Blue or Forest themes — intentional design choices, not bugs.
 - `taskState` (RewardEditScreen) and `rewardLinkState` (TaskEditScreen) lose checkbox state on rotation — would require a custom `mapSaver`.
+- `StandardContent` in `EarnItWidget.kt` has no general overflow protection: content is a fixed-height `Column` centered inside a fixed-size `Box` (`fea294c`, kept to avoid dead space on tall launcher grid cells), so if rendered content height ever exceeds the actual widget box, `Alignment.Center` crops evenly off the top and bottom with no scroll or shrink fallback. `fix/widget-hint-overflow` bounded the one known trigger (the mandatory-task hint wrapping to 2 lines on narrow widths) with `maxLines = 1`, but any other future source of extra height — a longer reward name at large accessibility font scale, a new line added to the layout — would reproduce the same clipping. Revisit with a proper responsive layout (e.g. `LocalSize`-driven, matching the pattern already used in `ProgressBar`) if this recurs.
 
 ---
 
