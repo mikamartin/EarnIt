@@ -67,7 +67,7 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 
 ---
 
-## Instrumented Tests — `app/src/androidTest/` (~40 tests, requires device/emulator)
+## Instrumented Tests — `app/src/androidTest/` (~45 tests, requires device/emulator)
 
 | File | Layer | What it covers |
 |---|---|---|
@@ -82,6 +82,7 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 | `TaskLibraryImportUiTest` (1) | UI | Task Library: expand "Healthy Living" template, add all 10 tasks, verify they appear in the Tasks list |
 | `SaveNavigationUiTest` (4) | UI | Post-save navigation: new task → TaskDetailScreen; new reward → RewardDetailScreen; task created from new-reward form → pops back to reward form (task auto-included), both saved and linked on reward save; Add task button disabled until reward name is entered |
 | `ImportErrorUiTest` (2) | UI | Import error messages appear on Data & Backup screen: invalid JSON file shows "File is not valid JSON"; wrong-schema JSON shows "This doesn't look like an EarnIt backup" |
+| `MaxLengthUiTest` (5) | UI | Reward name, task name, reward description, task group name, and nickname fields each accept input up to their character cap and silently reject one character past it |
 
 ---
 
@@ -145,7 +146,7 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
 | Unit (100+ tests) | Every build/push | `./gradlew test` |
-| Integration + UI, instrumented (~40 tests) | Every push/PR via CI (API 34 emulator, Workflow 2); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
+| Integration + UI, instrumented (~45 tests) | Every push/PR via CI (API 34 emulator, Workflow 2); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (3) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 
 See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the three journeys that are deliberately never automated (not just deferred) — each crosses a system-process boundary (system file picker, Play Core API, widget activity chain) that instrumented UI tests cannot drive reliably.
