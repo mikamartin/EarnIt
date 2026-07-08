@@ -37,12 +37,13 @@ These three journeys are deliberately never automated, not just temporarily defe
 5. Confirm the widget briefly shows "✓ Logged!" (flash), then reverts to normal state. Confirm a notification appeared ("Task name / Logged! +X pts").
 6. Force-stop the app (`adb shell am force-stop com.earnit.app` or via Android Settings). Reopen and confirm the flash revert still triggers correctly on the next log — the timer is self-contained in Glance, not tied to the app process.
 7. Configure the widget with a reward that has **no tasks linked**. Confirm the **ADD TASK** button appears (styled with a lighter background). Tap it and confirm it opens the app to that reward's detail screen.
-8. Configure the widget with a reward that has tasks. Log enough points to meet the point cost **without** completing all mandatory (★) tasks. Confirm the **+ LOG** button is still shown and a "Required tasks needed to claim" subtitle appears below the reward name.
+8. Configure the widget with a reward that has tasks. Log enough points to meet the point cost **without** completing all mandatory (★) tasks. Confirm the **+ LOG** button is still shown and the mandatory-task hint subtitle (`Strings.WIDGET_MANDATORY_HINT`) appears below the reward name.
 9. Log tasks until all non-repeatable tasks for the tracked reward are done. Confirm the **+ LOG** button is hidden and **no "Done ✓" text appears** — the widget shows only the reward name and progress bar.
 10. Log enough tasks to reach the reward's point cost and complete all mandatory tasks. Confirm the **CLAIM** button replaces the log button. Tap it and confirm it opens the app to the reward detail screen.
 11. Claim the reward. Confirm the widget shows the **Claimed/archived** state ("Earned and Claimed" subtitle) and that tapping the widget body opens the app.
 12. Remove the widget from the home screen and add a new one. Confirm the config flow runs again and selecting a different reward produces a correctly configured widget. Note: long-pressing an existing widget only offers resizing — re-adding is the only way to change the tracked reward.
 13. Switch the app colour scheme (Settings → Colour Scheme). Confirm both widget activities (`WidgetTaskLogActivity`, `WidgetConfigActivity`) reflect the new theme in both light and dark mode. Note: the existing widget on the home screen does **not** re-theme automatically — remove and re-add it to confirm a newly placed widget uses the updated scheme.
+14. With a reward in the mandatory-task-hint state from step 8, drag-resize the widget down to its smallest footprint (e.g. a 3-column-wide, 2-row-tall grid cell on Pixel launcher). Confirm the reward name, hint text, and full progress bar all stay visible with no clipping — this combination (narrow width + hint text + minimal height) is what caused the progress bar to be cut off on Pixel 6 before `fix/widget-hint-overflow`.
 
 ---
 

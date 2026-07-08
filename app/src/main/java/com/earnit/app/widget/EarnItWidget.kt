@@ -48,6 +48,7 @@ import com.earnit.app.R
 import com.earnit.app.data.AppColorScheme
 import com.earnit.app.data.EarnItRepository
 import com.earnit.app.data.RewardProgress
+import com.earnit.app.ui.Strings
 import com.earnit.app.ui.theme.ColorSchemes
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -358,7 +359,8 @@ private fun StandardContent(
                     if (showMandatoryHint) {
                         Spacer(GlanceModifier.height(2.dp))
                         Text(
-                            "Required tasks needed to claim",
+                            Strings.WIDGET_MANDATORY_HINT,
+                            maxLines = 1,
                             style = TextStyle(color = colors.onSurfaceVar, fontSize = 11.sp),
                         )
                     }
