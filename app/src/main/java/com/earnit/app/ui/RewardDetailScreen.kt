@@ -65,6 +65,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,6 +77,8 @@ import com.earnit.app.data.RewardProgress
 import com.earnit.app.ui.theme.LocalEarnItAccents
 import com.earnit.app.ui.theme.cardSurface
 import com.earnit.app.viewmodel.EarnItViewModel
+import com.earnit.app.widget.hasEarnItWidgetPinned
+import com.earnit.app.widget.requestPinEarnItWidget
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -92,6 +95,8 @@ fun RewardDetailScreen(
     var isTasksExpanded by remember { mutableStateOf(true) }
     var isActivityExpanded by remember { mutableStateOf(true) }
 
+    val context = LocalContext.current
+    val hasWidgetPinned = remember { hasEarnItWidgetPinned(context) }
     val detailSettings by viewModel.settings.collectAsState()
     if (showLogDialog) {
         LogTaskDialog(
@@ -580,6 +585,25 @@ fun RewardDetailScreen(
                         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(Strings.REWARD_ADD_TASK_BTN)
+                    }
+                    if (rp.allTasks.isNotEmpty() && !hasWidgetPinned && !detailSettings.widgetNudgeDismissed) {
+                        Spacer(Modifier.height(8.dp))
+                        DismissibleTipBanner(
+                            text = Strings.WIDGET_NUDGE_BODY,
+                            onDismiss = { viewModel.dismissWidgetNudge() },
+                            dismissContentDescription = Strings.WIDGET_NUDGE_DISMISS_DESC,
+                        ) {
+                            OutlinedButton(
+                                onClick = { requestPinEarnItWidget(context) },
+                                shape = RoundedCornerShape(10.dp),
+                                colors =
+                                    ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.primary,
+                                    ),
+                            ) {
+                                Text(Strings.WIDGET_NUDGE_ACTION, style = buttonLabelStyle)
+                            }
+                        }
                     }
                 }
             }

@@ -207,6 +207,11 @@ object Strings {
     const val REWARD_ROAD_TO_GLORY = "Road to Glory"
     const val REWARD_RECENT_ACTIVITY = "Recent activity"
 
+    // Reward detail screen — widget nudge banner
+    const val WIDGET_NUDGE_BODY = "Track this reward from your home screen without opening the app."
+    const val WIDGET_NUDGE_ACTION = "Add widget"
+    const val WIDGET_NUDGE_DISMISS_DESC = "Dismiss widget tip"
+
     // Log / claim dialogs (SharedDialogs.kt)
     const val LOG_DIALOG_TITLE = "Log"
     const val LOG_SEARCH_LABEL = "Search tasks"

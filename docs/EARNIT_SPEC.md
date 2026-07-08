@@ -141,6 +141,10 @@ Reward progress cards (home screen and Reward Detail) include live animated feed
    - **Archive** — reward is marked archived and removed from active view
 3. All active logs for that reward are archived into a History entry.
 
+### Widget Nudge
+
+A dismissible banner appears on the Reward Detail screen the first time a reward has a task linked to it (i.e. right after "Add task" is used, before any log needs to happen), prompting the user to add a home screen widget for that reward. The action triggers the OS "add to home screen" flow via `AppWidgetManager.requestPinAppWidget()`; the user still picks the reward in `WidgetConfigActivity` as usual — the nudge doesn't pre-select it. The banner is suppressed once the user already has any EarnIt widget pinned, and hides permanently once dismissed (`widgetNudgeDismissed` in DataStore).
+
 ---
 
 ## 4. History
