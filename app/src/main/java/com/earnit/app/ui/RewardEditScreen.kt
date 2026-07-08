@@ -136,7 +136,9 @@ fun RewardEditScreen(
 
     LaunchedEffect(pendingRewardId) {
         if (pendingRewardSaveNav && pendingRewardId != null) {
-            pendingRewardSaveNav = false
+            // Leave pendingRewardSaveNav = true — this screen stays composed during the nav
+            // transition, and resetting it here re-enables nameConflict for one frame, flashing
+            // the duplicate-name error just before the detail screen replaces this one.
             val newId = pendingRewardId!!
             viewModel.consumePendingRewardId()
             navController.navigate(Screen.RewardDetail.route(newId)) {
