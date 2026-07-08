@@ -31,10 +31,11 @@ object TestDataSeeder {
             taskDao.insertTask(
                 TaskEntity(name = "Evening Walk", points = 2, icon = "🚶", sortOrder = 2, group = "Fitness"),
             )
+        // Name at TASK_NAME_MAX_CHARS (56) — layout stress test
         val longTask =
             taskDao.insertTask(
                 TaskEntity(
-                    name = "Early Morning 5km Run Before Breakfast",
+                    name = "Early Morning 5km Run Before Breakfast Then a Cup of Tea",
                     points = 4,
                     icon = "🌅",
                     sortOrder = 3,
@@ -437,11 +438,20 @@ object TestDataSeeder {
 
         rewardDao.insertReward(RewardEntity(name = "Weekend Away", cost = 80, icon = "🏕️", sortOrder = 5))
 
-        // ── Active Reward 7 — long name + high cost (layout stress test) ──────
+        // ── Active Reward 7 — name/description at max length + high cost (layout stress test) ──
 
         val bigReward =
             rewardDao.insertReward(
-                RewardEntity(name = "Weekend Hiking Trip to the Mountains", cost = 500, icon = "⛰️", sortOrder = 6),
+                RewardEntity(
+                    name = "Weekend Hiking Trip to the Rockies Peaks",
+                    cost = 500,
+                    icon = "⛰️",
+                    description =
+                        "A multi-day backpacking trip through alpine meadows and rocky ridgelines, camping " +
+                            "under the stars each night, with a summit push on the final morning before the " +
+                            "long drive home and a well-earned rest.",
+                    sortOrder = 6,
+                ),
             )
         rewardTaskDao.insertCrossRef(RewardTaskCrossRef(bigReward, bigTask, isMandatory = true, isRepeatable = true))
         rewardTaskDao.insertCrossRef(RewardTaskCrossRef(bigReward, workout, isMandatory = false, isRepeatable = true))
@@ -554,11 +564,11 @@ object TestDataSeeder {
                     group = "Mindfulness",
                 ),
             )
-        // Long name — layout stress test
+        // Name at TASK_NAME_MAX_CHARS (56) — layout stress test
         val longTask =
             taskDao.insertTask(
                 TaskEntity(
-                    name = "Early Morning 5km Run Before Breakfast",
+                    name = "Early Morning 5km Run Before Breakfast Then a Cup of Tea",
                     points = 4,
                     icon = "🌅",
                     sortOrder = 11,
@@ -776,18 +786,27 @@ object TestDataSeeder {
 
         rewardDao.insertReward(RewardEntity(name = "Nice Dinner", cost = 25, icon = "🍽️", sortOrder = 4))
 
-        // ── Active Reward 6 — Long name (layout stress test) ───────────────────
+        // ── Active Reward 6 — name/description at max length (layout stress test) ─────
 
         val longReward =
             rewardDao.insertReward(
-                RewardEntity(name = "Weekend Hiking Trip to the Mountains", cost = 60, icon = "⛰️", sortOrder = 5),
+                RewardEntity(
+                    name = "Weekend Hiking Trip to the Rockies Peaks",
+                    cost = 60,
+                    icon = "⛰️",
+                    description =
+                        "A multi-day backpacking trip through alpine meadows and rocky ridgelines, camping " +
+                            "under the stars each night, with a summit push on the final morning before the " +
+                            "long drive home and a well-earned rest.",
+                    sortOrder = 5,
+                ),
             )
         rewardTaskDao.insertCrossRef(RewardTaskCrossRef(longReward, longTask, isMandatory = true, isRepeatable = true))
         rewardTaskDao.insertCrossRef(RewardTaskCrossRef(longReward, run, isMandatory = false, isRepeatable = true))
         logDao.insertLog(
             CompletionLogEntity(
                 taskId = longTask,
-                taskName = "Early Morning 5km Run Before Breakfast",
+                taskName = "Early Morning 5km Run Before Breakfast Then a Cup of Tea",
                 rewardId = longReward,
                 timestamp =
                     now - 2 * day,

@@ -274,11 +274,12 @@ fun TaskEditScreen(
                 }
                 OutlinedTextField(
                     value = name,
-                    onValueChange = { name = it },
+                    onValueChange = { if (it.length <= TASK_NAME_MAX_CHARS) name = it },
                     label = { Text(Strings.TASK_NAME_LABEL) },
                     placeholder = { Text(Strings.TASK_NAME_PLACEHOLDER) },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
                     isError = nameConflict,
                     colors =
                         OutlinedTextFieldDefaults.colors(
@@ -374,8 +375,10 @@ fun TaskEditScreen(
                             BasicTextField(
                                 value = newGroupText,
                                 onValueChange = {
-                                    newGroupText = it
-                                    if (it.isNotBlank()) group = ""
+                                    if (it.length <= TASK_GROUP_MAX_CHARS) {
+                                        newGroupText = it
+                                        if (it.isNotBlank()) group = ""
+                                    }
                                 },
                                 modifier =
                                     Modifier
@@ -644,7 +647,7 @@ fun TaskEditScreen(
                     viewModel.saveTask(
                         TaskEntity(
                             id = existing?.id ?: 0L,
-                            name = name,
+                            name = name.trim(),
                             repeatable = existing?.repeatable ?: true,
                             points = points.toIntOrNull() ?: 4,
                             useAutoPoints = useAuto,
@@ -652,7 +655,7 @@ fun TaskEditScreen(
                             difficulty = difficulty,
                             preparation = preparation,
                             icon = icon,
-                            group = newGroupText.ifBlank { group }.takeIf { it.isNotBlank() },
+                            group = newGroupText.trim().ifBlank { group }.takeIf { it.isNotBlank() },
                         ),
                         rewardLinks =
                             if (fromRewardId != 0L) {

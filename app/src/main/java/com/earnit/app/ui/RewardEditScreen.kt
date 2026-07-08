@@ -305,10 +305,11 @@ fun RewardEditScreen(
                     }
                     OutlinedTextField(
                         value = name,
-                        onValueChange = { name = it },
+                        onValueChange = { if (it.length <= REWARD_NAME_MAX_CHARS) name = it },
                         label = { Text(Strings.REWARD_NAME_LABEL) },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
                         isError = nameConflict,
                         colors =
                             OutlinedTextFieldDefaults.colors(
@@ -353,12 +354,13 @@ fun RewardEditScreen(
             item {
                 OutlinedTextField(
                     value = description,
-                    onValueChange = { description = it },
+                    onValueChange = { if (it.length <= REWARD_DESC_MAX_CHARS) description = it },
                     label = { Text(Strings.REWARD_DESC_LABEL) },
                     placeholder = { Text(Strings.REWARD_DESC_PLACEHOLDER) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     maxLines = 3,
+                    supportingText = { Text("${description.length}/$REWARD_DESC_MAX_CHARS") },
                     colors =
                         OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -474,7 +476,7 @@ fun RewardEditScreen(
                         taskState.entries
                             .filter { it.value.included }
                             .map { (id, s) -> Triple(id, s.isMandatory, s.isRepeatable) }
-                    viewModel.saveReward(rewardId, name, cost.toIntOrNull() ?: 10, description, icon, taskTriples)
+                    viewModel.saveReward(rewardId, name.trim(), cost.toIntOrNull() ?: 10, description.trim(), icon, taskTriples)
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar(Strings.REWARD_SAVED, duration = SnackbarDuration.Short)
                     }

@@ -56,3 +56,8 @@ internal fun formatDate(ts: Long): String {
 internal fun TaskEntity.displayPoints(): String = "+${effectivePoints()}"
 
 internal const val NOTE_MAX_CHARS = 200
+internal const val REWARD_NAME_MAX_CHARS = 40
+internal const val TASK_NAME_MAX_CHARS = 56
+internal const val REWARD_DESC_MAX_CHARS = 200
+internal const val TASK_GROUP_MAX_CHARS = 24
+internal const val NICKNAME_MAX_CHARS = 30
