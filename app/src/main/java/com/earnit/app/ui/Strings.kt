@@ -280,6 +280,10 @@ object Strings {
     const val THEME_OCEAN_BLUE = "Ocean Blue"
     const val THEME_FOREST = "Forest"
 
+    // Settings screen — discoverability tip
+    const val SETTINGS_TIP = "Tip: personalize your name, quote, and color theme below."
+    const val SETTINGS_TIP_DISMISS_DESC = "Dismiss tip"
+
     // Widget activities
     const val WIDGET_TASK_ALL_LOGGED = "All tasks logged!"
     const val WIDGET_TASK_PICKER_HINT = "Tap a task to log it"

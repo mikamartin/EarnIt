@@ -251,6 +251,10 @@ A `!` badge appears on the Settings icon in the bottom nav bar whenever a mascot
 
 **Import/restore suppression:** When the user restores data via import (replace or merge), the app silently seeds the unlocked-mascot list from the restored history without firing a snackbar or badge. This prevents spurious "new mascot" notifications for mascots the user already earned before the backup.
 
+### Discoverability Tip
+
+A dismissible banner at the top of the Settings screen ("Tip: personalize your name, quote, and color theme below.") is shown once on first visit and hides permanently once dismissed (`settingsTipDismissed` in DataStore).
+
 ### Colour Schemes
 
 | Scheme | Primary | Secondary | Surface |
