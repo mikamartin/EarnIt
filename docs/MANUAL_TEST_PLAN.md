@@ -43,7 +43,7 @@ These three journeys are deliberately never automated, not just temporarily defe
 11. Claim the reward. Confirm the widget shows the **Claimed/archived** state ("Earned and Claimed" subtitle) and that tapping the widget body opens the app.
 12. Remove the widget from the home screen and add a new one. Confirm the config flow runs again and selecting a different reward produces a correctly configured widget. Note: long-pressing an existing widget only offers resizing — re-adding is the only way to change the tracked reward.
 13. Switch the app colour scheme (Settings → Colour Scheme). Confirm both widget activities (`WidgetTaskLogActivity`, `WidgetConfigActivity`) reflect the new theme in both light and dark mode. Note: the existing widget on the home screen does **not** re-theme automatically — remove and re-add it to confirm a newly placed widget uses the updated scheme.
-14. With a reward in the mandatory-task-hint state from step 8, drag-resize the widget down to its smallest footprint (e.g. a 3-column-wide, 2-row-tall grid cell on Pixel launcher). Confirm the reward name, hint text, and full progress bar all stay visible with no clipping — this combination (narrow width + hint text + minimal height) is what caused the progress bar to be cut off on Pixel 6 before `fix/widget-hint-overflow`.
+14. With a reward in the mandatory-task-hint state from step 8, drag-resize the widget down to its smallest footprint (e.g. a 3-column-wide, 2-row-tall home screen grid cell). Confirm the reward name, hint text, and full progress bar all stay visible with no clipping — this combination (narrow width + hint text + minimal height) is what caused the progress bar to be cut off on at least one device before `fix/widget-hint-overflow`.
 
 ---
 
