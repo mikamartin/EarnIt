@@ -14,4 +14,6 @@ data class AppSettings(
     val useRandomNickname: Boolean = false,
     val tasksGroupView: Boolean = false,
     val devModeEnabled: Boolean = false,
+    val widgetNudgeDismissed: Boolean = false,
+    val settingsTipDismissed: Boolean = false,
 )

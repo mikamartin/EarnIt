@@ -74,7 +74,7 @@ Run this after any significant feature work or refactor. Copy the checklist into
 - [ ] Were any new instrumented tests added? Confirm they run on a device before committing (a test that never ran may have a compile error hidden by Gradle's incremental build).
 - [ ] Did this change touch `AppModule`, `TestAppModule`, or add a new `@Inject` site? Run `./gradlew assembleDebugAndroidTest` — `test` and `assembleDebug` don't compile the androidTest variant, so a binding missing only from `TestAppModule` (which fully replaces `AppModule` for instrumented tests) won't surface otherwise.
 - [ ] Is [TESTING.md](TESTING.md) still accurate?
-  - Update counts in the unit/instrumented tables if they changed.
+  - Update aggregate counts (test pyramid, section headers, cadence table) if they changed, rounded to the nearest 5 or 10 rather than an exact-looking figure — they're a ballpark, not a maintained tally, and false precision just creates more numbers to keep in sync. Per-file counts in the table rows stay exact since they map directly to that file's `@Test` methods.
   - Add a row to the relevant table for any new test file.
   - Move items out of **Deferrals** if they are now covered.
   - Add new gaps to **Deferrals** with a reason if this pass knowingly skips coverage.
@@ -144,7 +144,7 @@ Permanent, accepted constraints — not open work, nothing here gets checked off
 
 ## 5. Tooling Upgrade Reference
 
-Update this section each upgrade cycle. The version matrix and gotchas below reflect the June 2026 upgrade; update in place rather than appending.
+Update this section each upgrade cycle. The version matrix and gotchas below reflect the most recent upgrade; update in place rather than appending.
 
 `gradle/libs.versions.toml` is the source of truth for dependency and plugin versions — update it there first, then reflect the change in the matrix below. The one exception is the `buildscript classpath` Kotlin override (gotcha 1), which must stay a literal since catalog accessors aren't available in that block.
 

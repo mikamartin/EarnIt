@@ -115,7 +115,7 @@ object Strings {
 
     // Home screen
     const val HOME_QUOTE_SECTION = "QUOTE OF THE DAY"
-    const val HOME_EMPTY_REWARDS = "No rewards yet.\nTap + to create your first reward."
+    const val HOME_EMPTY_REWARDS = "No rewards yet.\nAdd one, then earn points toward it by completing tasks."
     const val HOME_ADD_TASKS_BTN = "+ ADD TASKS"
     const val LOG_BTN = "+ LOG"
     const val NEW_REWARD_DESC = "New Reward"
@@ -194,18 +194,23 @@ object Strings {
 
     // Task detail screen
     const val TASK_DETAIL_POINTS_LABEL = "Points:"
-    const val TASK_DETAIL_NO_REWARDS = "Not used in any rewards yet."
+    const val TASK_DETAIL_NO_REWARDS = "Not used in any rewards yet.\nLink it to a reward to start earning points with it."
     const val NO_ACTIVITY = "No activity yet."
 
     // Reward detail screen
     const val REWARD_DETAIL_CLAIM_BTN = "CLAIM"
-    const val REWARD_DETAIL_NO_TASKS = "No tasks added yet."
+    const val REWARD_DETAIL_NO_TASKS = "No tasks added yet.\nAdd tasks below — completing them earns points toward this reward."
     const val REWARD_MANDATORY_TASKS_HINT = "Point goal reached, complete the ★ tasks to claim."
 
     fun rewardEarnTasksTitle(count: Int) = if (count > 0) "Complete to earn points ($count)" else "Complete to earn points"
 
     const val REWARD_ROAD_TO_GLORY = "Road to Glory"
     const val REWARD_RECENT_ACTIVITY = "Recent activity"
+
+    // Reward detail screen — widget nudge banner
+    const val WIDGET_NUDGE_BODY = "Track this reward from your home screen without opening the app."
+    const val WIDGET_NUDGE_ACTION = "Add widget"
+    const val WIDGET_NUDGE_DISMISS_DESC = "Dismiss widget tip"
 
     // Log / claim dialogs (SharedDialogs.kt)
     const val LOG_DIALOG_TITLE = "Log"
@@ -274,6 +279,10 @@ object Strings {
     const val THEME_WARM_GOLD = "Warm Gold"
     const val THEME_OCEAN_BLUE = "Ocean Blue"
     const val THEME_FOREST = "Forest"
+
+    // Settings screen — discoverability tip
+    const val SETTINGS_TIP = "Tip: personalize your name, quote, and color theme below."
+    const val SETTINGS_TIP_DISMISS_DESC = "Dismiss tip"
 
     // Widget activities
     const val WIDGET_TASK_ALL_LOGGED = "All tasks logged!"

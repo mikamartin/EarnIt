@@ -24,8 +24,8 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 
 ```
                  [ Manual — 3 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
-            [ UI — ~10 tests ]          ComposeTestRule + Hilt, real DataStore
-       [ Integration — ~30 tests ]      Real in-memory Room, no mocks
+            [ UI — ~20 tests ]          ComposeTestRule + Hilt, real DataStore
+       [ Integration — ~25 tests ]      Real in-memory Room, no mocks
      [ Unit — 100+ tests ]              JVM, MockK DAOs, fast
 ```
 
@@ -83,6 +83,8 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 | `SaveNavigationUiTest` (4) | UI | Post-save navigation: new task → TaskDetailScreen; new reward → RewardDetailScreen; task created from new-reward form → pops back to reward form (task auto-included), both saved and linked on reward save; Add task button disabled until reward name is entered |
 | `ImportErrorUiTest` (2) | UI | Import error messages appear on Data & Backup screen: invalid JSON file shows "File is not valid JSON"; wrong-schema JSON shows "This doesn't look like an EarnIt backup" |
 | `MaxLengthUiTest` (5) | UI | Reward name, task name, reward description, task group name, and nickname fields each accept input up to their character cap and silently reject one character past it |
+| `WidgetNudgeUiTest` (1) | UI | Widget nudge banner on Reward Detail: hidden while a reward has no tasks, appears once the first task is linked, dismiss hides it and persists across `activityRule.scenario.recreate()` |
+| `SettingsTipUiTest` (1) | UI | Settings discoverability tip: shown on first visit, dismiss hides it and persists across `activityRule.scenario.recreate()` and subsequent visits |
 
 ---
 
@@ -122,6 +124,9 @@ Full UI path: Tasks tab → Library → expand a template → add all tasks → 
 
 **Post-save navigation** (`SaveNavigationUiTest`)
 Saving a new task navigates to TaskDetailScreen; saving a new reward navigates to RewardDetailScreen. Creating a task from a new-reward edit form pops back to the reward form (not forward to TaskDetailScreen), auto-includes the task in the form's task list, and persists both entities linked when the reward is subsequently saved.
+
+**Onboarding nudge dismissal persists** (`WidgetNudgeUiTest`, `SettingsTipUiTest`)
+Both one-time nudges (widget nudge on Reward Detail, discoverability tip on Settings) are asserted to disappear immediately on dismiss and to stay hidden after `activityRule.scenario.recreate()`, proving the DataStore flag round-trips rather than just the in-memory Compose state resetting.
 
 **Import file validation** (`JsonImportValidationTest`, `ImportViewModelErrorTest`, `ExportImportTest`, `ImportErrorUiTest`)
 Wrong-schema JSON (e.g. a random JSON file) throws `ImportWrongSchemaException` before touching the database — critical in Replace mode where silent failure would wipe user data. `ExportImportTest.importReplace_withWrongSchema_doesNotWipeExistingData` proves at integration level that existing DB rows survive a wrong-schema replace attempt (not just that the exception fires). Malformed JSON (invalid syntax even with an EarnIt key present) throws `ImportInvalidJsonException`. Each exception type maps to a specific user-facing string in the ViewModel and is verified against `importResult` StateFlow as well as the `onComplete` callback. UI tests verify the error messages actually appear on the Data & Backup screen.

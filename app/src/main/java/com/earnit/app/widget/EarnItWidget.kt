@@ -1,5 +1,7 @@
 package com.earnit.app.widget
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
@@ -477,4 +479,21 @@ private fun ProgressBar(
 
 class EarnItGlanceWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = EarnItGlanceWidget()
+}
+
+// ── Pinning ────────────────────────────────────────────────────────────────────
+
+/** Whether the user has at least one EarnIt widget already placed on a home screen. */
+fun hasEarnItWidgetPinned(context: Context): Boolean {
+    val provider = ComponentName(context, EarnItGlanceWidgetReceiver::class.java)
+    return AppWidgetManager.getInstance(context).getAppWidgetIds(provider).isNotEmpty()
+}
+
+/** Triggers the OS "add to home screen" dialog for the EarnIt widget, if the launcher supports it. */
+fun requestPinEarnItWidget(context: Context) {
+    val appWidgetManager = AppWidgetManager.getInstance(context)
+    if (appWidgetManager.isRequestPinAppWidgetSupported) {
+        val provider = ComponentName(context, EarnItGlanceWidgetReceiver::class.java)
+        appWidgetManager.requestPinAppWidget(provider, null, null)
+    }
 }

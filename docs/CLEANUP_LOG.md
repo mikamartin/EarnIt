@@ -396,7 +396,7 @@ Replaced all remaining `Brush.*Gradient(listOf(Color(0xFFFFD060), Color(0xFFE07B
 
 ---
 
-### Pass 16 — `bugfix/session-2026-06-01` branch
+### Pass 16 — bug fixes, Add Task shortcut, and button style system
 
 #### Bug Fixes ✅
 - **`copyRewardFromEntry` lost icon, wrong `sortOrder`/`createdAt`:** bypassed `upsertReward` → icon dropped and new reward pinned to top. Routed through `upsertReward` with `icon = entry.rewardIcon`.
@@ -548,7 +548,7 @@ Replaced all remaining `Brush.*Gradient(listOf(Color(0xFFFFD060), Color(0xFFE07B
 
 ---
 
-### Pass 21 — pre-publish cleanup (June 16, 2026)
+### Pass 21 — pre-publish cleanup
 
 #### Branding ✅
 - All "Cedar Inlet Apps" references replaced with "SecondMonday Studios" across `Strings.kt`, `CLEANUP.md`, `LAUNCH_SETUP.md`, `EARNIT_SPEC.md`
@@ -581,7 +581,7 @@ Replaced all remaining `Brush.*Gradient(listOf(Color(0xFFFFD060), Color(0xFFE07B
 
 ---
 
-### Pass 22 — empty-state UI journey (June 16, 2026)
+### Pass 22 — empty-state UI journey
 
 #### Tests ✅
 - Added `EmptyStateUiTest.kt` — UI journey covering the "no tasks, no rewards, no history" fresh-install state across all three tabs (Prizes, Tasks, History × both sub-tabs). Closes the "Empty-state screens" gap previously listed as not covered in `TESTING.md`.
@@ -600,7 +600,7 @@ Replaced all remaining `Brush.*Gradient(listOf(Color(0xFFFFD060), Color(0xFFE07B
 
 ---
 
-### Pass 23 — ktlint adoption (June 16, 2026)
+### Pass 23 — ktlint adoption
 
 #### Linting ✅
 - Added `org.jlleitschuh.gradle.ktlint` (14.2.0) to the root `build.gradle.kts`, applied to all subprojects. Closes the "Linting" pre-release checklist item.
@@ -642,7 +642,7 @@ Replaced all remaining `Brush.*Gradient(listOf(Color(0xFFFFD060), Color(0xFFE07B
 
 ---
 
-### Pass 27 — mascot unlock UX fixes (June 2026)
+### Pass 27 — mascot unlock UX fixes
 
 #### Duplication ✅
 - No new duplication introduced. Converted `_openMascotPicker` from `SharedFlow` to `StateFlow`, making it consistent with `_pendingTaskId` (already a StateFlow) — removed the one remaining inconsistency in how one-shot ViewModel state is modelled.
@@ -720,7 +720,7 @@ Replaced all remaining `Brush.*Gradient(listOf(Color(0xFFFFD060), Color(0xFFE07B
 
 ---
 
-### Pass 29 — `chore/pre-release-cleanup` branch (pre-release code review, June 2026)
+### Pass 29 — `chore/pre-release-cleanup` branch (pre-release code review)
 
 #### Dynamic version string ✅
 - `Strings.APP_VERSION = "Version: 1.0"` removed — would have drifted silently when `versionName` was incremented.
@@ -780,3 +780,26 @@ Replaced all remaining `Brush.*Gradient(listOf(Color(0xFFFFD060), Color(0xFFE07B
 - The original data-safety pass above scoped `database.withTransaction { }` to a specific method list rather than sweeping the whole file — `claimReward` (the core "earn a reward" flow: insert History entry → archive logs → conditionally archive the reward), `deleteTask`, `saveRewardTasks`, and `updateTaskRewards` had the identical multi-DAO-call risk profile but were missed. `DeleteCascadeTest` had `deleteTask` and `deleteReward` tests sitting side by side — only `deleteReward` had been fixed. Wrapped all four; `TESTING.md`'s Transaction rollback deferral list updated to match.
 - The `@ForeignKey` cascade added above (Schema baseline reset) made the manual `rewardTaskDao.clearTasksForReward`/`clearRewardsForTask` calls in `deleteReward`/`deleteTask` redundant — SQLite now removes the cross-ref rows declaratively. Removed both call sites, deleted the now-unused `clearRewardsForTask` DAO method, and dropped `deleteTask`'s transaction wrapper since it's now a single statement. `DeleteCascadeTest` updated to assert the manual clear no longer happens instead of asserting call order; new `TESTING.md` Deferrals entry notes cascade behaviour itself isn't verified against a real DB.
 - All unit tests and `ktlintCheck` re-verified green after each change.
+
+---
+
+### Pass 31 — `feat/onboarding-nudges` branch (first-run guidance)
+
+#### Design System ✅
+- Extracted `DismissibleTipBanner` into `EarnItButtons.kt` before writing either of the two new nudges — the codebase had no existing "shown once, dismissible, persisted" banner pattern (`MAX_REWARD_BANNER` is transient/auto-hide, the mascot settings badge is session-only), so this is a new shared primitive with two call sites from the start rather than a later extraction.
+
+#### Empty-state copy ✅
+- `HOME_EMPTY_REWARDS`, `REWARD_DETAIL_NO_TASKS`, `TASK_DETAIL_NO_REWARDS` expanded to explain *why* (tasks earn points toward rewards), not just *what to tap next*. Left `TASKS_EMPTY_*`, `HISTORY_NO_*`, `WIDGET_CONFIG_EMPTY`, and `NO_ACTIVITY` unchanged — those are either direct action lists where the concept was already taught upstream, or purely retrospective views with nothing to teach.
+
+#### New feature: onboarding nudges ✅
+- Widget nudge (Reward Detail): dismissible banner shown the first time a reward has a task linked, unless the user already has any EarnIt widget pinned. Action calls `AppWidgetManager.requestPinAppWidget()` (new — no prior use of the pin-request API in this codebase) rather than just instructing the user to long-press the home screen. Deliberately does **not** pre-select the reward in `WidgetConfigActivity` — doing so would require threading a reward ID through `EXTRA_APPWIDGET_PROVIDER_EXTRAS`, untested plumbing with no existing precedent; scoped down after discussing the risk/benefit with the user.
+- Settings tip: single dismissible banner at the top of Settings, shown once on first visit, rather than three separate nudges for name/quote/theme individually (rejected as likely to feel naggy for cosmetic, non-core-loop settings).
+- Both persist their dismissed state one-way via new `SettingsRepository`/`AppSettings` boolean flags (`widgetNudgeDismissed`, `settingsTipDismissed`), following the exact existing DataStore convention — no new abstraction introduced.
+
+#### Spec Review ✅
+- `EARNIT_SPEC.md` §3 (Widget Nudge) and §6 (Discoverability Tip) added; §9 test count bumped.
+
+#### Tests ✅
+- Added `WidgetNudgeUiTest` and `SettingsTipUiTest` — each verifies show/hide conditions, dismiss behaviour, and that the dismissal survives `activityRule.scenario.recreate()` (proving the DataStore flag round-trips, not just in-memory state). `TESTING.md` updated with both rows and bumped counts.
+- `./gradlew ktlintCheck`, `test`, `assembleDebug`, and `assembleDebugAndroidTest` all pass. `connectedDebugAndroidTest` run on a real device by the user afterward — all instrumented tests pass, including the two new ones.
+- Added a step to `MANUAL_TEST_PLAN.md`'s "Widget full flow" journey covering the new pin-request entry point, since the launcher's system "add to home screen" dialog is exactly the kind of system-process boundary already established as manual-only for the rest of the widget flow.
