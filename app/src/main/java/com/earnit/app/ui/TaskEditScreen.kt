@@ -375,8 +375,10 @@ fun TaskEditScreen(
                             BasicTextField(
                                 value = newGroupText,
                                 onValueChange = {
-                                    newGroupText = it
-                                    if (it.isNotBlank()) group = ""
+                                    if (it.length <= TASK_GROUP_MAX_CHARS) {
+                                        newGroupText = it
+                                        if (it.isNotBlank()) group = ""
+                                    }
                                 },
                                 modifier =
                                     Modifier
@@ -653,7 +655,7 @@ fun TaskEditScreen(
                             difficulty = difficulty,
                             preparation = preparation,
                             icon = icon,
-                            group = newGroupText.ifBlank { group }.takeIf { it.isNotBlank() },
+                            group = newGroupText.trim().ifBlank { group }.takeIf { it.isNotBlank() },
                         ),
                         rewardLinks =
                             if (fromRewardId != 0L) {

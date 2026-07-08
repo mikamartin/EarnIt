@@ -45,6 +45,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.lifecycleScope
 import com.earnit.app.data.RewardProgress
 import com.earnit.app.ui.EarnItPrimaryButton
+import com.earnit.app.ui.REWARD_NAME_MAX_CHARS
 import com.earnit.app.ui.Strings
 import com.earnit.app.ui.theme.EarnItTheme
 import com.earnit.app.viewmodel.EarnItViewModel
@@ -236,7 +237,7 @@ private fun LabelEditScreen(
 
         OutlinedTextField(
             value = label,
-            onValueChange = { label = it },
+            onValueChange = { if (it.length <= REWARD_NAME_MAX_CHARS) label = it },
             label = { Text(Strings.WIDGET_LABEL_TITLE) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),

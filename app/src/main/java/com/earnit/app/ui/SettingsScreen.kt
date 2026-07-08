@@ -196,8 +196,10 @@ fun SettingsScreen(
                 OutlinedTextField(
                     value = if (settings.useRandomNickname) viewModel.sessionNickname else nicknameText,
                     onValueChange = { newValue ->
-                        nicknameText = newValue
-                        if (settings.useRandomNickname) viewModel.updateUseRandomNickname(false)
+                        if (newValue.length <= NICKNAME_MAX_CHARS) {
+                            nicknameText = newValue
+                            if (settings.useRandomNickname) viewModel.updateUseRandomNickname(false)
+                        }
                     },
                     placeholder = { Text(Strings.SETTINGS_NAME_PLACEHOLDER) },
                     singleLine = true,
