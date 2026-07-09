@@ -88,10 +88,11 @@ fun RewardDetailScreen(
     uiState: EarnItUiState,
     viewModel: EarnItViewModel,
     navController: NavHostController,
+    autoOpenAddTask: Boolean = false,
 ) {
     var showLogDialog by remember { mutableStateOf(false) }
     var showClaimDialog by remember { mutableStateOf(false) }
-    var showAddTaskDialog by remember { mutableStateOf(false) }
+    var showAddTaskDialog by remember { mutableStateOf(autoOpenAddTask) }
     var isTasksExpanded by remember { mutableStateOf(true) }
     var isActivityExpanded by remember { mutableStateOf(true) }
 

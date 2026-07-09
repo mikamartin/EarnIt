@@ -15,6 +15,7 @@ import com.earnit.app.ui.Strings
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -22,7 +23,7 @@ import org.junit.runner.RunWith
 import javax.inject.Inject
 
 /**
- * UI regression tests for post-save navigation on the Add Task / Add Reward screens.
+ * UI regression tests for post-save and shortcut navigation around the reward/task forms.
  *
  * Before the fix, clicking SAVE left the user on the edit screen with a false
  * "already exists" duplicate warning. These tests verify:
@@ -31,6 +32,8 @@ import javax.inject.Inject
  *   3. Creating a task from the new-reward form pops back to the reward form
  *      (not to TaskDetailScreen), auto-includes the task, and saves both linked
  *      when the reward is subsequently saved.
+ *   4. The home card's "+ ADD TASKS" shortcut (reward with no tasks) opens the
+ *      Add Task dialog directly on Reward Detail, not the Reward Edit screen.
  */
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
@@ -129,5 +132,41 @@ class SaveNavigationUiTest {
         // Verify we reached RewardDetailScreen with both items present and linked.
         composeTestRule.onNodeWithText("Pizza Night").assertIsDisplayed()
         composeTestRule.onNodeWithText("Order Pizza").assertIsDisplayed()
+    }
+
+    @Test
+    fun homeCardAddTasksButton_opensAddTaskDialogDirectly() {
+        // Create a reward with no tasks yet.
+        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
+        composeTestRule.onNodeWithContentDescription("New Reward").performClick()
+        composeTestRule.onNodeWithText("Reward name").performTextInput("Movie Night")
+        composeTestRule.onNodeWithText("SAVE").performClick()
+
+        // Wait for RewardDetailScreen, then navigate back to Home.
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.onAllNodesWithText(Strings.REWARD_DETAIL_NO_TASKS).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
+
+        // Tap the home card's "+ ADD TASKS" pill.
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.onAllNodesWithText(Strings.HOME_ADD_TASKS_BTN).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithText(Strings.HOME_ADD_TASKS_BTN).performClick()
+
+        // The Add Task dialog must appear on this single tap — no Reward Edit screen in between.
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.onAllNodesWithText(Strings.ADD_TASK_CREATE).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithText(Strings.ADD_TASK_CREATE).assertIsDisplayed()
+
+        // We must never have landed on the Reward Edit screen.
+        assertTrue(
+            "Should open the Add Task dialog directly, not the reward edit screen",
+            composeTestRule
+                .onAllNodesWithText(Strings.REWARD_EDIT_NEW)
+                .fetchSemanticsNodes()
+                .isEmpty(),
+        )
     }
 }

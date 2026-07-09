@@ -12,7 +12,7 @@ activityCompose = "1.9.0"
 lifecycle = "2.6.2"
 navigationCompose = "2.7.3"
 hiltNavigationCompose = "1.1.0"
-glance = "1.1.0"
+glance = "1.1.1"
 moshi = "1.15.0"
 coroutines = "1.7.3"
 datastorePreferences = "1.0.0"
@@ -21,6 +21,7 @@ junit = "4.13.2"
 mockk = "1.14.0"
 androidxTestExtJunit = "1.2.1"
 espresso = "3.7.0"
+robolectric = "4.16.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -44,6 +45,9 @@ kotlin-metadata-jvm = { group = "org.jetbrains.kotlin", name = "kotlin-metadata-
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 androidx-glance = { group = "androidx.glance", name = "glance", version.ref = "glance" }
 androidx-glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
+androidx-glance-testing = { group = "androidx.glance", name = "glance-testing", version.ref = "glance" }
+androidx-glance-appwidget-testing = { group = "androidx.glance", name = "glance-appwidget-testing", version.ref = "glance" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 moshi = { group = "com.squareup.moshi", name = "moshi", version.ref = "moshi" }
 moshi-kotlin-codegen = { group = "com.squareup.moshi", name = "moshi-kotlin-codegen", version.ref = "moshi" }
 moshi-kotlin = { group = "com.squareup.moshi", name = "moshi-kotlin", version.ref = "moshi" }
