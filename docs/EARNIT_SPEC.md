@@ -184,7 +184,7 @@ One entry in the home screen widget picker:
 ### Display States
 
 - **Active:** reward name, progress bar, and + LOG or CLAIM button depending on state
-- **No tasks linked:** reward name, progress bar, and ADD TASK button (lighter style); tapping opens the app to the reward detail screen
+- **No tasks linked:** reward name, progress bar, and ADD TASK button (lighter style); tapping opens the app straight to the reward detail screen with the Add Task dialog already open
 - **Mandatory tasks blocking claim:** Active state with "Required tasks needed to claim" subtitle below the reward name — shown when point goal is reached but not all mandatory (★) tasks are logged
 - **All tasks done, points still short:** reward name and progress bar only; no button shown
 - **Claimed / archived:** reward name + "Earned and Claimed" subtitle; tapping opens the app
@@ -336,7 +336,7 @@ See [TESTING.md](TESTING.md) for the full picture — current coverage, known ga
 ```
 Main App
 ├── Prizes (Home)            — active rewards, progress cards, mascot, quote of the day
-│   ├── Reward Detail        — tasks checklist, progress bar, Earned It / claim flow; "Add task" button inside the "Complete to earn points" section opens AddTaskToRewardDialog for immediate linking
+│   ├── Reward Detail        — tasks checklist, progress bar, Earned It / claim flow; "Add task" button inside the "Complete to earn points" section opens AddTaskToRewardDialog for immediate linking; also reachable pre-opened via the home card's "+ ADD TASKS" pill (task-less rewards) and the widget's ADD TASK button, both of which navigate here with `autoOpenAddTask=true`
 │   └── Reward Edit          — name, icon, description, cost, linked tasks (mandatory/repeatable flags); duplicate name blocked with inline error on the name field (suppressed briefly while save navigation is in flight); "Add task" button disabled until a reward name is entered; saving a new reward navigates to RewardDetailScreen; saving an existing reward shows "Reward saved" snackbar and stays on screen; creating a new task from within a new-reward form pops back to the reward form and auto-includes the task
 ├── Tasks                    — draggable task list; group view toggle (flat / collapsible groups); Library shortcut
 │   ├── Task Detail          — task info (name, icon, group chip, points), linked rewards, log history

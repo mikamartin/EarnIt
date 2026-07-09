@@ -14,15 +14,28 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val claimRewardId = mutableStateOf(0L)
+    private val autoOpenAddTask = mutableStateOf(false)
+
+    // Bumped on every onCreate/onNewIntent so EarnItApp's nav effect re-fires even when
+    // the extras repeat (e.g. tapping the widget's ADD TASK button twice in a row for the
+    // same reward while the app is already showing it) — a plain state-equality key would
+    // silently no-op on the second identical intent.
+    private val navRequestToken = mutableStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         claimRewardId.value = intent.getLongExtra("rewardId", 0L)
+        autoOpenAddTask.value = intent.getBooleanExtra("autoOpenAddTask", false)
+        navRequestToken.value++
         setContent {
             EarnItTheme {
                 Surface {
-                    EarnItApp(startRewardId = claimRewardId.value)
+                    EarnItApp(
+                        startRewardId = claimRewardId.value,
+                        autoOpenAddTask = autoOpenAddTask.value,
+                        navRequestToken = navRequestToken.value,
+                    )
                 }
             }
         }
@@ -32,5 +45,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         claimRewardId.value = intent.getLongExtra("rewardId", 0L)
+        autoOpenAddTask.value = intent.getBooleanExtra("autoOpenAddTask", false)
+        navRequestToken.value++
     }
 }

@@ -387,7 +387,9 @@ fun HomeScreen(
                             },
                             onLogTask = { logDialogRewardId = rp.reward.id },
                             onClaim = { claimDialogRewardId = rp.reward.id },
-                            onEditReward = { navController.navigate(Screen.RewardEdit.route(rp.reward.id)) },
+                            onAddTask = {
+                                navController.navigate(Screen.RewardDetail.route(rp.reward.id, autoOpenAddTask = true))
+                            },
                         )
                     }
                 }
@@ -482,7 +484,7 @@ fun RewardProgressCard(
     onCardClick: (() -> Unit)? = null,
     onLogTask: (() -> Unit)? = null,
     onClaim: (() -> Unit)? = null,
-    onEditReward: (() -> Unit)? = null,
+    onAddTask: (() -> Unit)? = null,
 ) {
     val accents = LocalEarnItAccents.current
     val showMandatoryHint = !rp.canClaim && rp.totalPoints >= rp.reward.cost
@@ -642,8 +644,8 @@ fun RewardProgressCard(
                     }
                     if (rp.canClaim && onClaim != null) {
                         ClaimPillButton(modifier = Modifier.scale(claimScale), onClick = onClaim)
-                    } else if (rp.allTasks.isEmpty() && onEditReward != null) {
-                        LogPillButton(Strings.HOME_ADD_TASKS_BTN, accentColor, onClick = onEditReward)
+                    } else if (rp.allTasks.isEmpty() && onAddTask != null) {
+                        LogPillButton(Strings.HOME_ADD_TASKS_BTN, accentColor, onClick = onAddTask)
                     } else if (onLogTask != null) {
                         LogPillButton(
                             Strings.LOG_BTN,

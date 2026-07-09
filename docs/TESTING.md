@@ -16,7 +16,7 @@ Import/export, clearAll variants, and delete cascades can destroy user data perm
 DataStore-backed settings that fail to persist degrade every future session. Covered by instrumented UI tests using `activityRule.scenario.recreate()`.
 
 **Tier 4 — UI surface and widget (lower risk, partially deferred)**
-Group-view collapse state, dialog checkbox behaviour, and widget task logging are pure UI concerns with no data at risk. Bugs are visible and fixed without data recovery. Covered by manual exploratory testing; automated tests deferred on cost/risk grounds.
+Group-view collapse state and dialog checkbox behaviour are pure UI concerns with no data at risk. Bugs are visible and fixed without data recovery. Covered by manual exploratory testing; automated tests deferred on cost/risk grounds. The widget's rendered content (which button shows, text, click wiring) is covered at the JVM level by `WidgetActionButtonTest`/`WidgetContentTest` via `glance-testing`; what's still manual-only is the system-boundary wiring around it — the activity chain, real Room/DataStore data flow, and OS-level rendering — per `MANUAL_TEST_PLAN.md`'s "Widget full flow".
 
 ---
 
@@ -64,6 +64,8 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 | `InAppReviewTriggerTest` (2) | `EarnItViewModel.claimReward` — emits `triggerInAppReview` on first claim (empty history); does not emit on subsequent claims |
 | `MascotNotificationTest` (3) | `claimReward` sets `hasNewMascot` when a mascot is newly unlocked; does not set it when all already unlocked; `importFromFile` silently seeds unlocked mascots without emitting a notification or setting the badge |
 | `PendingRewardIdTest` (3) | `saveReward` sets `pendingRewardId` to the upserted id when creating a new reward; leaves it null when editing an existing reward; `consumePendingRewardId` clears the value |
+| `WidgetActionButtonTest` (6) | `widgetActionButtonFor` — no tasks → `ADD_TASK`; unlogged task → `LOG`; repeatable task already logged → still `LOG`; non-repeatable task already logged and below cost → `NONE`; `canClaim` → `CLAIM` even with a loggable task; unlogged mandatory task blocks `CLAIM` despite points met |
+| `WidgetContentTest` (12) | Renders `StandardContent`/`FlashContent`/`EmptyState`/`ClaimedState` via `glance-testing` + Robolectric (JVM, no device) — correct button shown/hidden per state with click action wired, reward name/points/custom-label text, mandatory hint shown/hidden, flash and empty/claimed state text |
 
 ---
 
@@ -80,7 +82,7 @@ Group-view collapse state, dialog checkbox behaviour, and widget task logging ar
 | `SettingsUiTest` (2) | UI | Colour scheme selection persists after `activityRule.scenario.recreate()`; Notes required toggle disables LOG until a note is entered, enables it after |
 | `EmptyStateUiTest` (1) | UI | Fresh-install empty-state copy on all three tabs: Prizes ("No rewards yet"), Tasks ("No tasks yet"), History — both Completed Tasks and Claimed Rewards sub-tabs |
 | `TaskLibraryImportUiTest` (1) | UI | Task Library: expand "Healthy Living" template, add all 10 tasks, verify they appear in the Tasks list |
-| `SaveNavigationUiTest` (4) | UI | Post-save navigation: new task → TaskDetailScreen; new reward → RewardDetailScreen; task created from new-reward form → pops back to reward form (task auto-included), both saved and linked on reward save; Add task button disabled until reward name is entered |
+| `SaveNavigationUiTest` (5) | UI | Post-save navigation: new task → TaskDetailScreen; new reward → RewardDetailScreen; task created from new-reward form → pops back to reward form (task auto-included), both saved and linked on reward save; Add task button disabled until reward name is entered; home card's "+ ADD TASKS" shortcut opens the Add Task dialog directly on Reward Detail, not Reward Edit |
 | `ImportErrorUiTest` (2) | UI | Import error messages appear on Data & Backup screen: invalid JSON file shows "File is not valid JSON"; wrong-schema JSON shows "This doesn't look like an EarnIt backup" |
 | `MaxLengthUiTest` (5) | UI | Reward name, task name, reward description, task group name, and nickname fields each accept input up to their character cap and silently reject one character past it |
 | `WidgetNudgeUiTest` (1) | UI | Widget nudge banner on Reward Detail: hidden while a reward has no tasks, appears once the first task is linked, dismiss hides it and persists across `activityRule.scenario.recreate()` |
@@ -123,10 +125,13 @@ Fresh-install copy on Prizes, Tasks, and both History sub-tabs is asserted direc
 Full UI path: Tasks tab → Library → expand a template → add all tasks → confirm they appear in the Tasks list. `ImportDedupTest` covers the dedup logic itself at the repository level; this test covers the UI wiring (navigation, checkbox state, button enabling) on top of it.
 
 **Post-save navigation** (`SaveNavigationUiTest`)
-Saving a new task navigates to TaskDetailScreen; saving a new reward navigates to RewardDetailScreen. Creating a task from a new-reward edit form pops back to the reward form (not forward to TaskDetailScreen), auto-includes the task in the form's task list, and persists both entities linked when the reward is subsequently saved.
+Saving a new task navigates to TaskDetailScreen; saving a new reward navigates to RewardDetailScreen. Creating a task from a new-reward edit form pops back to the reward form (not forward to TaskDetailScreen), auto-includes the task in the form's task list, and persists both entities linked when the reward is subsequently saved. The home card's "+ ADD TASKS" shortcut is also asserted to land on the Add Task dialog directly rather than the Reward Edit screen — the same regression class as the other cases in this file (an extra tap silently inserted into a flow that should be one tap).
 
 **Onboarding nudge dismissal persists** (`WidgetNudgeUiTest`, `SettingsTipUiTest`)
 Both one-time nudges (widget nudge on Reward Detail, discoverability tip on Settings) are asserted to disappear immediately on dismiss and to stay hidden after `activityRule.scenario.recreate()`, proving the DataStore flag round-trips rather than just the in-memory Compose state resetting.
+
+**Widget action-button selection** (`WidgetActionButtonTest`, `WidgetContentTest`)
+Added after a manual test caught the widget showing no action button at all following a task add via the widget's own new entry point (see `addTaskToReward` not refreshing the widget, fixed in the same change). The button-state decision (`CLAIM` / `LOG` / `ADD_TASK` / `NONE`) was extracted out of the Glance composable into a plain function so it's directly unit-testable; `WidgetContentTest` then renders the actual composables via `glance-testing` + Robolectric to confirm the right button (and only that button) appears with its click action wired, plus reward name/points/hint text. Neither test can verify the click actually reaches the intended `Intent` extras (`glance-testing`'s click-action matchers don't recognize the raw-`Intent` `actionStartActivity` overload this widget uses) — that part stays manual, per `MANUAL_TEST_PLAN.md`.
 
 **Import file validation** (`JsonImportValidationTest`, `ImportViewModelErrorTest`, `ExportImportTest`, `ImportErrorUiTest`)
 Wrong-schema JSON (e.g. a random JSON file) throws `ImportWrongSchemaException` before touching the database — critical in Replace mode where silent failure would wipe user data. `ExportImportTest.importReplace_withWrongSchema_doesNotWipeExistingData` proves at integration level that existing DB rows survive a wrong-schema replace attempt (not just that the exception fires). Malformed JSON (invalid syntax even with an EarnIt key present) throws `ImportInvalidJsonException`. Each exception type maps to a specific user-facing string in the ViewModel and is verified against `importResult` StateFlow as well as the `onComplete` callback. UI tests verify the error messages actually appear on the Data & Backup screen.
@@ -165,6 +170,9 @@ See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the three journeys that are d
 
 **Widget task logging**
 Covered by manual testing, not automation — see [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for rationale and steps.
+
+**Widget refresh side effect (`refreshWidgets()`)**
+`EarnItViewModel.logTask()`, `claimReward()`, and `addTaskToReward()` each call `refreshWidgets()`, which calls `EarnItGlanceWidget().updateAll(context)` by direct instantiation rather than through an injected/mockable seam — no test verifies this call actually happens. A regression here (as happened with `addTaskToReward` — fixed in `fix/add-task-shortcut`) manifests as the widget silently showing stale content, not a crash or visible error, so it's easy to miss without a real device. Deferred because closing it properly means injecting a widget-refresh interface via Hilt, a real architectural change; the manual widget journey in `MANUAL_TEST_PLAN.md` is the current backstop.
 
 **TipViewModel**
 `MockTipRepository` returns hardcoded prices and always succeeds. Tests written against it would validate the mock, not the billing path. Tests deferred until `MockTipRepository` is replaced with real RevenueCat calls; the `TipRepository` interface boundary makes the swap straightforward.

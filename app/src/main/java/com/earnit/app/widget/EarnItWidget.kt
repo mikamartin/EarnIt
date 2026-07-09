@@ -39,6 +39,8 @@ import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
+import androidx.glance.semantics.semantics
+import androidx.glance.semantics.testTag
 import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
@@ -149,7 +151,10 @@ class EarnItGlanceWidget : GlanceAppWidget() {
 
 // ── Theme-aware colors ─────────────────────────────────────────────────────────
 
-private data class WidgetColors(
+// internal (not private): StandardContent/FlashContent/EmptyState/ClaimedState/WidgetColors are
+// exposed to app/src/test so glance-testing can render and assert on them directly, without going
+// through the full provideGlance Hilt/Room pipeline.
+internal data class WidgetColors(
     val primary: ColorProvider,
     val surface: ColorProvider,
     val track: ColorProvider,
@@ -231,7 +236,7 @@ private fun WidgetContent(
 // ── Flash state ────────────────────────────────────────────────────────────────
 
 @Composable
-private fun FlashContent(
+internal fun FlashContent(
     context: Context,
     rewardId: Long,
     colors: WidgetColors,
@@ -249,31 +254,47 @@ private fun FlashContent(
         verticalAlignment = Alignment.CenterVertically,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("✓", style = TextStyle(color = colors.primary, fontSize = 22.sp, fontWeight = FontWeight.Bold))
+        Text(
+            "✓",
+            style = TextStyle(color = colors.primary, fontSize = 22.sp, fontWeight = FontWeight.Bold),
+            modifier = GlanceModifier.semantics { testTag = WidgetTestTags.FLASH_CHECK },
+        )
         Spacer(GlanceModifier.height(2.dp))
-        Text("Logged!", style = TextStyle(color = colors.onSurfaceVar, fontSize = 13.sp))
+        Text(
+            "Logged!",
+            style = TextStyle(color = colors.onSurfaceVar, fontSize = 13.sp),
+            modifier = GlanceModifier.semantics { testTag = WidgetTestTags.FLASH_MESSAGE },
+        )
     }
 }
 
 // ── Empty / unconfigured ───────────────────────────────────────────────────────
 
 @Composable
-private fun EmptyState(colors: WidgetColors) {
+internal fun EmptyState(colors: WidgetColors) {
     Column(
         modifier = GlanceModifier.fillMaxSize(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("EarnIt", style = TextStyle(color = colors.primary, fontSize = 18.sp, fontWeight = FontWeight.Bold))
+        Text(
+            "EarnIt",
+            style = TextStyle(color = colors.primary, fontSize = 18.sp, fontWeight = FontWeight.Bold),
+            modifier = GlanceModifier.semantics { testTag = WidgetTestTags.EMPTY_TITLE },
+        )
         Spacer(GlanceModifier.height(4.dp))
-        Text("Long-press to configure", style = TextStyle(color = colors.onSurfaceVar, fontSize = 12.sp))
+        Text(
+            "Long-press to configure",
+            style = TextStyle(color = colors.onSurfaceVar, fontSize = 12.sp),
+            modifier = GlanceModifier.semantics { testTag = WidgetTestTags.EMPTY_SUBTITLE },
+        )
     }
 }
 
 // ── Claimed / archived ─────────────────────────────────────────────────────────
 
 @Composable
-private fun ClaimedState(
+internal fun ClaimedState(
     context: Context,
     rewardName: String,
     colors: WidgetColors,
@@ -294,11 +315,13 @@ private fun ClaimedState(
                 rewardName.ifBlank { "Reward" },
                 maxLines = 1,
                 style = TextStyle(color = colors.primary, fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                modifier = GlanceModifier.semantics { testTag = WidgetTestTags.CLAIMED_NAME },
             )
             Spacer(GlanceModifier.height(2.dp))
             Text(
                 "Earned and Claimed",
                 style = TextStyle(color = colors.onSurfaceVar, fontSize = 12.sp),
+                modifier = GlanceModifier.semantics { testTag = WidgetTestTags.CLAIMED_SUBTITLE },
             )
         }
     }
@@ -307,7 +330,7 @@ private fun ClaimedState(
 // ── Standard layout ────────────────────────────────────────────────────────────
 
 @Composable
-private fun StandardContent(
+internal fun StandardContent(
     context: Context,
     progress: RewardProgress,
     rewardName: String,
@@ -317,15 +340,8 @@ private fun StandardContent(
     val cost = progress.reward.cost
     val fraction = (current.toFloat() / cost.toFloat()).coerceIn(0f, 1f)
 
-    val completedIds = progress.activeLogs.map { it.taskId }.toSet()
-    val taskRefsMap = progress.taskRefs.associateBy { it.taskId }
-    val hasTasks =
-        (progress.mandatoryTasks + progress.optionalTasks).any { task ->
-            val ref = taskRefsMap[task.id]
-            ref?.isRepeatable == true || task.id !in completedIds
-        }
+    val actionButton = widgetActionButtonFor(progress)
     val showMandatoryHint = !progress.canClaim && progress.totalPoints >= progress.reward.cost
-    val noTasks = progress.allTasks.isEmpty()
 
     val logIntent =
         Intent(context, WidgetTaskLogActivity::class.java).apply {
@@ -335,6 +351,12 @@ private fun StandardContent(
     val mainIntent =
         Intent(context, MainActivity::class.java).apply {
             putExtra("rewardId", progress.reward.id)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+    val addTaskIntent =
+        Intent(context, MainActivity::class.java).apply {
+            putExtra("rewardId", progress.reward.id)
+            putExtra("autoOpenAddTask", true)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
 
@@ -357,6 +379,7 @@ private fun StandardContent(
                         displayName,
                         maxLines = 1,
                         style = TextStyle(color = colors.primary, fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                        modifier = GlanceModifier.semantics { testTag = WidgetTestTags.REWARD_NAME },
                     )
                     if (showMandatoryHint) {
                         Spacer(GlanceModifier.height(2.dp))
@@ -364,31 +387,34 @@ private fun StandardContent(
                             Strings.WIDGET_MANDATORY_HINT,
                             maxLines = 1,
                             style = TextStyle(color = colors.onSurfaceVar, fontSize = 11.sp),
+                            modifier = GlanceModifier.semantics { testTag = WidgetTestTags.MANDATORY_HINT },
                         )
                     }
                 }
                 Spacer(GlanceModifier.width(8.dp))
-                when {
-                    progress.canClaim ->
+                when (actionButton) {
+                    WidgetActionButton.CLAIM ->
                         Box(
                             modifier =
                                 GlanceModifier
                                     .background(colors.primary)
                                     .cornerRadius(16.dp)
                                     .padding(horizontal = 12.dp, vertical = 7.dp)
-                                    .clickable(actionStartActivity(mainIntent)),
+                                    .clickable(actionStartActivity(mainIntent))
+                                    .semantics { testTag = WidgetTestTags.CLAIM_BUTTON },
                             contentAlignment = Alignment.Center,
                         ) {
                             Text("CLAIM", style = TextStyle(color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold))
                         }
-                    hasTasks ->
+                    WidgetActionButton.LOG ->
                         Box(
                             modifier =
                                 GlanceModifier
                                     .size(32.dp)
                                     .background(colors.primary)
                                     .cornerRadius(16.dp)
-                                    .clickable(actionStartActivity(logIntent)),
+                                    .clickable(actionStartActivity(logIntent))
+                                    .semantics { testTag = WidgetTestTags.LOG_BUTTON },
                             contentAlignment = Alignment.Center,
                         ) {
                             Image(
@@ -397,18 +423,20 @@ private fun StandardContent(
                                 modifier = GlanceModifier.size(20.dp),
                             )
                         }
-                    noTasks ->
+                    WidgetActionButton.ADD_TASK ->
                         Box(
                             modifier =
                                 GlanceModifier
                                     .background(colors.track)
                                     .cornerRadius(16.dp)
                                     .padding(horizontal = 10.dp, vertical = 7.dp)
-                                    .clickable(actionStartActivity(mainIntent)),
+                                    .clickable(actionStartActivity(addTaskIntent))
+                                    .semantics { testTag = WidgetTestTags.ADD_TASK_BUTTON },
                             contentAlignment = Alignment.Center,
                         ) {
                             Text("ADD TASK", style = TextStyle(color = colors.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold))
                         }
+                    WidgetActionButton.NONE -> {}
                 }
             }
 
@@ -468,6 +496,7 @@ private fun ProgressBar(
                     Text(
                         "$current",
                         style = TextStyle(color = White, fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                        modifier = GlanceModifier.semantics { testTag = WidgetTestTags.PROGRESS_CURRENT },
                     )
                 }
             }

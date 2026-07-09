@@ -803,3 +803,47 @@ Replaced all remaining `Brush.*Gradient(listOf(Color(0xFFFFD060), Color(0xFFE07B
 - Added `WidgetNudgeUiTest` and `SettingsTipUiTest` — each verifies show/hide conditions, dismiss behaviour, and that the dismissal survives `activityRule.scenario.recreate()` (proving the DataStore flag round-trips, not just in-memory state). `TESTING.md` updated with both rows and bumped counts.
 - `./gradlew ktlintCheck`, `test`, `assembleDebug`, and `assembleDebugAndroidTest` all pass. `connectedDebugAndroidTest` run on a real device by the user afterward — all instrumented tests pass, including the two new ones.
 - Added a step to `MANUAL_TEST_PLAN.md`'s "Widget full flow" journey covering the new pin-request entry point, since the launcher's system "add to home screen" dialog is exactly the kind of system-process boundary already established as manual-only for the rest of the widget flow.
+
+### Pass 32 — `fix/add-task-shortcut` branch
+
+#### Bug fix ✅
+- Home card's "+ ADD TASKS" pill (rewards with no tasks linked) navigated to Reward Edit instead of opening the Add Task dialog, forcing a second tap once there. The widget's ADD TASK button had the same gap: it opened the app to Reward Detail but never triggered the dialog.
+- Added an `autoOpenAddTask` nav argument on `Screen.RewardDetail`, threaded through `MainActivity` (new intent extra) → `EarnItApp` → the `RewardDetail` composable → `RewardDetailScreen`, which now seeds `showAddTaskDialog` from it. Both entry points reuse `RewardDetailScreen`'s existing dialog + immediate-persist logic (`viewModel.addTaskToReward`) rather than duplicating it on `HomeScreen`.
+
+#### Complexity & Pattern Health ✅
+- Caught during review, not before: keying the nav-trigger `LaunchedEffect` on the raw `(startRewardId, autoOpenAddTask)` values meant a second, identical intent — e.g. tapping the widget's ADD TASK button twice for the same reward while the app is already showing it — wouldn't re-fire the effect, so the dialog would silently fail to reopen. The pre-existing `rewardId`-only version had the same staleness quirk but it was harmless there (re-navigating to a screen you're already on is a no-op); for add-task it wasn't. Fixed with a `navRequestToken` counter in `MainActivity`, bumped on every `onCreate`/`onNewIntent` and threaded through as the effect's key, so it fires on every new intent regardless of whether the payload repeats.
+
+#### Naming Consistency ✅
+- `HomeScreen`'s `RewardProgressCard` parameter `onEditReward` renamed to `onAddTask` — it only ever wired the add-tasks pill (single call site) and never opened Reward Edit, so the old name was actively misleading.
+
+#### Spec Review ✅
+- `EARNIT_SPEC.md` widget Display States and §10 Screen Map updated to describe the dialog auto-opening from both entry points.
+
+#### Tests ✅
+- Initially added a standalone `AddTaskShortcutUiTest` with one test — caught on checklist review that this violates the stated "3+ tests to justify a new file" threshold, so folded it into `SaveNavigationUiTest` instead (same theme: post-action navigation around the reward/task forms, same fixture setup) and deleted the standalone file. `TESTING.md`'s `SaveNavigationUiTest` row bumped from (4) to (5) with an exact count; no other counts touched since they're intentionally rounded approximations, not a maintained tally.
+- `MANUAL_TEST_PLAN.md` widget step 7 updated to assert the dialog opens directly instead of just landing on the reward detail screen.
+- `./gradlew ktlintCheck`, `test`, `assembleDebug`, and `assembleDebugAndroidTest` all pass. `connectedDebugAndroidTest` still needs to run on a real device to confirm the new test and the widget tap path end-to-end.
+
+### Pass 32 continued — widget refresh bug + widget test coverage (same branch)
+
+User manually tested the flow above and found a second bug, which led to a second checklist pass on the additional diff (widget refresh fix, new `WidgetActionButton.kt`/`WidgetTestTags.kt`, new test files, new Gradle dependencies).
+
+#### Bug fix ✅
+- Repro: tap ADD TASK on the widget → add a task via the dialog → return to the home screen → the widget shows **no** action button at all (not ADD TASK, not LOG). Root cause: `EarnItViewModel.addTaskToReward()` was the only reward/task-mutating ViewModel function that didn't call `refreshWidgets()` afterward (unlike `logTask()` and `claimReward()`), and the widget has no periodic refresh (`updatePeriodMillis="0"`) or Room-invalidation hook of its own — it kept rendering the stale pre-add `RemoteViews`. Fixed by adding the same `refreshWidgets()` call the other two functions already make.
+- This was reachable before this branch too (e.g. adding a task from Reward Detail's pre-existing "Add task" button while a widget was pinned), but this branch made it obviously reachable — the widget itself now funnels users into `addTaskToReward`.
+
+#### Duplication ✅
+- Found on checklist review: the testTag strings (`"widget_claim_button"` etc.) added to `EarnItWidget.kt` for the new tests below were hand-typed a second time in the test file to match. A typo in either copy wouldn't necessarily fail loudly — `assertDoesNotExist()` on a mistyped tag would falsely pass, masking a real bug instead of catching one. Extracted both copies into a shared `internal object WidgetTestTags` (new file) referenced from both `EarnItWidget.kt` and `WidgetContentTest.kt`.
+
+#### Complexity & Pattern Health ✅
+- The widget's button-selection logic (`CLAIM`/`LOG`/`ADD_TASK`, previously a boolean `when` with no `else` that silently rendered nothing on fall-through — the actual shape of the bug above) extracted into `widgetActionButtonFor(progress): WidgetActionButton` (new file `WidgetActionButton.kt`), called from `StandardContent` via an exhaustive `when` over the new enum. A missing branch is now a compile error instead of a silent empty render.
+
+#### Tests ✅
+- `WidgetFlashTest` was the only prior widget test, and it only covers the SharedPreferences flash timer — nothing asserted on the widget's actual rendered buttons/text, which is exactly the layer that broke. Added two new files:
+  - `WidgetActionButtonTest` (6 tests, plain JVM) — the extracted button-selection function directly, no Glance/Robolectric needed.
+  - `WidgetContentTest` (12 tests) — renders `StandardContent`/`FlashContent`/`EmptyState`/`ClaimedState` via `androidx.glance:glance-testing` + `glance-appwidget-testing` (new `testImplementation` deps, `glance`/`glance-appwidget` bumped 1.1.0 → 1.1.1 to match) and `org.robolectric:robolectric` (new dep; first use of Robolectric in this project, plus `testOptions.unitTests.isIncludeAndroidResources = true`). Both are JVM-only (`app/src/test`), no device needed. `StandardContent`/`FlashContent`/`EmptyState`/`ClaimedState`/`WidgetColors` changed from `private` to `internal` so the test source set can render them directly, bypassing `provideGlance`'s Hilt/Room pipeline in favor of fixture-driven `RewardProgress` values (same pattern as `GatekeeperTest`/`RewardProgressTest`).
+  - Known limitation, documented in `WidgetContentTest`'s file comment and `TESTING.md`: `glance-testing`'s `hasStartActivityClickAction()` matcher doesn't recognize the raw-`Intent` `actionStartActivity` overload this widget uses (it builds a `StartActivityIntentAction`, which the matcher's source doesn't check for) — so these tests confirm a button exists and has *some* click action, not that it targets the correct `Intent` extras. Still manual, per `MANUAL_TEST_PLAN.md`.
+- Gap found and deliberately **not** fixed this pass: there is still no regression test for the actual bug fixed above (`addTaskToReward` calling `refreshWidgets()`). `refreshWidgets()` calls `EarnItGlanceWidget().updateAll(context)` by direct instantiation, not through an injected/mockable seam, so it can't be verified with MockK the way other ViewModel behaviour is — and this is a pre-existing gap shared by `logTask()`/`claimReward()`'s identical calls, not something newly introduced. Making it testable would mean injecting a widget-refresh interface via Hilt, which is a real architectural change out of scope for this fix. Deferred; noted in `TESTING.md` Deferrals.
+- `TESTING.md`: Tier 4 description updated (widget content no longer "deferred", widget activity-chain/live-data wiring still is), two new exact-count rows added, new Edge Cases entry, new Deferrals entry for the `refreshWidgets()` coverage gap above.
+- `MANUAL_TEST_PLAN.md` "Widget full flow": steps that only re-confirmed content now covered by the two new test files were shortened to point at the specific test and focus on what's still uniquely manual (live Room/DataStore wiring through `provideGlance`, the ADD TASK cross-activity intent → navigation → dialog chain, real widget-host rendering). No step deleted outright — each still exercises the real pipeline, which the new unit tests deliberately bypass.
+- `./gradlew ktlintCheck`, `test`, `assembleDebug`, and `assembleDebugAndroidTest` all pass; the 18 new tests individually confirmed via the JUnit XML report (not just a green `test` task).

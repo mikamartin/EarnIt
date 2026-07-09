@@ -51,8 +51,11 @@ sealed class Screen(
 ) {
     object Home : Screen("home")
 
-    object RewardDetail : Screen("reward_detail/{rewardId}") {
-        fun route(rewardId: Long) = "reward_detail/$rewardId"
+    object RewardDetail : Screen("reward_detail/{rewardId}?autoOpenAddTask={autoOpenAddTask}") {
+        fun route(
+            rewardId: Long,
+            autoOpenAddTask: Boolean = false,
+        ) = "reward_detail/$rewardId?autoOpenAddTask=$autoOpenAddTask"
     }
 
     object RewardEdit : Screen("reward_edit/{rewardId}") {
@@ -125,6 +128,8 @@ private fun routeToTab(route: String?): String =
 fun EarnItApp(
     viewModel: EarnItViewModel = hiltViewModel(),
     startRewardId: Long = 0L,
+    autoOpenAddTask: Boolean = false,
+    navRequestToken: Int = 0,
 ) {
     val settings by viewModel.settings.collectAsState()
     EarnItTheme(colorScheme = settings.colorScheme) {
@@ -136,9 +141,9 @@ fun EarnItApp(
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
 
-        LaunchedEffect(startRewardId) {
+        LaunchedEffect(navRequestToken) {
             if (startRewardId != 0L) {
-                navController.navigate(Screen.RewardDetail.route(startRewardId))
+                navController.navigate(Screen.RewardDetail.route(startRewardId, autoOpenAddTask))
             }
         }
 
@@ -197,11 +202,19 @@ fun EarnItApp(
                 }
                 composable(
                     Screen.RewardDetail.route,
-                    arguments = listOf(navArgument("rewardId") { type = NavType.LongType }),
+                    arguments =
+                        listOf(
+                            navArgument("rewardId") { type = NavType.LongType },
+                            navArgument("autoOpenAddTask") {
+                                type = NavType.BoolType
+                                defaultValue = false
+                            },
+                        ),
                 ) { back ->
                     val id = back.arguments?.getLong("rewardId") ?: 0L
+                    val autoOpen = back.arguments?.getBoolean("autoOpenAddTask") ?: false
                     val rp = uiState.rewardProgressList.find { it.reward.id == id }
-                    if (rp != null) RewardDetailScreen(rp, uiState, viewModel, navController)
+                    if (rp != null) RewardDetailScreen(rp, uiState, viewModel, navController, autoOpenAddTask = autoOpen)
                 }
                 composable(
                     Screen.RewardEdit.route,
