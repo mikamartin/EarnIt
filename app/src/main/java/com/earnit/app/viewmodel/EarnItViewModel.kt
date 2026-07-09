@@ -222,7 +222,10 @@ class EarnItViewModel
             isMandatory: Boolean,
             isRepeatable: Boolean,
         ) {
-            viewModelScope.launch { repository.addTaskToReward(rewardId, taskId, isMandatory, isRepeatable) }
+            viewModelScope.launch {
+                repository.addTaskToReward(rewardId, taskId, isMandatory, isRepeatable)
+                refreshWidgets()
+            }
         }
 
         fun deleteTask(
