@@ -120,9 +120,9 @@ fun AboutScreen(
                                 if (settings.devModeEnabled) return@clickable
                                 devTapCount++
                                 if (devTapCount >= 7) {
+                                    devTapCount = 0
                                     scope.launch {
-                                        viewModel.enableDevMode()
-                                        snackbarHostState.showSnackbar("Developer options enabled")
+                                        snackbarHostState.showSnackbar("Sorry, no dev mode at this time")
                                     }
                                 }
                             },
