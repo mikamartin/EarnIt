@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @HiltViewModel
@@ -417,8 +418,21 @@ class EarnItViewModel
             viewModelScope.launch { repository.seedFullTestData() }
         }
 
-        fun debugBackdateLastLog(hoursAgo: Int) {
-            viewModelScope.launch { repository.debugBackdateLastLog(hoursAgo) }
+        fun debugBackdateLastLog(
+            hoursAgo: Int,
+            onComplete: () -> Unit = {},
+        ) {
+            viewModelScope.launch {
+                repository.debugBackdateLastLog(hoursAgo)
+                onComplete()
+            }
+        }
+
+        fun debugGetLastLogIdleHours(onResult: (Long?) -> Unit) {
+            viewModelScope.launch {
+                val timestamp = repository.debugGetLastLogTimestamp()
+                onResult(timestamp?.let { TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - it) })
+            }
         }
 
         fun runStartupUnlockCheck() {

@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.withContext
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 class EarnItRepository
@@ -348,11 +349,13 @@ class EarnItRepository
 
         suspend fun seedFullTestData() = TestDataSeeder.seedFull(database)
 
-        // Shifts the most recent completion log's timestamp back so the inactivity-nudge
-        // worker can be exercised without waiting 48/96 real hours — see NudgeDecider.
+        // Ensures no completion log is newer than `hoursAgo` so the inactivity-nudge worker can
+        // be exercised without waiting 48/96 real hours — see NudgeDecider.
         suspend fun debugBackdateLastLog(hoursAgo: Int) {
-            logDao.debugSetLastLogTimestamp(System.currentTimeMillis() - hoursAgo * 60 * 60 * 1000L)
+            logDao.debugCapLogTimestamps(System.currentTimeMillis() - TimeUnit.HOURS.toMillis(hoursAgo.toLong()))
         }
+
+        suspend fun debugGetLastLogTimestamp(): Long? = logDao.getLastLogTimestamp()
     }
 
 data class EarnItUiState(

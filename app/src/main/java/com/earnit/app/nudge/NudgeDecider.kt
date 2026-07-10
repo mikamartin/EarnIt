@@ -14,10 +14,11 @@ sealed interface NudgeDecision {
 }
 
 object NudgeDecider {
+    const val MS_PER_HOUR = 60 * 60 * 1000L
     const val FIRST_THRESHOLD_HOURS = 48
     const val SECOND_THRESHOLD_HOURS = 96
-    const val FIRST_THRESHOLD_MS = FIRST_THRESHOLD_HOURS * 60 * 60 * 1000L
-    const val SECOND_THRESHOLD_MS = SECOND_THRESHOLD_HOURS * 60 * 60 * 1000L
+    const val FIRST_THRESHOLD_MS = FIRST_THRESHOLD_HOURS * MS_PER_HOUR
+    const val SECOND_THRESHOLD_MS = SECOND_THRESHOLD_HOURS * MS_PER_HOUR
 
     fun decide(
         now: Long,

@@ -57,20 +57,35 @@ class NudgeDataTest : RoomIntegrationBase() {
         }
 
     @Test
-    fun debugBackdateLastLog_updatesOnlyTheMostRecentLog() =
+    fun debugBackdateLastLog_capsEveryRecentLog_soGlobalMaxActuallyDropsBelowCutoff() =
         runBlocking {
-            val olderId = database.completionLogDao().insertLog(log(timestamp = 1000L))
-            val newestId = database.completionLogDao().insertLog(log(timestamp = 5000L))
+            // Reproduces the real bug: seeded/real data commonly has several near-simultaneous
+            // "most recent" logs (e.g. from "Load full test data"). Updating only a single row
+            // left the next-newest one as the new global max, so idle time never actually
+            // crossed the threshold and NudgeWorker silently no-opped.
+            val oldId = database.completionLogDao().insertLog(log(timestamp = 1000L))
+            val recentIds =
+                listOf(
+                    database.completionLogDao().insertLog(log(timestamp = System.currentTimeMillis() - 1000L)),
+                    database.completionLogDao().insertLog(log(timestamp = System.currentTimeMillis() - 2000L)),
+                    database.completionLogDao().insertLog(log(timestamp = System.currentTimeMillis() - 3000L)),
+                )
 
             repository.debugBackdateLastLog(hoursAgo = 49)
 
             val logs = database.completionLogDao().getAllLogs().associateBy { it.id }
-            val expected = System.currentTimeMillis() - 49 * 60 * 60 * 1000L
+            val cutoff = System.currentTimeMillis() - 49 * 60 * 60 * 1000L
+            recentIds.forEach { id ->
+                assertTrue(
+                    "Every previously-recent log must be capped at or before the cutoff",
+                    logs.getValue(id).timestamp <= cutoff + 5000L,
+                )
+            }
+            assertEquals("Genuinely old log must be untouched", 1000L, logs.getValue(oldId).timestamp)
             assertTrue(
-                "Backdated timestamp should land within 5s of the expected value",
-                kotlin.math.abs(logs.getValue(newestId).timestamp - expected) < 5000L,
+                "Global max must actually drop to/below the cutoff, not just the single newest row",
+                (database.completionLogDao().getLastLogTimestamp() ?: 0L) <= cutoff + 5000L,
             )
-            assertEquals("Older log must be untouched", 1000L, logs.getValue(olderId).timestamp)
         }
 
     @Test

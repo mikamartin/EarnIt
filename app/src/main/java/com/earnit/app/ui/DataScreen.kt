@@ -309,8 +309,10 @@ fun DataScreen(
     }
 }
 
-// Dev-only: exercises NudgeWorker's 48h/96h idle thresholds without waiting real days —
-// backdate amounts are threshold + 1h so "CHECK NOW" reliably crosses the boundary.
+// Dev-only: exercises NudgeWorker's 48h/96h idle thresholds without waiting real days. Each
+// button backdates every log past the threshold (+1h margin), then — only once that DB write
+// has completed, to avoid the worker racing ahead and reading stale data — triggers the real
+// check immediately instead of waiting for the ~6h periodic schedule.
 @Composable
 private fun NudgeDebugCard(
     viewModel: EarnItViewModel,
@@ -318,6 +320,16 @@ private fun NudgeDebugCard(
 ) {
     val firstBackdateHours = NudgeDecider.FIRST_THRESHOLD_HOURS + 1
     val secondBackdateHours = NudgeDecider.SECOND_THRESHOLD_HOURS + 1
+    var statusText by remember { mutableStateOf<String?>(null) }
+
+    fun testThreshold(hoursAgo: Int) {
+        viewModel.debugBackdateLastLog(hoursAgo) {
+            NudgeScheduler.runNow(context)
+            viewModel.debugGetLastLogIdleHours { hours ->
+                statusText = if (hours == null) "No logs found" else "Checked — last log ${hours}h ago"
+            }
+        }
+    }
 
     SettingsCard {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -338,6 +350,11 @@ private fun NudgeDebugCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    Text(
+                        "Also rewrites timestamps on recently-claimed History logs — use test data, not real history",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -346,26 +363,35 @@ private fun NudgeDebugCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 OutlinedButton(
-                    onClick = { viewModel.debugBackdateLastLog(firstBackdateHours) },
+                    onClick = { testThreshold(firstBackdateHours) },
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text("-${firstBackdateHours}H", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold)
+                    Text(
+                        "${NudgeDecider.FIRST_THRESHOLD_HOURS}H",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
                 }
                 OutlinedButton(
-                    onClick = { viewModel.debugBackdateLastLog(secondBackdateHours) },
+                    onClick = { testThreshold(secondBackdateHours) },
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text("-${secondBackdateHours}H", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold)
+                    Text(
+                        "${NudgeDecider.SECOND_THRESHOLD_HOURS}H",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
                 }
-                OutlinedButton(
-                    onClick = { NudgeScheduler.runNow(context) },
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text("CHECK NOW", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold)
-                }
+            }
+            statusText?.let {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

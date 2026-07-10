@@ -76,8 +76,15 @@ interface CompletionLogDao {
     @Query("SELECT MAX(timestamp) FROM completion_logs")
     suspend fun getLastLogTimestamp(): Long?
 
-    @Query("UPDATE completion_logs SET timestamp = :timestamp WHERE id = (SELECT id FROM completion_logs ORDER BY timestamp DESC LIMIT 1)")
-    suspend fun debugSetLastLogTimestamp(timestamp: Long)
+    // Caps every log newer than cutoff down to cutoff — updating only the single most-recent
+    // row isn't enough: real/seeded data commonly has several near-simultaneous "most recent"
+    // logs, and the next-newest one would immediately become the new max, silently keeping the
+    // idle clock under 48h. See NudgeDataTest. No historyEntryId filter: getLastLogTimestamp()
+    // (what NudgeWorker actually reads) considers archived logs too, so this must match — but
+    // that also means it will rewrite displayed timestamps on any recently-claimed reward's
+    // History logs. Dev-mode only; use test data, not real history.
+    @Query("UPDATE completion_logs SET timestamp = :cutoff WHERE timestamp > :cutoff")
+    suspend fun debugCapLogTimestamps(cutoff: Long)
 }
 
 @Dao
