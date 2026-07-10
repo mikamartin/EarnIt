@@ -295,6 +295,13 @@ object Strings {
 
     fun widgetLoggedNotif(pts: Int) = "Logged! +$pts pts"
 
+    // Inactivity nudge notifications
+    const val NUDGE_NOTIF_CHANNEL_NAME = "Inactivity nudges"
+    const val NUDGE_FIRST_TITLE = "Still there?"
+    const val NUDGE_FIRST_BODY = "It's been 2 days since you logged anything. Got a task to knock out?"
+    const val NUDGE_SECOND_TITLE = "Your rewards are waiting"
+    const val NUDGE_SECOND_BODY = "4 days without a log — pick a task and earn something today."
+
     const val WIDGET_CONFIG_TITLE = "Choose a reward"
     const val WIDGET_CONFIG_SUBTITLE = "Select which reward this widget will track."
     const val WIDGET_CONFIG_EMPTY = "No active rewards yet.\nCreate one in the app first."

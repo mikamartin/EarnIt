@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -36,6 +37,8 @@ class SettingsRepository
             val DEV_MODE_ENABLED = booleanPreferencesKey("dev_mode_enabled")
             val WIDGET_NUDGE_DISMISSED = booleanPreferencesKey("widget_nudge_dismissed")
             val SETTINGS_TIP_DISMISSED = booleanPreferencesKey("settings_tip_dismissed")
+            val NUDGE_STAGE = intPreferencesKey("nudge_stage")
+            val NUDGE_ANCHOR_TIMESTAMP = longPreferencesKey("nudge_anchor_timestamp")
         }
 
         val settings: Flow<AppSettings> =
@@ -75,6 +78,8 @@ class SettingsRepository
                         devModeEnabled = prefs[Keys.DEV_MODE_ENABLED] ?: false,
                         widgetNudgeDismissed = prefs[Keys.WIDGET_NUDGE_DISMISSED] ?: false,
                         settingsTipDismissed = prefs[Keys.SETTINGS_TIP_DISMISSED] ?: false,
+                        nudgeStage = prefs[Keys.NUDGE_STAGE] ?: 0,
+                        nudgeAnchorTimestamp = prefs[Keys.NUDGE_ANCHOR_TIMESTAMP] ?: 0L,
                     )
                 }
 
@@ -132,5 +137,15 @@ class SettingsRepository
 
         suspend fun dismissSettingsTip() {
             context.dataStore.edit { it[Keys.SETTINGS_TIP_DISMISSED] = true }
+        }
+
+        suspend fun updateNudgeState(
+            stage: Int,
+            anchorTimestamp: Long,
+        ) {
+            context.dataStore.edit {
+                it[Keys.NUDGE_STAGE] = stage
+                it[Keys.NUDGE_ANCHOR_TIMESTAMP] = anchorTimestamp
+            }
         }
     }

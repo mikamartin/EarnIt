@@ -347,6 +347,12 @@ class EarnItRepository
         suspend fun seedTestData() = TestDataSeeder.seed(database)
 
         suspend fun seedFullTestData() = TestDataSeeder.seedFull(database)
+
+        // Shifts the most recent completion log's timestamp back so the inactivity-nudge
+        // worker can be exercised without waiting 48/96 real hours — see NudgeDecider.
+        suspend fun debugBackdateLastLog(hoursAgo: Int) {
+            logDao.debugSetLastLogTimestamp(System.currentTimeMillis() - hoursAgo * 60 * 60 * 1000L)
+        }
     }
 
 data class EarnItUiState(

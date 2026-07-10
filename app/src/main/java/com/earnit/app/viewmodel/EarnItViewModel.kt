@@ -417,6 +417,10 @@ class EarnItViewModel
             viewModelScope.launch { repository.seedFullTestData() }
         }
 
+        fun debugBackdateLastLog(hoursAgo: Int) {
+            viewModelScope.launch { repository.debugBackdateLastLog(hoursAgo) }
+        }
+
         fun runStartupUnlockCheck() {
             viewModelScope.launch { checkAndUnlockMascots(pendingClaim = false) }
         }

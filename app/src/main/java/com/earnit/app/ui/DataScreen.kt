@@ -2,6 +2,7 @@
 
 package com.earnit.app.ui
 
+import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -42,6 +43,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.earnit.app.nudge.NudgeDecider
+import com.earnit.app.nudge.NudgeScheduler
 import com.earnit.app.viewmodel.EarnItViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -275,6 +278,8 @@ fun DataScreen(
                     }
                 }
 
+                NudgeDebugCard(viewModel = viewModel, context = context)
+
                 SettingsCard {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -300,6 +305,68 @@ fun DataScreen(
             }
 
             Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+// Dev-only: exercises NudgeWorker's 48h/96h idle thresholds without waiting real days —
+// backdate amounts are threshold + 1h so "CHECK NOW" reliably crosses the boundary.
+@Composable
+private fun NudgeDebugCard(
+    viewModel: EarnItViewModel,
+    context: Context,
+) {
+    val firstBackdateHours = NudgeDecider.FIRST_THRESHOLD_HOURS + 1
+    val secondBackdateHours = NudgeDecider.SECOND_THRESHOLD_HOURS + 1
+
+    SettingsCard {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(
+                    Icons.Default.Science,
+                    null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp),
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Inactivity nudge", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "Test the ${NudgeDecider.FIRST_THRESHOLD_HOURS}h/${NudgeDecider.SECOND_THRESHOLD_HOURS}h nudge without waiting",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedButton(
+                    onClick = { viewModel.debugBackdateLastLog(firstBackdateHours) },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("-${firstBackdateHours}H", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold)
+                }
+                OutlinedButton(
+                    onClick = { viewModel.debugBackdateLastLog(secondBackdateHours) },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("-${secondBackdateHours}H", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold)
+                }
+                OutlinedButton(
+                    onClick = { NudgeScheduler.runNow(context) },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("CHECK NOW", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold)
+                }
+            }
         }
     }
 }

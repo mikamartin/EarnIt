@@ -72,6 +72,12 @@ interface CompletionLogDao {
 
     @Query("DELETE FROM completion_logs")
     suspend fun deleteAllLogs()
+
+    @Query("SELECT MAX(timestamp) FROM completion_logs")
+    suspend fun getLastLogTimestamp(): Long?
+
+    @Query("UPDATE completion_logs SET timestamp = :timestamp WHERE id = (SELECT id FROM completion_logs ORDER BY timestamp DESC LIMIT 1)")
+    suspend fun debugSetLastLogTimestamp(timestamp: Long)
 }
 
 @Dao
@@ -105,6 +111,9 @@ interface RewardDao {
 
     @Query("DELETE FROM rewards WHERE id = :id")
     suspend fun deleteReward(id: Long)
+
+    @Query("SELECT COUNT(*) FROM rewards WHERE isArchived = 0")
+    suspend fun getActiveRewardCount(): Int
 
     @Query("DELETE FROM rewards")
     suspend fun deleteAllRewards()
