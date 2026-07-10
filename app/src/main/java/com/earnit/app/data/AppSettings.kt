@@ -16,4 +16,6 @@ data class AppSettings(
     val devModeEnabled: Boolean = false,
     val widgetNudgeDismissed: Boolean = false,
     val settingsTipDismissed: Boolean = false,
+    val nudgeStage: Int = 0,
+    val nudgeAnchorTimestamp: Long = 0L,
 )

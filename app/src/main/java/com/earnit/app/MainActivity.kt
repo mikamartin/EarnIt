@@ -1,10 +1,13 @@
 package com.earnit.app
 
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.mutableStateOf
 import com.earnit.app.ui.EarnItApp
@@ -22,9 +25,17 @@ class MainActivity : ComponentActivity() {
     // silently no-op on the second identical intent.
     private val navRequestToken = mutableStateOf(0)
 
+    private val requestNotificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestNotificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
         claimRewardId.value = intent.getLongExtra("rewardId", 0L)
         autoOpenAddTask.value = intent.getBooleanExtra("autoOpenAddTask", false)
         navRequestToken.value++

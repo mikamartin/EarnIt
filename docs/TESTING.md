@@ -26,7 +26,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
                  [ Manual — 3 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
             [ UI — ~20 tests ]          ComposeTestRule + Hilt, real DataStore
        [ Integration — ~25 tests ]      Real in-memory Room, no mocks
-     [ Unit — 100+ tests ]              JVM, MockK DAOs, fast
+     [ Unit — 120+ tests ]              JVM, MockK DAOs, fast
 ```
 
 **Run unit tests** (JVM, no device needed)
@@ -43,7 +43,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ---
 
-## Unit Tests — `app/src/test/` (100+ tests)
+## Unit Tests — `app/src/test/` (120+ tests)
 
 | File | What it covers |
 |---|---|
@@ -66,10 +66,13 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `PendingRewardIdTest` (3) | `saveReward` sets `pendingRewardId` to the upserted id when creating a new reward; leaves it null when editing an existing reward; `consumePendingRewardId` clears the value |
 | `WidgetActionButtonTest` (6) | `widgetActionButtonFor` — no tasks → `ADD_TASK`; unlogged task → `LOG`; repeatable task already logged → still `LOG`; non-repeatable task already logged and below cost → `NONE`; `canClaim` → `CLAIM` even with a loggable task; unlogged mandatory task blocks `CLAIM` despite points met |
 | `WidgetContentTest` (12) | Renders `StandardContent`/`FlashContent`/`EmptyState`/`ClaimedState` via `glance-testing` + Robolectric (JVM, no device) — correct button shown/hidden per state with click action wired, reward name/points/custom-label text, mandatory hint shown/hidden, flash and empty/claimed state text |
+| `NudgeDeciderTest` (10) | `NudgeDecider.decide` — never-logged and no-active-reward guardrails; idle under/at/over the 48h and 96h thresholds; stage 2 never re-sends (two-nudge cap); a new log after stage 1 or stage 2 resets the streak |
+| `NudgeWorkerTest` (8) | `NudgeWorker.doWork()` via `androidx.work:work-testing`'s `TestListenableWorkerBuilder` + Robolectric — real notification posted with correct title/body per stage (asserted via `NotificationManager` shadow) and correct `SettingsRepository.updateNudgeState` call for each `NudgeDecider` outcome (first nudge, second nudge, no-op under threshold, no active reward, never logged, stage-2 cap, streak reset), plus the `POST_NOTIFICATIONS`-denied path (state still recorded, no notification shown) |
+| `NudgeDebugToolsTest` (3) | `EarnItViewModel.debugGetLastLogIdleHours` — whole-hour idle time from a real timestamp, null when nothing's ever been logged; `debugBackdateLastLog` writes to the repository and invokes its completion callback exactly once (the ordering the "48H"/"96H" dev buttons rely on to avoid racing `NudgeWorker` against an in-flight write) |
 
 ---
 
-## Instrumented Tests — `app/src/androidTest/` (~45 tests, requires device/emulator)
+## Instrumented Tests — `app/src/androidTest/` (~50 tests, requires device/emulator)
 
 | File | Layer | What it covers |
 |---|---|---|
@@ -77,6 +80,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `StartOverTest` (3) | Repository | `startOver=true` — reward stays active, history entry created, point balance resets to zero, second cycle immediately valid |
 | `ClearCascadeTest` (5) | Repository | `clearAllLogs` removes active + archived logs and history entries; `clearAllTasks` removes cross-refs, leaves reward; `clearAllRewards` removes cross-refs + active logs, leaves task; `deleteTask` / `deleteReward` cascade |
 | `ExportImportTest` (10) | Repository | Export → clear → import(replace) round-trip preserving all entity types; import(replace) preserves archived history; import(merge) preserves existing + adds new; file-based variants via temp `Uri`; malformed JSON → `ImportInvalidJsonException`; wrong-schema JSON → `ImportWrongSchemaException`; file-backed bad JSON and wrong-schema variants; wrong-schema replace attempt leaves existing DB data intact |
+| `NudgeDataTest` (6) | Repository | Real-Room coverage for the SQL `NudgeWorkerTest` only mocks: `getLastLogTimestamp` null with no logs / returns max among out-of-order logs; `getActiveRewardCount` zero with no rewards / counts only non-archived; `debugBackdateLastLog` caps every log newer than the cutoff (not just the single most-recent row) so the global max actually drops below it even with several near-simultaneous recent logs, leaves genuinely old logs untouched, safe no-op with no logs |
 | `WidgetFlashTest` (7) | Utility | `WidgetFlash` — set/isActive round-trip; false for different reward ID; false after expiry; false when nothing set; `remainingMs` positive when active, zero after expiry, zero for wrong reward |
 | `UiHappyPathTest` (1) | UI | Full Compose UI flow: create task → create reward → link from Reward Detail → log from Prizes home card → open detail → claim → verify claimed reward appears in History |
 | `SettingsUiTest` (2) | UI | Colour scheme selection persists after `activityRule.scenario.recreate()`; Notes required toggle disables LOG until a note is entered, enables it after |
@@ -155,11 +159,11 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
-| Unit (100+ tests) | Every build/push | `./gradlew test` |
-| Integration + UI, instrumented (~45 tests) | Every push/PR via CI (API 34 emulator, Workflow 2); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
-| Manual-only journeys (3) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
+| Unit (120+ tests) | Every build/push | `./gradlew test` |
+| Integration + UI, instrumented (~50 tests) | Every push/PR via CI (API 34 emulator, Workflow 2); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
+| Manual-only journeys (4) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 
-See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the three journeys that are deliberately never automated (not just deferred) — each crosses a system-process boundary (system file picker, Play Core API, widget activity chain) that instrumented UI tests cannot drive reliably.
+See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the journeys that are deliberately never automated (not just deferred) — each crosses a system-process boundary (system file picker, Play Core API, widget activity chain, background `WorkManager` execution) that instrumented UI tests cannot drive reliably.
 
 ---
 

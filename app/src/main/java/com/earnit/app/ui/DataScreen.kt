@@ -2,6 +2,7 @@
 
 package com.earnit.app.ui
 
+import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -42,6 +43,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.earnit.app.nudge.NudgeDecider
+import com.earnit.app.nudge.NudgeScheduler
 import com.earnit.app.viewmodel.EarnItViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -275,6 +278,8 @@ fun DataScreen(
                     }
                 }
 
+                NudgeDebugCard(viewModel = viewModel, context = context)
+
                 SettingsCard {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -300,6 +305,94 @@ fun DataScreen(
             }
 
             Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+// Dev-only: exercises NudgeWorker's 48h/96h idle thresholds without waiting real days. Each
+// button backdates every log past the threshold (+1h margin), then — only once that DB write
+// has completed, to avoid the worker racing ahead and reading stale data — triggers the real
+// check immediately instead of waiting for the ~6h periodic schedule.
+@Composable
+private fun NudgeDebugCard(
+    viewModel: EarnItViewModel,
+    context: Context,
+) {
+    val firstBackdateHours = NudgeDecider.FIRST_THRESHOLD_HOURS + 1
+    val secondBackdateHours = NudgeDecider.SECOND_THRESHOLD_HOURS + 1
+    var statusText by remember { mutableStateOf<String?>(null) }
+
+    fun testThreshold(hoursAgo: Int) {
+        viewModel.debugBackdateLastLog(hoursAgo) {
+            NudgeScheduler.runNow(context)
+            viewModel.debugGetLastLogIdleHours { hours ->
+                statusText = if (hours == null) "No logs found" else "Checked — last log ${hours}h ago"
+            }
+        }
+    }
+
+    SettingsCard {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(
+                    Icons.Default.Science,
+                    null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp),
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Inactivity nudge", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "Test the ${NudgeDecider.FIRST_THRESHOLD_HOURS}h/${NudgeDecider.SECOND_THRESHOLD_HOURS}h nudge without waiting",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        "Also rewrites timestamps on recently-claimed History logs — use test data, not real history",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedButton(
+                    onClick = { testThreshold(firstBackdateHours) },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(
+                        "${NudgeDecider.FIRST_THRESHOLD_HOURS}H",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                }
+                OutlinedButton(
+                    onClick = { testThreshold(secondBackdateHours) },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(
+                        "${NudgeDecider.SECOND_THRESHOLD_HOURS}H",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                }
+            }
+            statusText?.let {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

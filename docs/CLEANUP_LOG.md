@@ -847,3 +847,100 @@ User manually tested the flow above and found a second bug, which led to a secon
 - `TESTING.md`: Tier 4 description updated (widget content no longer "deferred", widget activity-chain/live-data wiring still is), two new exact-count rows added, new Edge Cases entry, new Deferrals entry for the `refreshWidgets()` coverage gap above.
 - `MANUAL_TEST_PLAN.md` "Widget full flow": steps that only re-confirmed content now covered by the two new test files were shortened to point at the specific test and focus on what's still uniquely manual (live Room/DataStore wiring through `provideGlance`, the ADD TASK cross-activity intent → navigation → dialog chain, real widget-host rendering). No step deleted outright — each still exercises the real pipeline, which the new unit tests deliberately bypass.
 - `./gradlew ktlintCheck`, `test`, `assembleDebug`, and `assembleDebugAndroidTest` all pass; the 18 new tests individually confirmed via the JUnit XML report (not just a green `test` task).
+
+---
+
+### Pass 33 — `feature/inactivity-nudges` branch (48h/96h idle notifications)
+
+#### Duplication ✅
+- The three dev-tool buttons in the new "Inactivity nudge" card repeat the same `OutlinedButton`/`shape`/`weight` styling inline — reviewed against the existing "Load test data"/"Load full test data" cards in the same file, which follow the identical unextracted-per-card convention. Left as-is; consistent with local precedent, not new debt.
+- No duplicated strings, no `Repository`/`ViewModel` logic duplicated, no `Dao` query overlapping an existing one.
+
+#### Decoupling ✅
+- `NudgeDebugCard`'s "CHECK NOW" button calls `NudgeScheduler.runNow(context)` directly from the composable rather than routing through the `ViewModel`. Reviewed against precedent: `EarnItGlanceWidget().updateAll(context)` is already called directly from UI/Activity code elsewhere in this codebase (not exclusively through the ViewModel) for the same reason — it's a system-scheduling call, not app state/business logic. Left as-is.
+- No business logic in composables, no ViewModel referencing UI types, no data layer referencing UI/ViewModel concerns.
+
+#### Complexity & Pattern Health ✅ (1 fix)
+- **Fixed:** the new "Inactivity nudge" dev card (52 lines) was inline inside `DataScreen`, an already-large single composable. Extracted into a new private `NudgeDebugCard(viewModel, context)` composable so this branch's addition doesn't grow the existing giant-composable debt further. (`DataScreen` itself was already ~305 lines pre-branch — a pre-existing condition, out of scope for this pass.)
+- `NudgeDecider`/`NudgeWorker`/`NudgeScheduler` are each single-purpose, single-caller — reviewed as earning their keep: they centralize the WorkManager unique-work-name strings and threshold constants that would otherwise be duplicated across files.
+
+#### Dead Code & Hygiene ✅
+- No unused imports/vars (ktlint's unused-import rule ran clean on every check).
+- Dev-only debug method (`debugBackdateLastLog`) added directly under the existing `// TEST DATA — gated behind Settings.devModeEnabled` comment block in `EarnItRepository.kt`, consistent with `seedTestData`/`seedFullTestData`.
+- Debug-card strings ("Inactivity nudge", "-49H", "CHECK NOW", etc.) left inline rather than moved to `Strings.kt` — reviewed against the existing "Load test data"/"Load full test data"/"Developer mode active" cards in the same file, none of which are in `Strings.kt` either. Production-facing nudge notification copy *is* in `Strings.kt` (`NUDGE_FIRST_TITLE` etc.); the local convention is dev-only debug strings stay inline, user-facing strings go to `Strings.kt`.
+- `git status` clean, no stray untracked files.
+
+#### Naming Consistency ✅
+- New `com.earnit.app.nudge` package follows the existing flat-by-feature convention (`data/`, `ui/`, `viewmodel/`, `widget/`).
+- `NudgeDecider`/`NudgeWorker`/`NudgeScheduler`/`NudgeDecision` — no symbol conflicts with stdlib/Compose/AndroidX names.
+- New `Strings.kt` constants follow the existing `WIDGET_*` naming style (`NUDGE_*`).
+
+#### Hardcoded Values ✅ (2 fixes)
+- **Fixed:** `NudgeScheduler`'s periodic check interval was a bare `6` in `PeriodicWorkRequestBuilder(6, TimeUnit.HOURS)` — extracted to `private const val CHECK_INTERVAL_HOURS = 6L`.
+- **Fixed:** the dev-tool backdate amounts were bare `49`/`97`, disconnected from the 48h/96h thresholds they're meant to test — if the thresholds ever changed, the buttons could silently stop crossing the boundary. `NudgeDecider` now exposes `FIRST_THRESHOLD_HOURS = 48`/`SECOND_THRESHOLD_HOURS = 96` (with the existing `*_MS` constants derived from them), and `NudgeDebugCard` computes `threshold + 1h` from those instead of restating literals.
+- No new hardcoded colors.
+
+#### Accessibility ✅
+- No new icon-only buttons (all three dev buttons have text labels). Touch targets unchanged from the existing `OutlinedButton` pattern used throughout this file.
+
+#### Deprecated APIs ✅
+- No deprecation warnings from the new WorkManager/Hilt-Work APIs or `MainActivity`'s new permission-request code.
+
+#### Spec Review ✅
+- `EARNIT_SPEC.md` §8a added, describing trigger conditions, global scope, two-nudge cap, notification content, `WorkManager` mechanism, and the dev tooling.
+- Not a previously-listed Deferred Idea, so nothing to remove from that section.
+
+#### Tests ✅
+- `NudgeDeciderTest` (10 tests, new file) covers the pure decision logic: never-logged/no-active-reward guardrails, idle-under-threshold, both `Send` transitions, the stage-2 two-nudge cap, and reset-on-new-log from both stage 1 and stage 2.
+- Reviewed for gaps: `EarnItRepository.debugBackdateLastLog` / `EarnItViewModel.debugBackdateLastLog` have no dedicated unit test. Checked against precedent — `seedTestData`/`seedFullTestData`/`TestDataSeeder` (the existing dev-only data helpers) have zero test coverage anywhere in the codebase either; this is an established, deliberate gap for dev-only tooling, not one newly introduced here. Left uncovered, consistent with precedent.
+- `NudgeWorker`'s actual `doWork()` (notification post, permission check, settings write) is not unit- or instrumented-tested — same category as `WidgetTaskLogActivity`'s notification code: real background execution + system notification outside what a JVM or Compose UI test can drive. Added to `MANUAL_TEST_PLAN.md` instead (new "Inactivity nudge notifications" journey), with the dev-tool card built specifically to make that journey checkable in a couple of minutes instead of requiring real 48h/96h waits.
+- This change adds a new `@HiltWorker`/`@AssistedInject` site (`NudgeWorker`) and a new `@Inject` site (`EarnItApplication`'s `HiltWorkerFactory`). Confirmed `TestAppModule` doesn't need changes — it already provides `EarnItDatabase`/`SettingsRepository` as singletons, which is everything `NudgeWorker` depends on — and ran `./gradlew assembleDebugAndroidTest` to verify the full Hilt graph (including `TestAppModule`) still builds.
+- `TESTING.md` updated: `NudgeDeciderTest` row added, unit test count `100+` → `110+` (rounded), manual-journey count `3` → `4`, Deferrals intro line mentions the `WorkManager` boundary alongside the existing system-boundary examples.
+- `./gradlew ktlintCheck`, `test`, `assembleDebugAndroidTest`, `assembleDebug` all pass (run sequentially, not in parallel, per `CLAUDE.md`).
+
+---
+
+### Pass 33 continued — automated NudgeWorker coverage (same branch)
+
+#### Tests ✅
+- User pushback on the line above (`NudgeWorker.doWork()` "not unit- or instrumented-tested"): unlike `TestDataSeeder`, `NudgeWorker` is production code that runs for real users, so "manual only" was a weaker bar than the rest of this codebase holds itself to. Re-examined and found it *is* automatable — `androidx.work:work-testing`'s `TestListenableWorkerBuilder` lets a `CoroutineWorker` be constructed directly (bypassing Hilt/WorkManager scheduling) and its `doWork()` called from a plain JVM test, same Robolectric setup already used for `WidgetContentTest`.
+- Added `androidx.work:work-testing` (`testImplementation`, same `work` version as `work-runtime-ktx`) and `NudgeWorkerTest` (8 tests, new file): both `Send` transitions post the correct real notification (title/body asserted via Robolectric's `NotificationManager` shadow, not just that *some* notification fired) and persist the correct `SettingsRepository.updateNudgeState` call; all `NoOp`/`Reset` cases post nothing; and the `POST_NOTIFICATIONS`-denied path specifically (state still recorded even though the notification can't be shown — verifies the permission gate doesn't also skip state persistence).
+- This narrows, not eliminates, the manual "Inactivity nudge notifications" journey in `MANUAL_TEST_PLAN.md` — its rationale was rewritten to name only what's genuinely still unreachable by automation: real periodic `WorkManager` scheduling invoking the worker in a live process, real Hilt-generated-factory construction (the test constructs `NudgeWorker` directly), the real OS permission dialog, and an actual tap on the system notification tray.
+- `TESTING.md`: `NudgeWorkerTest` row added, unit test count `110+` → `120+` (rounded).
+- `./gradlew test --tests` confirms all 8 new tests individually pass (JUnit XML report checked, not just a green task); full `ktlintCheck`/`test`/`assembleDebugAndroidTest`/`assembleDebug` re-run clean after the change.
+
+---
+
+### Pass 33 continued — automated debugBackdateLastLog coverage (same branch)
+
+#### Tests ✅
+- Further pushback, and a sharper distinction than the "consistent with `seedTestData` precedent" reasoning above: `debugBackdateLastLog` isn't just dev tooling like `seedTestData` — it's the mechanism `MANUAL_TEST_PLAN.md`'s nudge journey *depends on* to validate `NudgeWorker`'s real wiring. If `seedTestData` were broken, a tester sees empty/wrong data immediately and knows something's off. If `debugBackdateLastLog`'s SQL were subtly wrong (wrong row picked, wrong timestamp math), the manual test would silently validate against corrupted state with no visible sign — undermining the one layer this feature still relies on manual testing for. That risk lives entirely in real SQL/Room behaviour, which `NudgeWorkerTest`'s mocked DAOs never exercise.
+- Added `NudgeDataTest` (6 tests, new instrumented file, `RoomIntegrationBase`, real in-memory Room — matches this project's existing convention for exactly this class of risk, e.g. `HappyPathTest`/`ExportImportTest`): `getLastLogTimestamp` null with no logs and correctly picks the max among out-of-order inserts (not just the last-inserted row); `getActiveRewardCount` zero with no rewards and correctly excludes archived ones; `debugBackdateLastLog` updates only the most-recent log (a second, older log in the same table is asserted untouched) and is a safe no-op with no logs at all.
+- Run for real on a connected device (`./gradlew connectedDebugAndroidTest`, class-filtered to `NudgeDataTest`), not just compiled — 6/6 pass, confirmed via the instrumented JUnit XML report, per `DEV_PLAYBOOK.md`'s "confirm instrumented tests actually run on a device" step.
+- `TESTING.md`: `NudgeDataTest` row added under the Repository layer, instrumented test count `~45` → `~50` (rounded, ballpark only — file counts left as-is per this doc's own "rounded, not a maintained tally" guidance).
+- Full `ktlintCheck`/`test`/`assembleDebugAndroidTest`/`assembleDebug` re-run clean after the change.
+
+---
+
+### Pass 34 — live-device bug fix + CI regression (same branch)
+
+#### Duplication ✅ (1 fix)
+- Fixing the backdate SQL (below) required "hours → ms" math in two new places (`EarnItRepository.debugBackdateLastLog`, `EarnItViewModel.debugGetLastLogIdleHours`), on top of the same `60 * 60 * 1000` literal already appearing twice in `NudgeDecider`'s threshold constants — four copies across the codebase. First attempt centralized it into a `NudgeDecider.MS_PER_HOUR` constant referenced from `EarnItRepository` — see Decoupling below for why that was wrong. Fixed with `java.util.concurrent.TimeUnit` at both new call sites instead: no custom constant, no cross-package dependency. `NudgeDecider`'s own two threshold constants still derive from a local `MS_PER_HOUR`, kept self-contained (not exported).
+
+#### Decoupling ✅ (1 caught before it shipped)
+- The first version of the fix above had `EarnItRepository` (`data/`) importing `NudgeDecider` (`nudge/`). `grep`-checked for existing `data/` → `nudge/` imports first (none existed) — this codebase's layering runs the other direction (`NudgeWorker` already imports `EarnItDatabase`/`SettingsRepository`; `data/` has no business knowing `nudge/` exists). Reverted to `TimeUnit` before it landed.
+
+#### Tests ✅ (4 new tests, 1 coverage gap closed, 1 test rewritten to actually reproduce the bug it was meant to catch)
+- **The reported bug:** dev-tool taps appeared to do nothing. Diagnosed live against a connected device — pulled the on-device Room DB via `adb ... run-as`, found 5 completion logs within the last 48h; `logcat` confirmed `NudgeWorker` ran successfully both times with no crash. Root cause: `debugBackdateLastLog`'s SQL only rewrote the single most-recent log's timestamp. With "Load full test data" seeding many logs, several sit within seconds of each other — backdating one just promoted the next-newest to the new global max, so the worker correctly saw recent activity and correctly no-opped. Not a worker bug; a dev-tool data bug.
+- **Why the existing test didn't catch it:** `NudgeDataTest`'s original case used two logs with ancient, arbitrary timestamps (1000ms/5000ms) and asserted the SQL did what it was designed to do (touch one row) — it never used a dataset shaped like the real bug (several near-simultaneous *recent* logs), so it verified the implementation, not the requirement. Rewrote the case with multiple realistic recent logs; confirmed it fails against the old single-row SQL and passes against the fix (`UPDATE completion_logs SET timestamp = :cutoff WHERE timestamp > :cutoff`) — 6/6 pass, run for real on-device, not just compiled.
+- **New coverage gap, closed:** the UX fix added `EarnItViewModel.debugGetLastLogIdleHours` (drives the status text now shown after every tap, specifically so a future silent failure like this one would be visible) with zero test coverage — same blind-spot category as the bug above. Added `NudgeDebugToolsTest` (3 tests, new file, root `com.earnit.app` test package alongside other ViewModel-level tests): whole-hour idle computation from a real timestamp, null when nothing's ever logged, and `debugBackdateLastLog`'s completion callback fires exactly once after the repository write completes — the ordering the simplified 48H/96H buttons depend on to avoid racing `NudgeWorker` against an in-flight DB write.
+- **Separate CI regression:** `instrumented-tests` failed on the already-pushed PR (`IllegalStateException: No compose hierarchies found`, ~7 unrelated pre-existing UI tests). Initially misread as the already-documented Android-16-device issue in this doc's Deferrals — ruled out by checking `main`'s CI history (green as of the prior day) and confirming none of the new `Nudge*` tests were among the failures. Actual cause: `MainActivity`'s `POST_NOTIFICATIONS` request (added earlier in this branch) pops a real system dialog on every launch on API 33+, and CI's emulator is API 34 — nearly every UI test launches `MainActivity`. Fixed centrally in `HiltTestRunner.onCreate()` (grants the permission once via `UiAutomation`, before any test `Activity` launches — the same mechanism `GrantPermissionRule` uses internally) rather than adding that rule to ~10 individual test files. Verified against the same API level CI uses: full instrumented suite, 54/54 pass (was ~7 failing).
+
+#### Hardcoded Values ✅ — the `MS_PER_HOUR` finding is covered under Duplication above; no other new magic numbers.
+
+#### Spec Review ✅
+- `EARNIT_SPEC.md`'s dev-tooling description and `MANUAL_TEST_PLAN.md`'s steps updated to match the simplified 2-button flow (was 3: two backdate buttons + a separate "CHECK NOW") and the History-timestamp side effect, which is surfaced directly in the debug card's UI, not just the docs — it's the kind of caveat someone could hit with real data present, not only test data.
+
+#### Reviewed, no findings: Naming Consistency, Accessibility, Deprecated APIs, remaining Complexity & Pattern Health items, `git status` (one new untracked file, `NudgeDebugToolsTest.kt`, intentional).
+
+- `./gradlew ktlintCheck`, `test` (141 tests total, all pass), `assembleDebugAndroidTest`, `assembleDebug`, and `connectedDebugAndroidTest` (full suite, 54/54, run on the same API level as CI) all green after every change in this pass — not just the final state.

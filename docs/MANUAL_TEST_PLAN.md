@@ -1,6 +1,6 @@
 # EarnIt — Manual Test Plan
 
-These three journeys are deliberately never automated, not just temporarily deferred. Each one crosses a system-process boundary (a separate Android Activity outside the app under test, or a Play Store-only API) that Compose UI tests cannot see or drive — automating them would mean either a brittle UiAutomator script tied to OS/OEM-specific picker UIs, or a test that can't run outside a real Play Store install. The underlying *data correctness* for each is already covered by automated tests at a lower layer; what's manual is only the system-boundary wiring. See [TESTING.md](TESTING.md) for the automated coverage and the overall test cadence.
+These journeys are deliberately never automated, not just temporarily deferred. Each one crosses a system-process boundary (a separate Android Activity outside the app under test, a Play Store-only API, or background `WorkManager` execution) that Compose UI tests cannot see or drive — automating them would mean either a brittle UiAutomator script tied to OS/OEM-specific picker UIs, a test that can't run outside a real Play Store install, or a test that would need to wait 48+ real hours. The underlying *data correctness* for each is already covered by automated tests at a lower layer; what's manual is only the system-boundary wiring. See [TESTING.md](TESTING.md) for the automated coverage and the overall test cadence.
 
 ---
 
@@ -45,6 +45,23 @@ These three journeys are deliberately never automated, not just temporarily defe
 13. Switch the app colour scheme (Settings → Colour Scheme). Confirm both widget activities (`WidgetTaskLogActivity`, `WidgetConfigActivity`) reflect the new theme in both light and dark mode. Note: the existing widget on the home screen does **not** re-theme automatically — remove and re-add it to confirm a newly placed widget uses the updated scheme.
 14. With a reward in the mandatory-task-hint state from step 8, drag-resize the widget down to its smallest footprint (e.g. a 3-column-wide, 2-row-tall home screen grid cell). Confirm the reward name, hint text, and full progress bar all stay visible with no clipping — this combination (narrow width + hint text + minimal height) is what caused the progress bar to be cut off on at least one device before `fix/widget-hint-overflow`.
 15. With no EarnIt widget currently placed, create a reward and link its first task. Confirm the widget nudge banner appears on Reward Detail. Tap "Add widget" and confirm `requestPinAppWidget()` triggers the launcher's system "add to home screen" placement flow (exact UI is launcher-specific and out of the app's control — Compose UI tests cannot drive it). After placing it, confirm `WidgetConfigActivity` runs normally and configuring it works as in steps 1–2. Separately, dismiss the banner via its close icon and confirm it does not reappear after restarting the app.
+
+---
+
+## Inactivity nudge notifications
+
+**Why manual:** `NudgeDeciderTest` covers the decision logic (thresholds, guardrails, the two-nudge cap, reset-on-new-log) in isolation, and `NudgeWorkerTest` covers `NudgeWorker.doWork()` end-to-end — decision → real notification posted (title/body asserted via Robolectric's `NotificationManager` shadow) → settings persisted, including the permission-denied path — via `androidx.work:work-testing`'s `TestListenableWorkerBuilder`. What neither can verify: real `WorkManager` periodic scheduling actually invoking the worker in a live app process (the test builds `NudgeWorker` directly, bypassing the periodic scheduler entirely), the real Hilt `HiltWorkerFactory` constructing it via the generated assisted factory (the test also constructs it directly, bypassing Hilt), the real OS permission dialog, and a real tap on the system notification tray actually opening the app. `DataScreen.kt`'s dev-mode-gated "Inactivity nudge" card exists specifically to make this narrower remaining journey checkable in a couple of minutes instead of waiting 48/96 real hours.
+
+**Cadence:** Once per release candidate, and whenever nudge-related code changes.
+
+**Steps:**
+1. Enable dev mode (7-tap the version number in About) and **load full test data**, not just basic test data — this seeds many completion logs with several near-simultaneous "most recent" entries, which is the specific shape of data that once made the "48H" button silently no-op (fixed; see `NudgeDataTest`). Confirm at least one active reward exists.
+2. Fresh install on Android 13+: confirm the notification-permission system dialog appears on first launch (not just when using the widget), and grant it.
+3. Settings → Data & Backup → dev tools → tap **"48H"**. It backdates every completion log past 49h and immediately triggers a real check in one tap; the status line updates to "Checked — last log ~49h ago". Confirm a notification appears ("Still there?") and tapping it opens the app.
+4. Tap **"48H"** again immediately. Confirm no duplicate/second notification appears (stage already recorded) even though the status line still reports the same idle age.
+5. Tap **"96H"**. Confirm a *different* notification appears ("Your rewards are waiting") and replaces the first rather than stacking.
+6. Tap **"96H"** again. Confirm silence — the two-nudge cap holds even though idle time is still far past both thresholds.
+7. Log a real task from the app. Then tap **"48H"** again. Confirm the first nudge fires again — logging reset the cycle.
 
 ---
 
