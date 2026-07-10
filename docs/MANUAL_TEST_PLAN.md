@@ -55,7 +55,7 @@ These journeys are deliberately never automated, not just temporarily deferred. 
 **Cadence:** Once per release candidate, and whenever nudge-related code changes.
 
 **Steps:**
-1. Enable dev mode (7-tap the version number in About) and **load full test data**, not just basic test data — this seeds many completion logs with several near-simultaneous "most recent" entries, which is the specific shape of data that once made the "48H" button silently no-op (fixed; see `NudgeDataTest`). Confirm at least one active reward exists.
+1. Enable dev mode and **load full test data**, not just basic test data — this seeds many completion logs with several near-simultaneous "most recent" entries, which is the specific shape of data that once made the "48H" button silently no-op (fixed; see `NudgeDataTest`). Confirm at least one active reward exists.
 2. Fresh install on Android 13+: confirm the notification-permission system dialog appears on first launch (not just when using the widget), and grant it.
 3. Settings → Data & Backup → dev tools → tap **"48H"**. It backdates every completion log past 49h and immediately triggers a real check in one tap; the status line updates to "Checked — last log ~49h ago". Confirm a notification appears ("Still there?") and tapping it opens the app.
 4. Tap **"48H"** again immediately. Confirm no duplicate/second notification appears (stage already recorded) even though the status line still reports the same idle age.

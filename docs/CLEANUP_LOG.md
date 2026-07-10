@@ -944,3 +944,55 @@ User manually tested the flow above and found a second bug, which led to a secon
 #### Reviewed, no findings: Naming Consistency, Accessibility, Deprecated APIs, remaining Complexity & Pattern Health items, `git status` (one new untracked file, `NudgeDebugToolsTest.kt`, intentional).
 
 - `./gradlew ktlintCheck`, `test` (141 tests total, all pass), `assembleDebugAndroidTest`, `assembleDebug`, and `connectedDebugAndroidTest` (full suite, 54/54, run on the same API level as CI) all green after every change in this pass — not just the final state.
+
+---
+
+### Pass 35 — `feature/dev-unlock` branch (secret mascot gesture)
+
+#### Duplication ✅
+- No composables copy-pasted, no styling patterns repeated inline, no ViewModel/Repository/Dao overlap.
+- The new "Sorry, no dev mode at this time" snackbar string is inline in `AboutScreen.kt` rather than in `Strings.kt` — reviewed against what it replaced: the prior "Developer options enabled" string occupied the exact same spot and was also inline, never in `Strings.kt`. Consistent with local precedent at this call site, not new debt.
+
+#### Decoupling ✅ (addressed by design, not found after the fact)
+- The tap-timing state machine (group-gap boundary, pause window, reset-on-violation) is exactly the kind of business logic the Decoupling checklist warns against leaving in a composable. Extracted up front into `PugslyGesture`, a plain Kotlin object with no Compose/Android imports — `HomeScreen`'s click handler only calls `nextState`/`isComplete`.
+- No ViewModel referencing UI types, no data layer referencing ViewModel/UI concerns.
+
+#### Complexity & Pattern Health ✅ (1 fix)
+- **Fixed:** the click handler wrapped `viewModel.enableDevMode()` and `viewModel.bounceMascot()` in a `homeScope.launch { }` coroutine block, but neither call is `suspend` — `enableDevMode()` already launches its own `viewModelScope` coroutine internally, and `bounceMascot()` just calls `tryEmit` synchronously. The wrapping launch was dead ceremony (coroutine scope used where none was needed). Removed; both calls now happen directly in the click lambda.
+- `PugslyGesture` has a single caller (`HomeScreen`) — checked against the "does this extraction earn its keep" question: yes, per the Decoupling item above, this is exactly the pure-logic-out-of-composable pattern the checklist asks for, and it's what made the boundary-condition unit tests possible at all.
+- Modifier chain on the mascot `Image` (`size → scale → clickable` with a ~10-line lambda) reviewed against `AboutScreen`'s existing version-text `clickable` — same shape and length, consistent with local convention.
+- No new/changed `LaunchedEffect` keys. `pugslyTapTimestamps` uses plain `remember`, not `rememberSaveable` — correct: an in-progress secret tap sequence should *not* survive a config change, and it holds no user data.
+
+#### Dead Code & Hygiene ✅
+- No unused imports/vars — ktlint's unused-import rule ran clean on every check.
+- No commented-out code, no orphaned resources, no stale TODOs.
+- `git status` clean apart from the intended new files (`PugslyGesture.kt`, `PugslyGestureTest.kt`).
+
+#### Naming Consistency ✅
+- `PugslyGesture.kt` follows the established "bare noun-phrase, pure-logic file" pattern (`WidgetActionButton.kt`, `NudgeDecider.kt`).
+- Considered giving it `NudgeDecider`'s treatment — a dedicated top-level package — but `NudgeDecider` earns that because it's consumed by two independent callers (`NudgeWorker`, a debug UI card). `PugslyGesture` has one caller and is specifically a UI-input-gesture concern, closer to `WidgetActionButton.kt` living alongside `widget/`. Kept in `ui/` next to `HomeScreen.kt`.
+- Timing constants (`GROUP_GAP_MS`, `PAUSE_MS`, `PATTERN_LENGTH`) live on `PugslyGesture` itself, not `Strings.kt` — they're not display strings, same pattern as `NudgeDecider`'s own threshold constants.
+
+#### Hardcoded Values ✅
+- No hardcoded colors. All timing values are named constants on `PugslyGesture`, not inline magic numbers.
+
+#### Accessibility ✅ (1 deliberate trade-off, recorded not fixed)
+- Tap target (`150.dp` mascot image) is well over the 48dp minimum.
+- `contentDescription` on the mascot image stays `null` even though it's now interactive. This is intentional, not an oversight: giving it a label would announce "this is tappable" to anyone probing the screen (sighted or via TalkBack), which defeats the whole point of this pass — matches how the original About-screen 7-tap trigger was also never labeled as interactive.
+
+#### Deprecated APIs ✅
+- No deprecation warnings from any new API used.
+
+#### Spec Review ✅
+- Checked `EARNIT_SPEC.md` for any existing description of the dev-mode unlock mechanism — found none; it was never documented there. Nothing to update or contradict.
+- Not a listed Deferred Idea.
+
+#### Tests ✅ (10 new tests, 1 gap reviewed and left uncovered with rationale)
+- `PugslyGestureTest` (10 tests, new file) covers the pure state machine: group-gap boundary (exact pass, one ms over resets), pause-window boundary (one ms short/over resets, exact min/max accepted), the full 7-tap success path, and two reset scenarios (extra tap before the pause, a slow tap mid-second-burst).
+- Reviewed `EarnItViewModel.bounceMascot()` for coverage: it's a one-line wrapper around `_triggerMascotBounce.tryEmit(Unit)`. Checked precedent — `claimReward`'s existing `_triggerMascotBounce.tryEmit(Unit)` emission (this flow already existed before this branch) has never been unit tested anywhere in the codebase; it's a fire-and-forget animation trigger. Left uncovered, consistent with precedent, and testing a single delegating line would just restate the implementation.
+- No new `@Inject` site or `AppModule`/`TestAppModule` change — `assembleDebugAndroidTest` not required by the letter of the rule, but re-ran it anyway since the ViewModel changed; graph still builds.
+- `TESTING.md` updated: `PugslyGestureTest` row added, unit test count `120+` → `150+`. While updating that line, verified the real number rather than hand-tallying the table — summed the `tests="N"` attribute across every `app/build/test-results/testDebugUnitTest/*.xml` report from the full `./gradlew test` run: 151 total. The "120+" label predates this branch and was already stale by a wide margin; corrected to match the measured count (151, rounded to 150) instead of compounding the drift.
+- `MANUAL_TEST_PLAN.md:58` — removed the specific unlock instruction ("7-tap the version number in About") per explicit direction, since it now describes the decoy, not the real mechanism, and documenting the actual gesture in a public repo file would defeat the feature's purpose. No replacement step added describing the new gesture, for the same reason.
+- `./gradlew ktlintCheck`, `test` (10/10 new tests confirmed via JUnit XML, full suite green), `assembleDebug` all pass, run sequentially per `CLAUDE.md`.
+
+#### Reviewed, no findings: remaining Duplication/Decoupling items not covered above.

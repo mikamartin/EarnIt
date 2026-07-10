@@ -26,7 +26,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
                  [ Manual — 3 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
             [ UI — ~20 tests ]          ComposeTestRule + Hilt, real DataStore
        [ Integration — ~25 tests ]      Real in-memory Room, no mocks
-     [ Unit — 120+ tests ]              JVM, MockK DAOs, fast
+     [ Unit — 150+ tests ]              JVM, MockK DAOs, fast
 ```
 
 **Run unit tests** (JVM, no device needed)
@@ -43,7 +43,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ---
 
-## Unit Tests — `app/src/test/` (120+ tests)
+## Unit Tests — `app/src/test/` (150+ tests)
 
 | File | What it covers |
 |---|---|
@@ -69,6 +69,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `NudgeDeciderTest` (10) | `NudgeDecider.decide` — never-logged and no-active-reward guardrails; idle under/at/over the 48h and 96h thresholds; stage 2 never re-sends (two-nudge cap); a new log after stage 1 or stage 2 resets the streak |
 | `NudgeWorkerTest` (8) | `NudgeWorker.doWork()` via `androidx.work:work-testing`'s `TestListenableWorkerBuilder` + Robolectric — real notification posted with correct title/body per stage (asserted via `NotificationManager` shadow) and correct `SettingsRepository.updateNudgeState` call for each `NudgeDecider` outcome (first nudge, second nudge, no-op under threshold, no active reward, never logged, stage-2 cap, streak reset), plus the `POST_NOTIFICATIONS`-denied path (state still recorded, no notification shown) |
 | `NudgeDebugToolsTest` (3) | `EarnItViewModel.debugGetLastLogIdleHours` — whole-hour idle time from a real timestamp, null when nothing's ever been logged; `debugBackdateLastLog` writes to the repository and invokes its completion callback exactly once (the ordering the "48H"/"96H" dev buttons rely on to avoid racing `NudgeWorker` against an in-flight write) |
+| `PugslyGestureTest` (10) | `PugslyGesture.nextState`/`isComplete` — the tap-timing state machine behind the secret mascot gesture: group-gap boundary (exact pass, one ms over resets), pause-window boundaries (one ms short/over resets, exact min/max accepted), full 7-tap success path, and mid-pattern resets (extra tap before the pause, a slow tap mid-second-burst) |
 
 ---
 
