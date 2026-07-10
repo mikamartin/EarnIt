@@ -323,11 +323,27 @@ Each template card is collapsible. Individual tasks can be deselected before imp
 
 ---
 
+## 8a. Inactivity Nudges
+
+A background check re-engages users who have stopped logging tasks, via a periodic `WorkManager` job (`NudgeWorker`, `com.earnit.app.nudge`) that runs roughly every 6 hours regardless of whether the app is open.
+
+- **Trigger:** based on a single global clock — the most recent `CompletionLogEntity` timestamp across the whole app (any reward), not per-reward.
+- **First nudge:** fires once idle time reaches 48 hours.
+- **Second nudge:** fires once idle time reaches 96 hours (48h after the first), only if the first nudge already fired.
+- **Cap:** exactly two nudges per idle streak — no further nudges until the user logs something again, which resets the cycle.
+- **Guardrails:** no nudge fires if nothing has ever been logged (a user still setting up the app isn't nagged), or if there are no active (unclaimed, non-archived) rewards.
+- **Notification:** channel "Inactivity nudges" (`IMPORTANCE_DEFAULT`, unlike the silent widget-log channel — this one is meant to surface). Both nudges share one notification ID, so the second replaces the first rather than stacking. Tapping opens the app. Requires `POST_NOTIFICATIONS` (Android 13+), now requested from `MainActivity` on first launch (previously only requested from the widget flow).
+- **State:** `nudgeStage` (0/1/2) and `nudgeAnchorTimestamp` persisted in `AppSettings`/DataStore. The worker detects a new log (last-log timestamp has moved past the stored anchor) and resets the stage itself — no explicit reset call is threaded through `logCompletion`.
+- **No user-facing toggle** — the only opt-out is denying/revoking the OS notification permission.
+- **Dev tooling:** Settings → Data & Backup, dev-mode-gated "Inactivity nudge" card with "-49H"/"-97H" (backdates the most recent log) and "CHECK NOW" (runs the worker immediately instead of waiting for the periodic schedule) — real 48h/96h waits aren't practical to test manually otherwise.
+
+---
+
 ## 9. Tests
 
 See [TESTING.md](TESTING.md) for the full picture — current coverage, known gaps, and what to write next.
 
-**Summary:** 100+ unit tests across ~20 test files. ~45 instrumented tests across ~20 files (requires device/emulator) — including ~20 Compose UI tests.
+**Summary:** 120+ unit tests across ~20 test files. ~50 instrumented tests across ~20 files (requires device/emulator) — including ~20 Compose UI tests.
 
 ---
 
