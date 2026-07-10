@@ -409,7 +409,11 @@ class EarnItViewModel
             viewModelScope.launch { settingsRepository.disableDevMode() }
         }
 
-        // TEST DATA — only visible when dev mode enabled (7-tap on version in About)
+        fun bounceMascot() {
+            _triggerMascotBounce.tryEmit(Unit)
+        }
+
+        // TEST DATA — only visible when dev mode enabled
         fun seedTestData() {
             viewModelScope.launch { repository.seedTestData() }
         }

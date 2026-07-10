@@ -24,6 +24,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -81,6 +82,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.earnit.app.data.EarnItUiState
+import com.earnit.app.data.MascotId
 import com.earnit.app.data.Mascots
 import com.earnit.app.data.RewardProgress
 import com.earnit.app.ui.theme.LocalEarnItAccents
@@ -227,6 +229,7 @@ fun HomeScreen(
         }
     }
 
+    val pugslyTapTimestamps = remember { mutableListOf<Long>() }
     val mascotScale = remember { Animatable(1f) }
     LaunchedEffect(Unit) {
         viewModel.triggerMascotBounce.collect {
@@ -280,7 +283,24 @@ fun HomeScreen(
                 androidx.compose.foundation.Image(
                     painter = painterResource(mascotDrawable),
                     contentDescription = null,
-                    modifier = Modifier.size(150.dp).scale(mascotScale.value),
+                    modifier =
+                        Modifier
+                            .size(150.dp)
+                            .scale(mascotScale.value)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                            ) {
+                                if (settings.devModeEnabled || settings.selectedMascotId != MascotId.PUGSLY) return@clickable
+                                val updated = PugslyGesture.nextState(pugslyTapTimestamps, System.currentTimeMillis())
+                                pugslyTapTimestamps.clear()
+                                pugslyTapTimestamps.addAll(updated)
+                                if (PugslyGesture.isComplete(pugslyTapTimestamps)) {
+                                    pugslyTapTimestamps.clear()
+                                    viewModel.enableDevMode()
+                                    viewModel.bounceMascot()
+                                }
+                            },
                 )
             }
             Text(
