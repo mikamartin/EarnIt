@@ -55,13 +55,13 @@ These journeys are deliberately never automated, not just temporarily deferred. 
 **Cadence:** Once per release candidate, and whenever nudge-related code changes.
 
 **Steps:**
-1. Enable dev mode (7-tap the version number in About) and load test data so at least one active reward and one completion log exist.
+1. Enable dev mode (7-tap the version number in About) and **load full test data**, not just basic test data — this seeds many completion logs with several near-simultaneous "most recent" entries, which is the specific shape of data that once made the "48H" button silently no-op (fixed; see `NudgeDataTest`). Confirm at least one active reward exists.
 2. Fresh install on Android 13+: confirm the notification-permission system dialog appears on first launch (not just when using the widget), and grant it.
-3. Settings → Data & Backup → dev tools → tap **"-49H"** to backdate the most recent log, then tap **"CHECK NOW"**. Confirm a notification appears ("Still there?") and tapping it opens the app.
-4. Tap **"CHECK NOW"** again immediately. Confirm no duplicate/second notification appears (stage already recorded).
-5. Tap **"-97H"**, then **"CHECK NOW"**. Confirm a *different* notification appears ("Your rewards are waiting") and replaces the first rather than stacking.
-6. Tap **"CHECK NOW"** again. Confirm silence — the two-nudge cap holds even though idle time is still far past both thresholds.
-7. Log a real task from the app. Then tap **"-49H"** + **"CHECK NOW"** again. Confirm the first nudge fires again — logging reset the cycle.
+3. Settings → Data & Backup → dev tools → tap **"48H"**. It backdates every completion log past 49h and immediately triggers a real check in one tap; the status line updates to "Checked — last log ~49h ago". Confirm a notification appears ("Still there?") and tapping it opens the app.
+4. Tap **"48H"** again immediately. Confirm no duplicate/second notification appears (stage already recorded) even though the status line still reports the same idle age.
+5. Tap **"96H"**. Confirm a *different* notification appears ("Your rewards are waiting") and replaces the first rather than stacking.
+6. Tap **"96H"** again. Confirm silence — the two-nudge cap holds even though idle time is still far past both thresholds.
+7. Log a real task from the app. Then tap **"48H"** again. Confirm the first nudge fires again — logging reset the cycle.
 
 ---
 
