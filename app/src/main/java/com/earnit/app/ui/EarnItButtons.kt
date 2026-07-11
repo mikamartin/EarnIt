@@ -126,7 +126,7 @@ fun InfoIconButton(
     tint: Color = Color.Unspecified,
 ) {
     val resolvedTint = if (tint == Color.Unspecified) MaterialTheme.colorScheme.secondary else tint
-    IconButton(onClick = onClick, modifier = modifier.size(24.dp)) {
+    IconButton(onClick = onClick, modifier = modifier) {
         Icon(
             if (expanded) Icons.Default.Info else Icons.Outlined.Info,
             contentDescription = "Info",
