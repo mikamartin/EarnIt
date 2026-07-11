@@ -190,7 +190,7 @@ fun TaskDetailScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "Used in rewards${if (rewardsForTask.isNotEmpty()) " (${rewardsForTask.size})" else ""}",
+                    "${Strings.TASK_DETAIL_USED_IN_REWARDS}${if (rewardsForTask.isNotEmpty()) " (${rewardsForTask.size})" else ""}",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )
@@ -276,7 +276,7 @@ fun TaskDetailScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "Recent activity${if (logsForTask.isNotEmpty()) " (${logsForTask.size})" else ""}",
+                    "${Strings.REWARD_RECENT_ACTIVITY}${if (logsForTask.isNotEmpty()) " (${logsForTask.size})" else ""}",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )
@@ -306,7 +306,7 @@ fun TaskDetailScreen(
                                         .find { it.entry.id == log.historyEntryId }
                                         ?.entry
                                         ?.rewardName
-                                    ?: "Unknown reward"
+                                    ?: Strings.TASK_DETAIL_UNKNOWN_REWARD
                             Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),

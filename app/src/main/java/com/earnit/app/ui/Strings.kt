@@ -194,7 +194,9 @@ object Strings {
 
     // Task detail screen
     const val TASK_DETAIL_POINTS_LABEL = "Points:"
+    const val TASK_DETAIL_USED_IN_REWARDS = "Used in rewards"
     const val TASK_DETAIL_NO_REWARDS = "Not used in any rewards yet.\nLink it to a reward to start earning points with it."
+    const val TASK_DETAIL_UNKNOWN_REWARD = "Unknown reward"
     const val NO_ACTIVITY = "No activity yet."
 
     // Reward detail screen
