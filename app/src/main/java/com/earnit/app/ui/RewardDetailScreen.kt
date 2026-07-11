@@ -64,7 +64,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
@@ -438,51 +437,16 @@ fun RewardDetailScreen(
                     }
                 }
             } else {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .shadow(if (logEnabled) 4.dp else 0.dp, RoundedCornerShape(50))
-                            .clip(RoundedCornerShape(50))
-                            .background(
-                                if (logEnabled) {
-                                    Brush.horizontalGradient(
-                                        listOf(
-                                            accentColor
-                                                .copy(
-                                                    alpha = 0.15f,
-                                                ).compositeOver(MaterialTheme.colorScheme.surface),
-                                            accentColor
-                                                .copy(
-                                                    alpha = 0.32f,
-                                                ).compositeOver(MaterialTheme.colorScheme.surface),
-                                        ),
-                                    )
-                                } else {
-                                    Brush.horizontalGradient(listOf(Color(0xFFEDE8DC), Color(0xFFE0DAD0)))
-                                },
-                            ).border(
-                                1.5.dp,
-                                if (logEnabled) {
-                                    Brush.horizontalGradient(listOf(accents.gradientStart, accents.gradientEnd))
-                                } else {
-                                    Brush.horizontalGradient(listOf(Color(0xFFCEC8BC), Color(0xFFC2BBB0)))
-                                },
-                                RoundedCornerShape(50),
-                            ).clickable(enabled = logEnabled) {
-                                view.hapticTap()
-                                showLogDialog = true
-                            }.padding(vertical = 12.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        Strings.LOG_BTN,
-                        style = MaterialTheme.typography.labelSmall,
-                        letterSpacing = 0.8.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = if (logEnabled) accentColor else Color(0xFFB0A898),
-                    )
-                }
+                LogPillButton(
+                    label = Strings.LOG_BTN,
+                    accentColor = accentColor,
+                    enabled = logEnabled,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        view.hapticTap()
+                        showLogDialog = true
+                    },
+                )
                 if (showMandatoryHint) {
                     Spacer(Modifier.height(6.dp))
                     Text(

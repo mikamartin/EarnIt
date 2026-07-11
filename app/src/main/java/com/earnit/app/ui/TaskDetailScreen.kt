@@ -3,7 +3,6 @@
 package com.earnit.app.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,13 +39,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.earnit.app.data.EarnItUiState
 import com.earnit.app.ui.theme.LocalEarnItAccents
@@ -173,48 +169,12 @@ fun TaskDetailScreen(
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
-                Box(
-                    modifier =
-                        Modifier
-                            .shadow(if (logEnabled) 4.dp else 0.dp, RoundedCornerShape(50))
-                            .clip(RoundedCornerShape(50))
-                            .background(
-                                if (logEnabled) {
-                                    Brush.horizontalGradient(
-                                        listOf(
-                                            accents.gradientStart
-                                                .copy(
-                                                    alpha = 0.15f,
-                                                ).compositeOver(MaterialTheme.colorScheme.surface),
-                                            accents.gradientStart
-                                                .copy(
-                                                    alpha = 0.32f,
-                                                ).compositeOver(MaterialTheme.colorScheme.surface),
-                                        ),
-                                    )
-                                } else {
-                                    Brush.horizontalGradient(listOf(Color(0xFFEDE8DC), Color(0xFFE0DAD0)))
-                                },
-                            ).border(
-                                1.5.dp,
-                                if (logEnabled) {
-                                    Brush.horizontalGradient(listOf(accents.gradientStart, accents.gradientEnd))
-                                } else {
-                                    Brush.horizontalGradient(listOf(Color(0xFFCEC8BC), Color(0xFFC2BBB0)))
-                                },
-                                RoundedCornerShape(50),
-                            ).clickable(enabled = logEnabled) { showLogDialog = true }
-                            .padding(horizontal = 24.dp, vertical = 10.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        Strings.LOG_BTN,
-                        style = MaterialTheme.typography.labelSmall,
-                        letterSpacing = 0.8.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = if (logEnabled) accents.gradientEnd else Color(0xFFB0A898),
-                    )
-                }
+                LogPillButton(
+                    label = Strings.LOG_BTN,
+                    accentColor = accents.gradientStart,
+                    enabled = logEnabled,
+                    onClick = { showLogDialog = true },
+                )
             }
 
             HorizontalDivider(color = Color(0xFFD5C9B0), thickness = 1.dp)
