@@ -1,4 +1,4 @@
-// TEST DATA — gated behind Settings.devModeEnabled (7-tap on About version); not removed, see CLEANUP_LOG Pass 21
+// TEST DATA — gated behind Settings.devModeEnabled; not removed, see CLEANUP_LOG Pass 21
 package com.earnit.app.data
 
 object TestDataSeeder {
