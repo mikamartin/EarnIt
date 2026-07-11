@@ -996,3 +996,43 @@ User manually tested the flow above and found a second bug, which led to a secon
 - `./gradlew ktlintCheck`, `test` (10/10 new tests confirmed via JUnit XML, full suite green), `assembleDebug` all pass, run sequentially per `CLAUDE.md`.
 
 #### Reviewed, no findings: remaining Duplication/Decoupling items not covered above.
+
+---
+
+### Pass 36 — `chore/cleanup-backlog-fixes` branch (whole-repo audit fixes)
+
+Actioned findings #1, #2, #4–#8 from [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md), a whole-repo audit against this checklist run 2026-07-10 against `main` at `59d9a82`. Finding #3 (five oversized composables) is deferred to its own branch, `refactor/split-oversized-screens` — comparable in scope to the Pass 10 `EarnItApp.kt` split, and the audit itself recommended not folding it into a hygiene pass. `CLEANUP_BACKLOG.md` stays in the repo, trimmed to that one remaining item, until that branch lands.
+
+#### Duplication ✅ (2 fixes)
+- **Fixed:** `TaskDetailScreen.kt` and `RewardDetailScreen.kt` each hand-rolled the LOG pill button (shadow/clip/gradient/border/click/padding) instead of reusing `LogPillButton` from `EarnItButtons.kt` — `HomeScreen.kt` already called it correctly. Both screens now call `LogPillButton` directly; a future LOG-button styling change is one edit instead of three. Visual side effect: both screens' LOG buttons now match `HomeScreen`'s (flat single-tone border/text, more compact padding) instead of each having a slightly different hand-rolled variant.
+- **Fixed:** `TaskDetailScreen.kt` hardcoded `"Recent activity"` instead of the existing `Strings.REWARD_RECENT_ACTIVITY`, and hardcoded `"Used in rewards"` / `"Unknown reward"` with no `Strings.kt` entry at all. Added `TASK_DETAIL_USED_IN_REWARDS` and `TASK_DETAIL_UNKNOWN_REWARD`, routed all three through `Strings.kt`. Copy-only, no visible change.
+
+#### Decoupling ✅
+- No changes in this pass touched ViewModel/Repository/Dao boundaries.
+
+#### Complexity & Pattern Health — 1 item deferred
+- The five oversized composables finding (`RewardDetailScreen.kt` 694 lines, `TaskEditScreen.kt` ~637, `SettingsScreen.kt` ~430, `RewardEditScreen.kt` ~420, `HomeScreen.kt` ~320) is out of scope for this pass — tracked on `refactor/split-oversized-screens` instead.
+
+#### Dead Code & Hygiene ✅
+- Removed now-unused `border`/`Brush`/`compositeOver`/`sp` imports from `TaskDetailScreen.kt` and the unused `compositeOver` import from `RewardDetailScreen.kt`, left behind by the `LogPillButton` dedup.
+- `git status` clean apart from intended changes.
+
+#### Naming Consistency ✅ (1 fix)
+- **Fixed:** `WidgetConfigActivity.kt:211` and `TaskLibraryScreen.kt:97` hardcoded `contentDescription = "Back"` instead of `Strings.BACK_DESC`, despite both files already using `Strings.*` elsewhere. Screen-reader-only string, no visible change.
+
+#### Hardcoded Values ✅ (1 fix)
+- **Fixed:** `EarnItPrimaryButton`'s `disabledContainerColor`/`disabledContentColor` were hardcoded to flat greys (`0xFFCCCCCC`/`0xFF999999`) that didn't adapt to Ocean Blue or Forest themes. Checked `DEV_PLAYBOOK.md §4 Known Limitations` first — the only documented hardcoded-disabled-color exception is `LogPillButton`'s warm-gold neutral colors, a different component; this one had no such exception on record. Removed both overrides — Material3's `ButtonDefaults.buttonColors()` already defaults to theme-aware `onSurface.copy(alpha = 0.12f/0.38f)`, so the fix was deletion, not reimplementation.
+
+#### Accessibility ✅ (1 reviewed, documented as exception rather than fixed)
+- `InfoIconButton` overrode Compose's default 48dp minimum touch target down to 24dp. Checked for prior rationale first — none found; Pass 1's introduction of `InfoIconButton` only mentions visual consistency, and this wasn't logged as an accepted exception anywhere, unlike `AddTaskToRewardDialog`'s 32dp case (Pass 5). Initially fixed by removing the override, but manual testing on `SettingsScreen`'s name/rewards/tasks toggles caught a visible side effect: Compose's `minimumInteractiveComponentSize()` reports the enlarged 48dp size to the parent layout (not just the touch system), so the row grew taller and pushed a noticeable gap above the info note it reveals. Reverted to 24dp and documented as a permanent, accepted exception in `DEV_PLAYBOOK.md §4 Known Limitations` instead.
+
+#### Deprecated APIs ✅
+- No deprecated API usage touched in this pass.
+
+#### Spec Review ✅ (1 fix)
+- **Fixed:** `devModeEnabled` was the only `AppSettings` field with no `EARNIT_SPEC.md §6` row — every other field, including more obscure ones, was documented. Added a row describing what it gates (test-data seeding, nudge debug buttons) without naming the unlock trigger. While in the area, fixed a stale comment in `EarnItRepository.kt` and `TestDataSeeder.kt` that still referenced the old "7-tap on About version" trigger, superseded by Pass 35's mascot-gesture unlock.
+
+#### Tests ✅ (1 fix)
+- **Fixed:** `TESTING.md`'s instrumented-test table was missing rows for `DuplicateNameUiTest` (2, added Pass 29) and `RewardLimitUiTest` (1, added Pass 29), and `PointFormulaTest`'s row said "(7)" against an actual 9 `@Test` methods (Pass 29 added `difficulty=5`/`preparation=5` bonus cases without bumping the row). Recounted directly via `@Test` grep per file rather than trusting the audit's stated numbers — corrected the audit's own "55 actual" claim to the true figure, 54 (the audit had double-counted a `@TestInstallIn` match in `TestAppModule.kt` as a real `@Test`).
+
+#### Reviewed, no findings: Decoupling, Deprecated APIs — no changes in this pass touched either area.

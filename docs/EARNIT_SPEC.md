@@ -237,6 +237,7 @@ Settings are persisted via DataStore Preferences.
 | Unlocked Mascots | Set\<MascotId\> | `{PUGSLY, TABBY}` | Set of mascots the user has earned. Grows as milestones are hit; never shrinks. |
 | Show Quote | Boolean | true | Shows or hides the daily quote on the home screen |
 | Tasks Group View | Boolean | false | When true, the Tasks screen shows tasks in collapsible group sections instead of a flat list |
+| Dev Mode Enabled | Boolean | false | Gates developer tools (seed test data on Data & Backup screen, 48H/96H nudge debug buttons); toggled via the secret mascot-tap gesture on the home screen |
 
 ### Mascot Unlock Notifications
 
