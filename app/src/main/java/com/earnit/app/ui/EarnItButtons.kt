@@ -62,8 +62,6 @@ fun EarnItPrimaryButton(
             ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = Color.White,
-                disabledContainerColor = Color(0xFFCCCCCC),
-                disabledContentColor = Color(0xFF999999),
             ),
     ) {
         Text(text, style = buttonLabelStyle)
