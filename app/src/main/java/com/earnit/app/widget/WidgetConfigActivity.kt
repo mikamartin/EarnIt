@@ -208,7 +208,7 @@ private fun LabelEditScreen(
             IconButton(onClick = onBack) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = Strings.BACK_DESC,
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }

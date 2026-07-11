@@ -94,7 +94,7 @@ fun TaskLibraryScreen(
             IconButton(onClick = { navController.popBackStack() }) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = Strings.BACK_DESC,
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
