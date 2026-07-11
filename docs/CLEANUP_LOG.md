@@ -1023,8 +1023,8 @@ Actioned findings #1, #2, #4–#8 from [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md),
 #### Hardcoded Values ✅ (1 fix)
 - **Fixed:** `EarnItPrimaryButton`'s `disabledContainerColor`/`disabledContentColor` were hardcoded to flat greys (`0xFFCCCCCC`/`0xFF999999`) that didn't adapt to Ocean Blue or Forest themes. Checked `DEV_PLAYBOOK.md §4 Known Limitations` first — the only documented hardcoded-disabled-color exception is `LogPillButton`'s warm-gold neutral colors, a different component; this one had no such exception on record. Removed both overrides — Material3's `ButtonDefaults.buttonColors()` already defaults to theme-aware `onSurface.copy(alpha = 0.12f/0.38f)`, so the fix was deletion, not reimplementation.
 
-#### Accessibility ✅ (1 fix)
-- **Fixed:** `InfoIconButton` overrode Compose's default 48dp minimum touch target down to 24dp. Removed the override; the icon glyph itself stays visually 16dp. Checked all three live call sites (`SettingsScreen.kt:194,362,418`) — each sits next to a `Text(...weight(1f))`, so the larger tap target just takes more of the row's trailing space, no overlap.
+#### Accessibility ✅ (1 reviewed, documented as exception rather than fixed)
+- `InfoIconButton` overrode Compose's default 48dp minimum touch target down to 24dp. Checked for prior rationale first — none found; Pass 1's introduction of `InfoIconButton` only mentions visual consistency, and this wasn't logged as an accepted exception anywhere, unlike `AddTaskToRewardDialog`'s 32dp case (Pass 5). Initially fixed by removing the override, but manual testing on `SettingsScreen`'s name/rewards/tasks toggles caught a visible side effect: Compose's `minimumInteractiveComponentSize()` reports the enlarged 48dp size to the parent layout (not just the touch system), so the row grew taller and pushed a noticeable gap above the info note it reveals. Reverted to 24dp and documented as a permanent, accepted exception in `DEV_PLAYBOOK.md §4 Known Limitations` instead.
 
 #### Deprecated APIs ✅
 - No deprecated API usage touched in this pass.

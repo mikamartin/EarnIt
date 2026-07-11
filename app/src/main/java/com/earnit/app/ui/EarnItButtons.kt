@@ -126,7 +126,9 @@ fun InfoIconButton(
     tint: Color = Color.Unspecified,
 ) {
     val resolvedTint = if (tint == Color.Unspecified) MaterialTheme.colorScheme.secondary else tint
-    IconButton(onClick = onClick, modifier = modifier) {
+    // 24dp touch target, below the 48dp accessibility minimum — accepted trade-off for this
+    // small, low-frequency toggle; see DEV_PLAYBOOK.md §4 Known Limitations.
+    IconButton(onClick = onClick, modifier = modifier.size(24.dp)) {
         Icon(
             if (expanded) Icons.Default.Info else Icons.Outlined.Info,
             contentDescription = "Info",
