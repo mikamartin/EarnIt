@@ -39,7 +39,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 ./gradlew connectedDebugAndroidTest
 ```
 
-**CI:** Unit tests run on every build (Workflow 1). Instrumented tests run on every push/PR via an API 34 emulator (Workflow 2) and manually before each release candidate.
+**CI:** Unit tests run on every build (Workflow 1). Instrumented tests run on every push/PR via two parallel API 34 emulator jobs (Workflow 2) — sharded by layer, Repository/Utility and UI — and manually before each release candidate.
 
 ---
 
@@ -166,7 +166,7 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
 | Unit (150+ tests) | Every build/push | `./gradlew test` |
-| Integration + UI, instrumented (~60 tests) | Every push/PR via CI (API 34 emulator, Workflow 2); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
+| Integration + UI, instrumented (~60 tests) | Every push/PR via CI (two parallel API 34 emulator jobs, Workflow 2 — sharded by layer); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (4) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 
 See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the journeys that are deliberately never automated (not just deferred) — each crosses a system-process boundary (system file picker, Play Core API, widget activity chain, background `WorkManager` execution) that instrumented UI tests cannot drive reliably.
