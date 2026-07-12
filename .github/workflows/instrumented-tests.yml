@@ -24,7 +24,7 @@ jobs:
           - shard: repository-utility
             classes: com.earnit.app.ClearCascadeTest,com.earnit.app.ExportImportTest,com.earnit.app.HappyPathTest,com.earnit.app.NudgeDataTest,com.earnit.app.StartOverTest,com.earnit.app.WidgetFlashTest
           - shard: ui
-            classes: com.earnit.app.DuplicateNameUiTest,com.earnit.app.EmptyStateUiTest,com.earnit.app.ImportErrorUiTest,com.earnit.app.MaxLengthUiTest,com.earnit.app.RewardLimitUiTest,com.earnit.app.SaveNavigationUiTest,com.earnit.app.SettingsTipUiTest,com.earnit.app.SettingsUiTest,com.earnit.app.TaskLibraryImportUiTest,com.earnit.app.UiHappyPathTest,com.earnit.app.WidgetNudgeUiTest
+            classes: com.earnit.app.DuplicateNameUiTest,com.earnit.app.EmptyStateUiTest,com.earnit.app.ImportErrorUiTest,com.earnit.app.MaxLengthUiTest,com.earnit.app.RewardLimitUiTest,com.earnit.app.SaveNavigationUiTest,com.earnit.app.SettingsTipUiTest,com.earnit.app.SettingsUiTest,com.earnit.app.TaskEditScreenUiTest,com.earnit.app.TaskLibraryImportUiTest,com.earnit.app.UiHappyPathTest,com.earnit.app.WidgetNudgeUiTest
 
     steps:
       - uses: actions/checkout@v4
