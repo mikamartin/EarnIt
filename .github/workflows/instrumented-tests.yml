@@ -10,6 +10,25 @@ jobs:
   instrumented-tests:
     runs-on: ubuntu-latest
 
+    # Sharded along the existing Repository/Utility vs. UI layer split documented in
+    # TESTING.md's per-file "Layer" column — not an arbitrary split. Repository/Utility tests
+    # (32) never launch MainActivity or touch Compose; the UI shard (31) is where every
+    # MainActivity + Compose recomposition happens, which is what accumulates GPU/emulator
+    # resource pressure over a long run. Each shard gets its own runner VM and freshly-booted
+    # emulator, so the UI shard's tests now face at most 30 prior Activity launches instead of
+    # up to 62 in the old single combined 63-test run — added after
+    # `autoPoints_slidersUpdateComputedTotal` started deterministically failing late in that
+    # combined run with emulator "Failed to find ColorBuffer" errors, reproducible on GitHub's
+    # runners but not locally (including on an AVD matching CI's exact profile).
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: repository-utility
+            classes: com.earnit.app.ClearCascadeTest,com.earnit.app.ExportImportTest,com.earnit.app.HappyPathTest,com.earnit.app.NudgeDataTest,com.earnit.app.StartOverTest,com.earnit.app.WidgetFlashTest
+          - shard: ui
+            classes: com.earnit.app.DuplicateNameUiTest,com.earnit.app.EmptyStateUiTest,com.earnit.app.ImportErrorUiTest,com.earnit.app.MaxLengthUiTest,com.earnit.app.RewardLimitUiTest,com.earnit.app.SaveNavigationUiTest,com.earnit.app.SettingsTipUiTest,com.earnit.app.SettingsUiTest,com.earnit.app.TaskEditScreenUiTest,com.earnit.app.TaskLibraryImportUiTest,com.earnit.app.UiHappyPathTest,com.earnit.app.WidgetNudgeUiTest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -31,7 +50,9 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      # Cache the AVD snapshot so subsequent runs skip the 3-5 min cold-boot step.
+      # Cache the AVD snapshot so subsequent runs skip the 3-5 min cold-boot step. Keyed per
+      # shard (both shards use the same AVD config) so two parallel matrix jobs never race to
+      # write the same cache entry on a cold cache.
       - name: AVD cache
         uses: actions/cache@v4
         id: avd-cache
@@ -39,7 +60,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-api34
+          key: avd-api34-${{ matrix.shard }}
 
       # Only runs on a cache miss to generate the snapshot for future runs.
       - name: Create AVD snapshot
@@ -57,7 +78,7 @@ jobs:
           disable-animations: false
           script: echo "AVD snapshot created."
 
-      - name: Run instrumented tests
+      - name: Run instrumented tests (${{ matrix.shard }})
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -67,12 +88,12 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           # Disabling animations speeds up Compose UI assertions in instrumented tests.
           disable-animations: true
-          script: ./gradlew connectedDebugAndroidTest
+          script: ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=${{ matrix.classes }}
 
       # Upload results even on failure so flaky-test failures are diagnosable from CI.
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: instrumented-test-results
+          name: instrumented-test-results-${{ matrix.shard }}
           path: app/build/outputs/androidTest-results/
