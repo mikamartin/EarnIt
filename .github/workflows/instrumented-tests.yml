@@ -12,14 +12,11 @@ jobs:
 
     # Sharded along the existing Repository/Utility vs. UI layer split documented in
     # TESTING.md's per-file "Layer" column — not an arbitrary split. Repository/Utility tests
-    # (32) never launch MainActivity or touch Compose; the UI shard (31) is where every
-    # MainActivity + Compose recomposition happens, which is what accumulates GPU/emulator
-    # resource pressure over a long run. Each shard gets its own runner VM and freshly-booted
-    # emulator, so the UI shard's tests now face at most 30 prior Activity launches instead of
-    # up to 62 in the old single combined 63-test run — added after
-    # `autoPoints_slidersUpdateComputedTotal` started deterministically failing late in that
-    # combined run with emulator "Failed to find ColorBuffer" errors, reproducible on GitHub's
-    # runners but not locally (including on an AVD matching CI's exact profile).
+    # never launch MainActivity or touch Compose; the UI shard is where every MainActivity +
+    # Compose recomposition happens. Each shard gets its own runner VM and freshly-booted
+    # emulator. Class lists must be kept in sync with app/src/androidTest/java/com/earnit/app/
+    # on this branch — a class not present here (e.g. one that only exists on an unmerged
+    # feature branch) fails as a ClassNotFoundException, not a silent no-op.
     strategy:
       fail-fast: false
       matrix:
@@ -27,7 +24,7 @@ jobs:
           - shard: repository-utility
             classes: com.earnit.app.ClearCascadeTest,com.earnit.app.ExportImportTest,com.earnit.app.HappyPathTest,com.earnit.app.NudgeDataTest,com.earnit.app.StartOverTest,com.earnit.app.WidgetFlashTest
           - shard: ui
-            classes: com.earnit.app.DuplicateNameUiTest,com.earnit.app.EmptyStateUiTest,com.earnit.app.ImportErrorUiTest,com.earnit.app.MaxLengthUiTest,com.earnit.app.RewardLimitUiTest,com.earnit.app.SaveNavigationUiTest,com.earnit.app.SettingsTipUiTest,com.earnit.app.SettingsUiTest,com.earnit.app.TaskEditScreenUiTest,com.earnit.app.TaskLibraryImportUiTest,com.earnit.app.UiHappyPathTest,com.earnit.app.WidgetNudgeUiTest
+            classes: com.earnit.app.DuplicateNameUiTest,com.earnit.app.EmptyStateUiTest,com.earnit.app.ImportErrorUiTest,com.earnit.app.MaxLengthUiTest,com.earnit.app.RewardLimitUiTest,com.earnit.app.SaveNavigationUiTest,com.earnit.app.SettingsTipUiTest,com.earnit.app.SettingsUiTest,com.earnit.app.TaskLibraryImportUiTest,com.earnit.app.UiHappyPathTest,com.earnit.app.WidgetNudgeUiTest
 
     steps:
       - uses: actions/checkout@v4
@@ -88,13 +85,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           # Disabling animations speeds up Compose UI assertions in instrumented tests.
           disable-animations: true
-          # TEMPORARY diagnostics — the script below logs runner host RAM and emulator guest
-          # RAM every 15s alongside the test run, to confirm or rule out memory exhaustion as
-          # the cause of the ColorBuffer/ClassNotFoundException failures seen on this job. A
-          # multi-line inline script here previously broke `sh -c` parsing (lost newlines around
-          # the background subshell), so the logic lives in a real file instead. Remove both
-          # once the root cause is confirmed and a real fix lands.
-          script: chmod +x .github/scripts/run-instrumented-with-mem-monitor.sh && .github/scripts/run-instrumented-with-mem-monitor.sh "${{ matrix.classes }}"
+          script: ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=${{ matrix.classes }}
 
       # Upload results even on failure so flaky-test failures are diagnosable from CI.
       - name: Upload test results
