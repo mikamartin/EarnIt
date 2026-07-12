@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -122,8 +123,9 @@ class TaskEditScreenUiTest {
         composeTestRule.onNodeWithContentDescription("${Strings.TASK_SLIDER_DIFFICULTY} 5").performClick()
         composeTestRule.onNodeWithContentDescription("${Strings.TASK_SLIDER_PREPARATION} 5").performClick()
 
-        // computeAutoPoints(5, 5, 5) == 30 — see PointFormulaTest.
-        composeTestRule.onNodeWithText("30").assertIsDisplayed()
+        // computeAutoPoints(5, 5, 5) == 30 — see PointFormulaTest. Scroll it into view first —
+        // the points total isn't guaranteed to be on-screen on every emulator viewport.
+        composeTestRule.onNodeWithText("30").performScrollTo().assertIsDisplayed()
     }
 
     @Test
