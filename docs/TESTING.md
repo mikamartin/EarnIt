@@ -24,7 +24,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ```
                  [ Manual — 3 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
-            [ UI — ~20 tests ]          ComposeTestRule + Hilt, real DataStore
+            [ UI — ~30 tests ]          ComposeTestRule + Hilt, real DataStore
        [ Integration — ~25 tests ]      Real in-memory Room, no mocks
      [ Unit — 150+ tests ]              JVM, MockK DAOs, fast
 ```
@@ -73,7 +73,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ---
 
-## Instrumented Tests — `app/src/androidTest/` (~50 tests, requires device/emulator)
+## Instrumented Tests — `app/src/androidTest/` (~60 tests, requires device/emulator)
 
 | File | Layer | What it covers |
 |---|---|---|
@@ -94,6 +94,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `SettingsTipUiTest` (1) | UI | Settings discoverability tip: shown on first visit, dismiss hides it and persists across `activityRule.scenario.recreate()` and subsequent visits |
 | `DuplicateNameUiTest` (2) | UI | Duplicate-name error shown and SAVE disabled when a task or reward name conflicts with an existing one, case-insensitive |
 | `RewardLimitUiTest` (1) | UI | Tapping the reward FAB at `maxRewardCount` shows the max-limit tooltip instead of navigating to Reward Edit |
+| `TaskEditScreenUiTest` (9) | UI | Delete confirmation removes the task and returns to the Tasks list; icon picker selection updates the icon button and dismisses the dialog; group picker — selecting an existing group updates the header label, typing a new group name clears that selection, clearing the new-group text reverts to the optional label; auto-points sliders drive the computed total (checked against `PointFormulaTest`'s known formula output); manual points field strips non-digit input; reward-link checkbox includes/excludes the task and enables/disables the mandatory-star and repeatable-refresh toggles, which reset together when unchecked; editing an existing task's name/icon/group/points persists after Save; reopening a task already linked to a reward pre-populates the reward-link checkbox and mandatory state from its existing link; adding a task from an existing (already-saved) reward's own Detail screen shows the "used in" line instead of the checkbox list and pops back to Reward Detail with the task linked |
 
 ---
 
@@ -162,8 +163,8 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
-| Unit (120+ tests) | Every build/push | `./gradlew test` |
-| Integration + UI, instrumented (~50 tests) | Every push/PR via CI (API 34 emulator, Workflow 2); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
+| Unit (150+ tests) | Every build/push | `./gradlew test` |
+| Integration + UI, instrumented (~60 tests) | Every push/PR via CI (API 34 emulator, Workflow 2); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (4) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 
 See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the journeys that are deliberately never automated (not just deferred) — each crosses a system-process boundary (system file picker, Play Core API, widget activity chain, background `WorkManager` execution) that instrumented UI tests cannot drive reliably.
