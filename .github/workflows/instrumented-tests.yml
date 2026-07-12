@@ -88,25 +88,13 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           # Disabling animations speeds up Compose UI assertions in instrumented tests.
           disable-animations: true
-          # TEMPORARY diagnostics — logs runner host RAM (free -h) and emulator guest RAM
-          # (/proc/meminfo) every 15s alongside the test run, to confirm or rule out memory
-          # exhaustion as the cause of the ColorBuffer/ClassNotFoundException failures seen on
-          # this job. Remove once the root cause is confirmed and a real fix lands.
-          script: |
-            (
-              while true; do
-                echo "=== [mem-monitor] $(date -u +%T) host ==="
-                free -h
-                echo "=== [mem-monitor] $(date -u +%T) guest ==="
-                adb shell cat /proc/meminfo 2>/dev/null | head -5
-                sleep 15
-              done
-            ) &
-            MONITOR_PID=$!
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=${{ matrix.classes }}
-            EXIT_CODE=$?
-            kill "$MONITOR_PID" 2>/dev/null || true
-            exit $EXIT_CODE
+          # TEMPORARY diagnostics — the script below logs runner host RAM and emulator guest
+          # RAM every 15s alongside the test run, to confirm or rule out memory exhaustion as
+          # the cause of the ColorBuffer/ClassNotFoundException failures seen on this job. A
+          # multi-line inline script here previously broke `sh -c` parsing (lost newlines around
+          # the background subshell), so the logic lives in a real file instead. Remove both
+          # once the root cause is confirmed and a real fix lands.
+          script: chmod +x .github/scripts/run-instrumented-with-mem-monitor.sh && .github/scripts/run-instrumented-with-mem-monitor.sh "${{ matrix.classes }}"
 
       # Upload results even on failure so flaky-test failures are diagnosable from CI.
       - name: Upload test results
