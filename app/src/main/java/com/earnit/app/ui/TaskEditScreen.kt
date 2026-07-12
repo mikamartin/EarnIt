@@ -78,6 +78,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -582,7 +584,11 @@ private fun TaskPointsSection(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(Strings.TASK_AUTO_POINTS_TOGGLE, style = MaterialTheme.typography.bodyMedium)
-        Switch(checked = useAuto, onCheckedChange = onUseAutoChange)
+        Switch(
+            checked = useAuto,
+            onCheckedChange = onUseAutoChange,
+            modifier = Modifier.semantics { contentDescription = Strings.TASK_AUTO_POINTS_DESC },
+        )
     }
 
     if (useAuto) {
@@ -945,7 +951,8 @@ fun SliderRow(
                                 .clip(CircleShape)
                                 .background(if (i == value) primary else surface)
                                 .border(2.dp, primary, CircleShape)
-                                .clickable { onValueChange(i) },
+                                .clickable { onValueChange(i) }
+                                .semantics { contentDescription = "$label $i" },
                     )
                 }
             }
