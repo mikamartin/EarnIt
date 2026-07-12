@@ -57,7 +57,10 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-api34-${{ matrix.shard }}
+          # Bumped from avd-api34-* to force a fresh snapshot capturing the new -memory 4096
+          # boot config below — reusing an old snapshot risks silently keeping the smaller
+          # baked-in RAM size or hitting a snapshot/config mismatch.
+          key: avd-api34-mem4096-${{ matrix.shard }}
 
       # Only runs on a cache miss to generate the snapshot for future runs.
       - name: Create AVD snapshot
@@ -71,7 +74,13 @@ jobs:
           # default target (no Play Services) is sufficient and faster than google_apis.
           arch: x86_64
           force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          # -memory 4096: default AVD guest RAM (~2.4GB) measurably declined over the course of
+          # a UI test run (tracked via /proc/meminfo during the ci-shard-instrumented-tests
+          # investigation), independent of the unrelated "Failed to find ColorBuffer" log noise
+          # (a known red herring for this class of failure — see
+          # ReactiveCircus/android-emulator-runner#358). More guest headroom targets that
+          # measured decline directly.
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 4096
           disable-animations: false
           script: echo "AVD snapshot created."
 
@@ -82,7 +91,7 @@ jobs:
           target: default
           arch: x86_64
           force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 4096
           # Disabling animations speeds up Compose UI assertions in instrumented tests.
           disable-animations: true
           script: ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=${{ matrix.classes }}
