@@ -39,6 +39,7 @@ class TaskEditScreenUiTest {
     @Before
     fun setUp() {
         hiltRule.inject()
+        resetAppState()
     }
 
     private fun waitForTaskDetail() {

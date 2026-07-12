@@ -148,4 +148,11 @@ class SettingsRepository
                 it[Keys.NUDGE_ANCHOR_TIMESTAMP] = anchorTimestamp
             }
         }
+
+        // Used by instrumented test setup to isolate tests from each other — the DataStore
+        // backing this repository is real, persisted storage shared across the whole
+        // instrumentation process, not reset between tests automatically.
+        suspend fun resetToDefaults() {
+            context.dataStore.edit { it.clear() }
+        }
     }

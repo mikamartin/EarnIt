@@ -1036,3 +1036,34 @@ Actioned findings #1, #2, #4–#8 from [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md),
 - **Fixed:** `TESTING.md`'s instrumented-test table was missing rows for `DuplicateNameUiTest` (2, added Pass 29) and `RewardLimitUiTest` (1, added Pass 29), and `PointFormulaTest`'s row said "(7)" against an actual 9 `@Test` methods (Pass 29 added `difficulty=5`/`preparation=5` bonus cases without bumping the row). Recounted directly via `@Test` grep per file rather than trusting the audit's stated numbers — corrected the audit's own "55 actual" claim to the true figure, 54 (the audit had double-counted a `@TestInstallIn` match in `TestAppModule.kt` as a real `@Test`).
 
 #### Reviewed, no findings: Decoupling, Deprecated APIs — no changes in this pass touched either area.
+
+---
+
+### Pass 37 — CI instrumented-test flake fix + test-isolation hardening (on `refactor/split-task-edit-screen`, scoped to this fix only — not a full-branch pass)
+
+Triggered by a CI-only failure (`autoPoints_slidersUpdateComputedTotal` in `TaskEditScreenUiTest`) on PR #26 that didn't reproduce from local code review. Root cause: `TestAppModule` scopes the in-memory Room database and `SettingsRepository`'s DataStore `@Singleton` on the process-wide Hilt component, so every `@HiltAndroidTest` UI test was leaking its data/settings into whichever test ran after it in the same instrumentation run — several tests (`EmptyStateUiTest`, `SettingsTipUiTest`, `RewardLimitUiTest`) were only passing by luck of execution order. This pass covers only that fix (14 files: the flaky test itself, a new shared reset helper, and its retrofit into every other affected test) — it does not re-review the rest of the branch's earlier TaskEditScreen-split commits.
+
+#### Duplication ✅ (1 avoided)
+- `resetAppState()` (new `TestStateReset.kt`) reuses the existing `EarnItRepository.clearAll()` (the repository's `database.clearAllTables()` wrapper, originally written for the app's "Start Over" flow) via a Hilt `@EntryPoint`, instead of re-implementing table clearing.
+
+#### Decoupling ✅
+- No changes touched ViewModel/Repository/Dao boundaries; `resetAppState()` lives entirely in the androidTest source set and only adds one new production method (`SettingsRepository.resetToDefaults()`, a thin DataStore wrapper matching the shape of every other `update*` method already on that class).
+
+#### Complexity & Pattern Health ✅
+- No composables touched. `resetAppState()` uses `runBlocking`, matching the pattern every retrofitted test's own `@Before` already used for settings setup (`SettingsUiTest`, `RewardLimitUiTest`, etc.).
+
+#### Dead Code & Hygiene ✅
+- `git status` clean apart from the intended 14 files (13 modified, 1 new).
+
+#### Naming Consistency ✅
+- `TestStateReset.kt` matches the existing androidTest helper naming style (`HiltTestRunner.kt`, `RoomIntegrationBase.kt`) rather than forcing a `*Screen.kt`/`*Test.kt` shape that doesn't fit a plain utility file.
+
+#### Spec Review ✅
+- `EARNIT_SPEC.md` only references the instrumented-test count in its testing summary, which this pass doesn't change (no tests added, only isolation fixed between existing ones). No update needed.
+
+#### Tests ✅ (1 gap reviewed, none introduced)
+- Reviewed whether `SettingsRepository.resetToDefaults()` needs unit coverage: `SettingsRepository` has no unit tests anywhere in the codebase today (DataStore needs a real `Context`; its existing coverage is entirely instrumented, via `SettingsUiTest`). Consistent with that precedent — left uncovered at the unit level; it's exercised implicitly by every instrumented test's `@Before` now.
+- Could not run `connectedDebugAndroidTest` locally (no device/emulator attached this session); verified via `./gradlew assembleDebugAndroidTest` (Hilt graph resolves, all 12 retrofitted files compile against the new `@EntryPoint`) plus `ktlintCheck` and `test`. CI's API 34 emulator is the actual verification path for this change, consistent with the existing Android 16 local-verification gap logged in `TESTING.md` Deferrals.
+- Updated `TESTING.md`: added a state-isolation convention note above the instrumented-tests table describing when `resetAppState()` is called and why `RoomIntegrationBase`-based tests don't need it.
+
+#### Reviewed, no findings: remaining checklist items (Hardcoded Values, Accessibility, Deprecated APIs) don't apply — no UI surface in this pass.

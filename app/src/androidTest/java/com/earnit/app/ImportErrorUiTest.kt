@@ -33,6 +33,7 @@ class ImportErrorUiTest {
     @Before
     fun setUp() {
         hiltRule.inject()
+        resetAppState()
     }
 
     private fun navigateToDataScreen() {

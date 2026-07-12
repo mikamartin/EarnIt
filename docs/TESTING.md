@@ -75,6 +75,8 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ## Instrumented Tests — `app/src/androidTest/` (~60 tests, requires device/emulator)
 
+**State isolation:** Every `@HiltAndroidTest` class using `createAndroidComposeRule<MainActivity>()` calls `resetAppState()` (in `TestStateReset.kt`) as the first line of its `@Before`, immediately after `hiltRule.inject()` and before any test-specific overrides (e.g. `settingsRepository.updateMaxRewardCount(...)`). This gives each test a clean database and default settings to start from, independent of what ran before it in the same instrumentation process. `RoomIntegrationBase`-based repository tests don't need this — each already gets its own fresh in-memory database per test.
+
 | File | Layer | What it covers |
 |---|---|---|
 | `HappyPathTest` (1) | Repository | Create task → create reward → link as mandatory → log → assert `canClaim` → claim → assert history entry + archived log + reward archived |

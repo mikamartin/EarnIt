@@ -34,6 +34,7 @@ class DuplicateNameUiTest {
     @Before
     fun setUp() {
         hiltRule.inject()
+        resetAppState()
     }
 
     @Test
