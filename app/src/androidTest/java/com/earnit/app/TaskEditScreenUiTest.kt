@@ -22,7 +22,9 @@ import org.junit.runner.RunWith
 /**
  * UI regression tests for the sections of TaskEditScreen split into private sub-composables
  * on refactor/split-task-edit-screen: delete confirmation, icon picker, group picker,
- * auto-points sliders, manual points entry, and the reward-link checkboxes/toggles.
+ * auto-points sliders, manual points entry, the reward-link checkboxes/toggles, editing an
+ * existing task's fields, reward-link pre-population on an already-linked task, and the
+ * add-task-from-an-existing-reward's-own-Detail-screen entry point.
  */
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
@@ -179,5 +181,105 @@ class TaskEditScreenUiTest {
         composeTestRule.onNodeWithText("Bike Ride").performClick()
         composeTestRule.onNodeWithContentDescription(Strings.TASK_OPTIONAL_DESC).assertIsNotEnabled()
         composeTestRule.onNodeWithContentDescription(Strings.TASK_ONCE_DESC).assertIsNotEnabled()
+    }
+
+    @Test
+    fun editExistingTask_updatesFieldsAndPersists() {
+        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
+        composeTestRule.onNodeWithContentDescription("New Task").performClick()
+        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Original Name")
+        composeTestRule.onNodeWithText("SAVE").performClick()
+        waitForTaskDetail()
+
+        composeTestRule.onNodeWithContentDescription(Strings.EDIT_TASK_DESC).performClick()
+        composeTestRule.onNodeWithText(Strings.TASK_EDIT_EXISTING).assertIsDisplayed()
+
+        composeTestRule.onNodeWithText("Original Name").performTextClearance()
+        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Updated Name")
+
+        composeTestRule.onNodeWithText("✅").performClick()
+        composeTestRule.onNodeWithText("🏆").performClick()
+
+        composeTestRule.onNodeWithText(Strings.TASK_GROUP_PLACEHOLDER).performTextInput("Errands")
+
+        composeTestRule.onNodeWithText(Strings.TASK_POINTS_LABEL).performTextClearance()
+        composeTestRule.onNodeWithText(Strings.TASK_POINTS_LABEL).performTextInput("7")
+
+        composeTestRule.onNodeWithText("SAVE").performClick()
+
+        // Editing an existing task pops back to Task Detail rather than navigating forward.
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.onAllNodesWithText("Updated Name").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithText("🏆").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Errands").assertIsDisplayed()
+        composeTestRule.onNodeWithText("+7").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Original Name").assertDoesNotExist()
+    }
+
+    @Test
+    fun editExistingTask_rewardLinksPrepopulateFromExistingLinks() {
+        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
+        composeTestRule.onNodeWithContentDescription("New Reward").performClick()
+        composeTestRule.onNodeWithText("Reward name").performTextInput("Study Time")
+        composeTestRule.onNodeWithText("Point cost").performTextClearance()
+        composeTestRule.onNodeWithText("Point cost").performTextInput("5")
+        composeTestRule.onNodeWithText("SAVE").performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule
+                .onAllNodesWithText(Strings.REWARD_DETAIL_NO_TASKS)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
+
+        // Create a task linked to that reward as mandatory.
+        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
+        composeTestRule.onNodeWithContentDescription("New Task").performClick()
+        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Read Book")
+        composeTestRule.onNodeWithText("Study Time").performClick()
+        composeTestRule.onNodeWithContentDescription(Strings.TASK_OPTIONAL_DESC).performClick()
+        composeTestRule.onNodeWithText("SAVE").performClick()
+        waitForTaskDetail()
+
+        // Reopening the task must pre-populate the reward link as included + mandatory.
+        composeTestRule.onNodeWithContentDescription(Strings.EDIT_TASK_DESC).performClick()
+        composeTestRule.onNodeWithText(Strings.TASK_USE_TO_GET).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Study Time").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(Strings.TASK_MANDATORY_DESC).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(Strings.TASK_MANDATORY_DESC).assertIsEnabled()
+    }
+
+    @Test
+    fun addTaskFromExistingRewardDetail_showsUsedInAndLinksOnSave() {
+        // Create and save a reward first so its Reward Detail screen is reachable with a real id.
+        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
+        composeTestRule.onNodeWithContentDescription("New Reward").performClick()
+        composeTestRule.onNodeWithText("Reward name").performTextInput("Piano Practice")
+        composeTestRule.onNodeWithText("Point cost").performTextClearance()
+        composeTestRule.onNodeWithText("Point cost").performTextInput("5")
+        composeTestRule.onNodeWithText("SAVE").performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule
+                .onAllNodesWithText(Strings.REWARD_DETAIL_NO_TASKS)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
+
+        // From the existing reward's own Detail screen — not a new, unsaved reward form.
+        composeTestRule.onNodeWithText(Strings.REWARD_ADD_TASK_BTN).performClick()
+        composeTestRule.onNodeWithText(Strings.ADD_TASK_CREATE).performClick()
+
+        // This entry point shows the "used in" line, not the reward-link checkbox list.
+        composeTestRule.onNodeWithText(Strings.taskUsedIn("Piano Practice")).assertIsDisplayed()
+        composeTestRule.onNodeWithText(Strings.TASK_USE_TO_GET).assertDoesNotExist()
+
+        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Practice Scales")
+        composeTestRule.onNodeWithText("SAVE").performClick()
+
+        // Must pop back to Reward Detail (not forward to TaskDetailScreen) with the task linked.
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.onAllNodesWithText("Practice Scales").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithText("Piano Practice").assertIsDisplayed()
     }
 }
