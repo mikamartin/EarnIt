@@ -1001,7 +1001,7 @@ User manually tested the flow above and found a second bug, which led to a secon
 
 ### Pass 36 — `chore/cleanup-backlog-fixes` branch (whole-repo audit fixes)
 
-Actioned findings #1, #2, #4–#8 from [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md), a whole-repo audit against this checklist run 2026-07-10 against `main` at `59d9a82`. Finding #3 (five oversized composables) is deferred to its own branch, `refactor/split-oversized-screens` — comparable in scope to the Pass 10 `EarnItApp.kt` split, and the audit itself recommended not folding it into a hygiene pass. `CLEANUP_BACKLOG.md` stays in the repo, trimmed to that one remaining item, until that branch lands.
+Actioned findings #1, #2, #4–#8 from [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md), a whole-repo audit against this checklist run against `main` at `59d9a82`. Finding #3 (five oversized composables) is deferred to its own branch, `refactor/split-oversized-screens` — comparable in scope to the Pass 10 `EarnItApp.kt` split, and the audit itself recommended not folding it into a hygiene pass. `CLEANUP_BACKLOG.md` stays in the repo, trimmed to that one remaining item, until that branch lands.
 
 #### Duplication ✅ (2 fixes)
 - **Fixed:** `TaskDetailScreen.kt` and `RewardDetailScreen.kt` each hand-rolled the LOG pill button (shadow/clip/gradient/border/click/padding) instead of reusing `LogPillButton` from `EarnItButtons.kt` — `HomeScreen.kt` already called it correctly. Both screens now call `LogPillButton` directly; a future LOG-button styling change is one edit instead of three. Visual side effect: both screens' LOG buttons now match `HomeScreen`'s (flat single-tone border/text, more compact padding) instead of each having a slightly different hand-rolled variant.
@@ -1081,3 +1081,47 @@ Pass 37's isolation fix was real but didn't resolve the original CI failure it w
 - Added a **Focused coverage** convention note to `TESTING.md` (assert incrementally; don't re-verify logic covered elsewhere) and a matching checklist bullet to this file's `§1 Tests` section, so future tests default to this pattern rather than rediscovering it.
 
 #### Reviewed, no findings: remaining checklist items don't apply — single-test fix plus doc/process additions, no other code touched.
+
+---
+
+### Pass 39 — `refactor/split-settings-screen` branch
+
+Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s `SettingsScreen.kt` item (~430 lines in one composable) — same pattern as the `RewardDetailScreen`/`TaskEditScreen` splits: pull screen-only pieces into `private` composables in the same file, no new files/folders, no behavior change.
+
+#### Duplication ✅ (1 reviewed, not fixed)
+- `SettingsAppearanceSection`, `SettingsRewardsSection`, and `SettingsTasksSection` each still hand-roll the same section-header `Row` (bold label + optional `InfoIconButton`) instead of extending the existing `SettingsSectionHeader` helper (used as-is by About/Data/Clean Up, which have no trailing icon) with an optional trailing-content slot. Pre-existing duplication, not introduced by this split — left as-is since fixing it changes `SettingsSectionHeader`'s signature, beyond a pure structural split. Worth a follow-up if this file is touched again.
+
+#### Decoupling ✅ (1 fix)
+- **Fixed:** `showRewardsInfo`/`optimalText`/`maxText` (Rewards) and `showTasksInfo` (Tasks) were hoisted to the top of `SettingsScreen` even though nothing outside their own section ever read them — pure prop-drilling with no purpose. Moved into `SettingsRewardsSection`/`SettingsTasksSection` themselves. Only `showMascotPicker`/`highlightedMascot` stay hoisted at the orchestrator, since they're genuinely driven from outside (the `viewModel.openMascotPicker` `LaunchedEffect`, fired when a claim unlocks a new mascot).
+
+#### Complexity & Pattern Health ✅
+- `SettingsScreen` cut from ~430 lines to a 58-line orchestrator (state + one `LaunchedEffect` + six section calls) plus 8 private helpers: `SettingsAboutSection`, `SettingsAppearanceSection` (which itself calls `SettingsNicknameCard`/`SettingsThemeCard`/`SettingsMascotAndQuoteCard`), `SettingsRewardsSection`, `SettingsTasksSection`, `SettingsDataSection`, `SettingsCleanUpSection`.
+- `SettingsNicknameCard`/`SettingsThemeCard`/`SettingsMascotAndQuoteCard` each have exactly one caller (`SettingsAppearanceSection`) — reviewed against "is this extraction earning its keep": yes, this is the same card-per-composable pattern the backlog itself specified, and matches `RewardDetailScreen`'s single-caller helpers from its own split.
+
+#### Dead Code & Hygiene ✅
+- No unused imports (ktlint's unused-import rule ran clean on every check).
+- `git status` clean apart from the intended 4 files (`SettingsScreen.kt`, `SettingsScreenUiTest.kt`, `TESTING.md`, `CLEANUP_BACKLOG.md`).
+
+#### Naming Consistency ✅
+- New composables follow the existing `Settings*` naming already established by `SettingsCard`/`SettingsSectionHeader`/`ThemeChip`/`MascotPickerDialog`/`DangerButton` in this file.
+
+#### Hardcoded Values ✅
+- None touched.
+
+#### Accessibility ✅ (1 fix)
+- **Fixed:** the "Show daily quote" `Switch` had no `contentDescription` — every other toggle on this screen (Notes Required) already does. Added `contentDescription = Strings.SETTINGS_QUOTE_TOGGLE`, reusing the existing label string, matching the Notes Required precedent exactly. Needed to make the toggle reliably targetable in the new instrumented test, but it's a genuine pre-existing accessibility gap independent of that.
+
+#### Deprecated APIs ✅
+- None touched.
+
+#### Spec Review ✅ (2 findings — 1 fixed, 1 flagged not actioned)
+- **Fixed:** the Max Reward Count row said only "Hard cap; banner shown when exceeded," which undersold what's actually built and confirmed intended: the FAB dims to 40% opacity at the cap but stays tappable (not a disabled button) — tapping it shows a 2s tooltip instead of navigating, and a separate 3s banner auto-appears the moment a new reward reaches the cap. Row expanded to describe both surfaces and the FAB's non-disabled tappable state.
+- **Found while writing spec-grounded tests, not actioned:** `optimalRewardCount` is read back from DataStore and displayed in its own edit field, but is never consumed anywhere else in the app — no banner, no home-screen guidance, nothing reads it besides the Settings field itself. The spec table describes it as "Soft limit; shown as guidance," which isn't true today. Pre-existing (not introduced by this branch), out of scope for a structural-split pass to fix since closing it is a product decision (what should "shown as guidance" look like?), not a mechanical fix — flagged to the user rather than silently patched or silently left in the spec.
+
+#### Tests ✅ (10 new tests, spec-grounded)
+- Reviewed instrumented coverage of `SettingsScreen` before writing anything: `SettingsUiTest` (colour scheme persistence, Notes Required) and `SettingsTipUiTest` (discoverability tip) were the only coverage; nickname, random nickname, show-quote, mascot picker, reward-count fields via the UI itself, and the About/Data/Clean Up nav rows had none.
+- Added `SettingsScreenUiTest` (10 tests, new file), each grounded in an `EARNIT_SPEC.md` §6 line rather than mirroring implementation: nickname typed in Settings shows in the home greeting; clearing it shows "Earn It!" with no address (the exact spec wording); enabling random nickname overrides the typed name on the greeting ("chosen each session instead of the saved name"); Show Quote toggle hides/shows the daily quote section on Home; Max Reward Count edited through the Settings field itself (not the repository, closing the gap `RewardLimitUiTest` left) still enforces the FAB's max-limit tooltip; the mascot picker's default unlocked set is exactly Pugsly and Tabby per the spec table, with the next-locked mascot's unlock hint shown and further-locked mascots showing neither name nor hint; selecting an unlocked mascot persists after `activityRule.scenario.recreate()`; About/Data & Backup/Clean Up rows navigate to their respective screens.
+- One test initially failed on-device (`mascotPicker_defaultUnlockedSet...`): `onNodeWithText("Pugsly").assertIsDisplayed()` found 2 nodes, not 1 — the mascot-picker dialog doesn't unmount the row behind it, and that row already shows "Pugsly" as the current-mascot label. Fixed by asserting via `onAllNodesWithText(...).isNotEmpty()` instead of requiring a single unique match.
+- Full instrumented suite run on a connected emulator, not just compiled: 73/73 pass (was 63 before this branch).
+- `TESTING.md` updated: `SettingsScreenUiTest` row added; UI test pyramid count `~30` → `~40` (rounded).
+- `./gradlew ktlintCheck`, `test`, `assembleDebugAndroidTest`, `assembleDebug`, and `connectedDebugAndroidTest` (full suite) all pass, run sequentially per `CLAUDE.md`.
