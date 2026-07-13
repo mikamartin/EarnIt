@@ -7,12 +7,10 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
-import androidx.compose.ui.test.printToString
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.ui.Strings
 import dagger.hilt.android.testing.HiltAndroidRule
@@ -122,27 +120,22 @@ class TaskEditScreenUiTest {
 
         composeTestRule.onNodeWithContentDescription(Strings.TASK_AUTO_POINTS_DESC).performClick()
 
+        // Asserted immediately after each click rather than clicking all three sliders then
+        // checking once at the end: proves each slider maps to its own state variable (would
+        // catch e.g. Difficulty accidentally wired to onTimeChange, which a single combined
+        // assertion can't distinguish), and avoids stacking three clicks before any check —
+        // this test's job is wiring, not the formula itself (see PointFormulaTest for that).
         composeTestRule.onNodeWithContentDescription("${Strings.TASK_SLIDER_TIME} 5").performClick()
-        composeTestRule.onNodeWithContentDescription("${Strings.TASK_SLIDER_DIFFICULTY} 5").performClick()
-        composeTestRule.onNodeWithContentDescription("${Strings.TASK_SLIDER_PREPARATION} 5").performClick()
+        // computeAutoPoints(5, 1, 1) == 6
+        composeTestRule.onNodeWithText("6").performScrollTo().assertIsDisplayed()
 
-        // computeAutoPoints(5, 5, 5) == 30 — see PointFormulaTest. Scroll it into view first —
-        // the points total isn't guaranteed to be on-screen on every emulator viewport.
-        //
-        // TEMPORARY diagnostics: this test fails deterministically on GitHub Actions CI runners
-        // (never locally, under any tested emulator config — see PR description's investigation
-        // log) with "30" missing from the semantics tree entirely. Dumping the full tree into
-        // the failure message on the next CI failure to see what's actually on screen instead of
-        // guessing further. Remove this try/catch once the root cause is found.
-        try {
-            composeTestRule.onNodeWithText("30").performScrollTo().assertIsDisplayed()
-        } catch (e: Throwable) {
-            throw AssertionError(
-                "autoPoints assertion failed. Full semantics tree at failure time:\n" +
-                    composeTestRule.onRoot().printToString(),
-                e,
-            )
-        }
+        composeTestRule.onNodeWithContentDescription("${Strings.TASK_SLIDER_DIFFICULTY} 5").performClick()
+        // computeAutoPoints(5, 5, 1) == 12
+        composeTestRule.onNodeWithText("12").performScrollTo().assertIsDisplayed()
+
+        composeTestRule.onNodeWithContentDescription("${Strings.TASK_SLIDER_PREPARATION} 5").performClick()
+        // computeAutoPoints(5, 5, 5) == 30
+        composeTestRule.onNodeWithText("30").performScrollTo().assertIsDisplayed()
     }
 
     @Test
