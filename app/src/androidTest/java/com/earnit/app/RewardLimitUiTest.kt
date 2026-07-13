@@ -39,6 +39,7 @@ class RewardLimitUiTest {
     @Before
     fun setUp() {
         hiltRule.inject()
+        resetAppState()
         runBlocking {
             // Set the cap to 1 so a single reward triggers the limit.
             settingsRepository.updateMaxRewardCount(1)

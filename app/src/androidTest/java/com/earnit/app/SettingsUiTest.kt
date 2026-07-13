@@ -40,6 +40,7 @@ class SettingsUiTest {
     @Before
     fun setUp() {
         hiltRule.inject()
+        resetAppState()
         runBlocking {
             settingsRepository.updateColorScheme(AppColorScheme.WARM_GOLD)
             settingsRepository.updateNotesMandatory(false)

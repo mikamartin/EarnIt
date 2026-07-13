@@ -147,6 +147,7 @@ object Strings {
     fun taskGroupLabel(g: String) = "Group · $g"
 
     const val TASK_AUTO_POINTS_TOGGLE = "Assign points automatically"
+    const val TASK_AUTO_POINTS_DESC = "Assign points automatically"
     const val TASK_SLIDER_TIME = "Time"
     const val TASK_SLIDER_DIFFICULTY = "Difficulty"
     const val TASK_SLIDER_PREPARATION = "Preparation"
@@ -164,6 +165,7 @@ object Strings {
     const val TASK_ICON_PICKER_TITLE = "Choose icon"
     const val BACK_DESC = "Back"
     const val DELETE_TASK_DESC = "Delete task"
+    const val EDIT_TASK_DESC = "Edit task"
     const val NEW_TASK_DESC = "New Task"
     const val CLEAR_DESC = "Clear"
     const val TASKS_VIEW_ALL_DESC = "Switch to all tasks view"

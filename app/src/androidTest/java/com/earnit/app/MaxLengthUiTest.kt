@@ -37,6 +37,7 @@ class MaxLengthUiTest {
     @Before
     fun setUp() {
         hiltRule.inject()
+        resetAppState()
     }
 
     @Test

@@ -41,6 +41,7 @@ class WidgetNudgeUiTest {
     @Before
     fun setUp() {
         hiltRule.inject()
+        resetAppState()
         runBlocking { settingsRepository.updateNotesMandatory(false) }
     }
 
