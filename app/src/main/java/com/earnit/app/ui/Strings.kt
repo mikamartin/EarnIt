@@ -19,9 +19,7 @@ object Strings {
             "To generate a fun random nickname, tap the sparkle icon. " +
             "To switch back to a custom name, start typing."
 
-    const val REWARDS_INFO =
-        "Going for too many rewards makes it hard to stay focused. " +
-            "Try finishing one before adding more."
+    const val REWARDS_INFO = "Going for too many rewards makes it hard to stay focused."
 
     const val TASKS_NOTES_INFO =
         "When enabled, every log entry must include a note. " +
@@ -269,7 +267,7 @@ object Strings {
     // Settings screen
     const val SETTINGS_SECTION_ABOUT = "ABOUT"
     const val SETTINGS_SECTION_APPEARANCE = "APPEARANCE"
-    const val SETTINGS_SECTION_REWARDS = "REWARD LIMITS"
+    const val SETTINGS_SECTION_REWARDS = "MAX REWARDS"
     const val SETTINGS_SECTION_TASKS = "TASKS"
     const val SETTINGS_SECTION_DATA = "DATA & BACKUP"
     const val SETTINGS_SECTION_CLEANUP = "CLEAN UP"

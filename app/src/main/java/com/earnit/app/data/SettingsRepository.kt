@@ -66,7 +66,7 @@ class SettingsRepository
                                 runCatching { AppColorScheme.valueOf(it) }.getOrDefault(AppColorScheme.WARM_GOLD)
                             } ?: AppColorScheme.WARM_GOLD,
                         notesMandatory = prefs[Keys.NOTES_MANDATORY] ?: false,
-                        maxRewardCount = prefs[Keys.MAX_REWARD_COUNT] ?: 7,
+                        maxRewardCount = prefs[Keys.MAX_REWARD_COUNT] ?: 5,
                         nickname = prefs[Keys.NICKNAME] ?: "Babe",
                         selectedMascotId = selectedMascotId,
                         unlockedMascotIds = unlockedMascotIds,
