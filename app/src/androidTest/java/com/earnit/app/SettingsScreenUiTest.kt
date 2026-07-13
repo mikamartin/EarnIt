@@ -29,9 +29,10 @@ import javax.inject.Inject
 /**
  * Covers EARNIT_SPEC.md §6 App Settings behaviours that had no automated coverage before the
  * SettingsScreen split: nickname/greeting, random nickname override, show-quote toggle, the
- * default unlocked-mascot set, mascot selection persistence, max reward count enforced through
- * the Settings field itself (not just the repository), and the About/Data/Clean Up nav rows.
- * Colour scheme persistence and Notes Required are already covered by SettingsUiTest.
+ * default unlocked-mascot set, mascot selection persistence, max reward count's default value
+ * and enforcement through the Settings slider itself (not just the repository), and the
+ * About/Data/Clean Up nav rows. Colour scheme persistence and Notes Required are already
+ * covered by SettingsUiTest.
  */
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
@@ -112,10 +113,21 @@ class SettingsScreenUiTest {
     }
 
     @Test
-    fun maxRewardCount_editedInSettingsField_enforcesCapOnHomeFab() {
+    fun maxRewardCount_freshInstall_defaultsToFive() {
         composeTestRule.onNodeWithContentDescription("Settings").performClick()
-        composeTestRule.onNodeWithText(Strings.SETTINGS_MAX_LABEL).performScrollTo().performTextClearance()
-        composeTestRule.onNodeWithText(Strings.SETTINGS_MAX_LABEL).performTextInput("1")
+        composeTestRule
+            .onNodeWithText("${Strings.SETTINGS_MAX_LABEL}: 5")
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun maxRewardCount_editedInSettingsSlider_enforcesCapOnHomeFab() {
+        composeTestRule.onNodeWithContentDescription("Settings").performClick()
+        composeTestRule
+            .onNodeWithContentDescription("${Strings.SETTINGS_MAX_LABEL} 1")
+            .performScrollTo()
+            .performClick()
 
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithContentDescription("New Reward").performClick()
