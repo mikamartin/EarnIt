@@ -1067,3 +1067,17 @@ Triggered by a CI-only failure (`autoPoints_slidersUpdateComputedTotal` in `Task
 - Updated `TESTING.md`: added a state-isolation convention note above the instrumented-tests table describing when `resetAppState()` is called and why `RoomIntegrationBase`-based tests don't need it.
 
 #### Reviewed, no findings: remaining checklist items (Hardcoded Values, Accessibility, Deprecated APIs) don't apply — no UI surface in this pass.
+
+---
+
+### Pass 38 — CI flake resolution (`refactor/split-task-edit-screen` branch, follow-up to Pass 37)
+
+Pass 37's isolation fix was real but didn't resolve the original CI failure it was triggered by — `TaskEditScreenUiTest.autoPoints_slidersUpdateComputedTotal` kept failing on GitHub's runners only, never locally. Root cause: the test clicked three sliders back-to-back and checked the combined total once at the end, which both papered over which interaction was wrong and left a window where one click's state update could be missed under CI's slower/differently-scheduled execution. Fixed by asserting after each slider click instead of chaining all three before any check.
+
+#### Tests ✅ (1 fix)
+- **Fixed:** `autoPoints_slidersUpdateComputedTotal` now asserts the total after each slider click (verifying each slider maps to its own state variable) instead of clicking all three and checking once. Confirmed green on two independent CI runs after the change.
+
+#### Spec Review ✅
+- Added a **Focused coverage** convention note to `TESTING.md` (assert incrementally; don't re-verify logic covered elsewhere) and a matching checklist bullet to this file's `§1 Tests` section, so future tests default to this pattern rather than rediscovering it.
+
+#### Reviewed, no findings: remaining checklist items don't apply — single-test fix plus doc/process additions, no other code touched.
