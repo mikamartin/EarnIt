@@ -320,10 +320,6 @@ class EarnItViewModel
             viewModelScope.launch { settingsRepository.updateNotesMandatory(mandatory) }
         }
 
-        fun updateOptimalRewardCount(count: Int) {
-            viewModelScope.launch { settingsRepository.updateOptimalRewardCount(count) }
-        }
-
         fun updateMaxRewardCount(count: Int) {
             viewModelScope.launch { settingsRepository.updateMaxRewardCount(count) }
         }

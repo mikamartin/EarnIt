@@ -917,12 +917,14 @@ fun SliderRow(
     label: String,
     value: Int,
     onValueChange: (Int) -> Unit,
+    range: IntRange = 1..5,
+    showValue: Boolean = false,
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val surface = MaterialTheme.colorScheme.surface
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            label,
+            if (showValue) "$label: $value" else label,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -943,13 +945,13 @@ fun SliderRow(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                (1..5).forEach { i ->
+                range.forEach { i ->
                     Box(
                         modifier =
                             Modifier
                                 .size(28.dp)
                                 .clip(CircleShape)
-                                .background(if (i == value) primary else surface)
+                                .background(if (i <= value) primary else surface)
                                 .border(2.dp, primary, CircleShape)
                                 .clickable { onValueChange(i) }
                                 .semantics { contentDescription = "$label $i" },

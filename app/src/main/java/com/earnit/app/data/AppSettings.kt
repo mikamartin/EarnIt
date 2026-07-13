@@ -5,8 +5,7 @@ enum class AppColorScheme { WARM_GOLD, OCEAN_BLUE, FOREST }
 data class AppSettings(
     val colorScheme: AppColorScheme = AppColorScheme.WARM_GOLD,
     val notesMandatory: Boolean = false,
-    val optimalRewardCount: Int = 3,
-    val maxRewardCount: Int = 7,
+    val maxRewardCount: Int = 5,
     val nickname: String = "Babe",
     val selectedMascotId: MascotId? = MascotId.PUGSLY,
     val unlockedMascotIds: Set<MascotId> = setOf(MascotId.PUGSLY, MascotId.TABBY),

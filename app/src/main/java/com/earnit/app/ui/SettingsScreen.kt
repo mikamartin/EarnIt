@@ -66,7 +66,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -416,8 +415,6 @@ private fun SettingsRewardsSection(
     viewModel: EarnItViewModel,
     settings: AppSettings,
 ) {
-    var optimalText by remember(settings.optimalRewardCount) { mutableStateOf(settings.optimalRewardCount.toString()) }
-    var maxText by remember(settings.maxRewardCount) { mutableStateOf(settings.maxRewardCount.toString()) }
     var showRewardsInfo by remember { mutableStateOf(false) }
 
     Row(
@@ -443,36 +440,13 @@ private fun SettingsRewardsSection(
                 modifier = Modifier.padding(bottom = 8.dp),
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(
-                value = optimalText,
-                onValueChange = { v ->
-                    if (v.length <= 2) {
-                        optimalText = v
-                        v.toIntOrNull()?.let { if (it > 0) viewModel.updateOptimalRewardCount(it) }
-                    }
-                },
-                label = { Text(Strings.SETTINGS_OPTIMAL_LABEL, style = MaterialTheme.typography.labelSmall) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                shape = RoundedCornerShape(10.dp),
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
-            OutlinedTextField(
-                value = maxText,
-                onValueChange = { v ->
-                    if (v.length <= 2) {
-                        maxText = v
-                        v.toIntOrNull()?.let { if (it > 0) viewModel.updateMaxRewardCount(it) }
-                    }
-                },
-                label = { Text(Strings.SETTINGS_MAX_LABEL, style = MaterialTheme.typography.labelSmall) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                shape = RoundedCornerShape(10.dp),
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
-        }
+        SliderRow(
+            label = Strings.SETTINGS_MAX_LABEL,
+            value = settings.maxRewardCount,
+            onValueChange = { viewModel.updateMaxRewardCount(it) },
+            range = 1..10,
+            showValue = true,
+        )
     }
 }
 
