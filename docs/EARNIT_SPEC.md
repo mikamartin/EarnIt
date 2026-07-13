@@ -229,7 +229,6 @@ Settings are persisted via DataStore Preferences.
 |---|---|---|---|
 | Colour Scheme | Enum | `WARM_GOLD` | `WARM_GOLD`, `OCEAN_BLUE`, `FOREST` |
 | Notes Mandatory | Boolean | false | When true, a note is required on every log |
-| Optimal Reward Count | Int | 3 | Soft limit; shown as guidance |
 | Max Reward Count | Int | 7 | Hard cap. FAB dims to 40% opacity at the cap but remains tappable — tapping it shows a 2s tooltip instead of navigating. A separate 3s banner also auto-appears the moment a new reward reaches the cap. |
 | Nickname | String | `"Babe"` | Displayed in the home screen greeting. Clearing the field stores `""` — greeting shows "Earn It!" with no address. |
 | Use Random Nickname | Boolean | false | When true, a random fun nickname is chosen each session instead of the saved name |
@@ -364,7 +363,7 @@ Main App
     ├── About                — app name, version, "The idea" copy; Rate the app (opens Play Store); Get in touch (email); Support the developer (Tip Jar — two price buttons, loading state, thank-you snackbar; mock until RevenueCat integrated)
     ├── Appearance           — nickname input + random-nickname toggle, Mascot picker, Show Quote toggle
     ├── Colour Scheme        — 3 theme chips (Warm Gold, Ocean Blue, Forest)
-    ├── Reward Limits        — optimal count, max count inputs
+    ├── Reward Limits        — max count input
     ├── Tasks                — notes required toggle
     ├── Data & Backup        — export JSON, import JSON (replace or merge)
     └── Clean Up             — separate cards: clear logs / clear tasks / clear rewards / clear all; each operation shows a snackbar confirmation after completing; "Clear Logs" deletes both completion logs and all history entries

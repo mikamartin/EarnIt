@@ -25,7 +25,6 @@ class SettingsRepository
         private object Keys {
             val COLOR_SCHEME = stringPreferencesKey("color_scheme")
             val NOTES_MANDATORY = booleanPreferencesKey("notes_mandatory")
-            val OPTIMAL_REWARD_COUNT = intPreferencesKey("optimal_reward_count")
             val MAX_REWARD_COUNT = intPreferencesKey("max_reward_count")
             val NICKNAME = stringPreferencesKey("nickname")
             val SHOW_PUGSLY = booleanPreferencesKey("show_pugsly") // legacy — read only for migration
@@ -67,7 +66,6 @@ class SettingsRepository
                                 runCatching { AppColorScheme.valueOf(it) }.getOrDefault(AppColorScheme.WARM_GOLD)
                             } ?: AppColorScheme.WARM_GOLD,
                         notesMandatory = prefs[Keys.NOTES_MANDATORY] ?: false,
-                        optimalRewardCount = prefs[Keys.OPTIMAL_REWARD_COUNT] ?: 3,
                         maxRewardCount = prefs[Keys.MAX_REWARD_COUNT] ?: 7,
                         nickname = prefs[Keys.NICKNAME] ?: "Babe",
                         selectedMascotId = selectedMascotId,
@@ -89,10 +87,6 @@ class SettingsRepository
 
         suspend fun updateNotesMandatory(mandatory: Boolean) {
             context.dataStore.edit { it[Keys.NOTES_MANDATORY] = mandatory }
-        }
-
-        suspend fun updateOptimalRewardCount(count: Int) {
-            context.dataStore.edit { it[Keys.OPTIMAL_REWARD_COUNT] = count }
         }
 
         suspend fun updateMaxRewardCount(count: Int) {

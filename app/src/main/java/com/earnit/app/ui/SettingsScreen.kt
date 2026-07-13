@@ -416,7 +416,6 @@ private fun SettingsRewardsSection(
     viewModel: EarnItViewModel,
     settings: AppSettings,
 ) {
-    var optimalText by remember(settings.optimalRewardCount) { mutableStateOf(settings.optimalRewardCount.toString()) }
     var maxText by remember(settings.maxRewardCount) { mutableStateOf(settings.maxRewardCount.toString()) }
     var showRewardsInfo by remember { mutableStateOf(false) }
 
@@ -443,36 +442,20 @@ private fun SettingsRewardsSection(
                 modifier = Modifier.padding(bottom = 8.dp),
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(
-                value = optimalText,
-                onValueChange = { v ->
-                    if (v.length <= 2) {
-                        optimalText = v
-                        v.toIntOrNull()?.let { if (it > 0) viewModel.updateOptimalRewardCount(it) }
-                    }
-                },
-                label = { Text(Strings.SETTINGS_OPTIMAL_LABEL, style = MaterialTheme.typography.labelSmall) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                shape = RoundedCornerShape(10.dp),
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
-            OutlinedTextField(
-                value = maxText,
-                onValueChange = { v ->
-                    if (v.length <= 2) {
-                        maxText = v
-                        v.toIntOrNull()?.let { if (it > 0) viewModel.updateMaxRewardCount(it) }
-                    }
-                },
-                label = { Text(Strings.SETTINGS_MAX_LABEL, style = MaterialTheme.typography.labelSmall) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                shape = RoundedCornerShape(10.dp),
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
-        }
+        OutlinedTextField(
+            value = maxText,
+            onValueChange = { v ->
+                if (v.length <= 2) {
+                    maxText = v
+                    v.toIntOrNull()?.let { if (it > 0) viewModel.updateMaxRewardCount(it) }
+                }
+            },
+            label = { Text(Strings.SETTINGS_MAX_LABEL, style = MaterialTheme.typography.labelSmall) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            shape = RoundedCornerShape(10.dp),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 

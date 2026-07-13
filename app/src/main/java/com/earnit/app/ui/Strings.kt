@@ -276,7 +276,6 @@ object Strings {
     const val SETTINGS_NAME_LABEL = "Name"
     const val SETTINGS_NAME_PLACEHOLDER = "you can leave this empty"
     const val SETTINGS_QUOTE_TOGGLE = "Show daily quote"
-    const val SETTINGS_OPTIMAL_LABEL = "Optimal"
     const val SETTINGS_MAX_LABEL = "Maximum"
     const val SETTINGS_NOTES_TOGGLE = "Notes required"
     const val SETTINGS_NOTES_DESC = "Notes required"
