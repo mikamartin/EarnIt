@@ -23,9 +23,9 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 ## Test Pyramid
 
 ```
-                 [ Manual — 3 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
-            [ UI — ~30 tests ]          ComposeTestRule + Hilt, real DataStore
-       [ Integration — ~25 tests ]      Real in-memory Room, no mocks
+                 [ Manual — 4 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
+            [ UI — ~40 tests ]          ComposeTestRule + Hilt, real DataStore
+       [ Integration — ~30 tests ]      Real in-memory Room, no mocks
      [ Unit — 150+ tests ]              JVM, MockK DAOs, fast
 ```
 
@@ -73,7 +73,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ---
 
-## Instrumented Tests — `app/src/androidTest/` (~60 tests, requires device/emulator)
+## Instrumented Tests — `app/src/androidTest/` (~75 tests, requires device/emulator)
 
 **State isolation:** Every `@HiltAndroidTest` class using `createAndroidComposeRule<MainActivity>()` calls `resetAppState()` (in `TestStateReset.kt`) as the first line of its `@Before`, immediately after `hiltRule.inject()` and before any test-specific overrides (e.g. `settingsRepository.updateMaxRewardCount(...)`). This gives each test a clean database and default settings to start from, independent of what ran before it in the same instrumentation process. `RoomIntegrationBase`-based repository tests don't need this — each already gets its own fresh in-memory database per test.
 
@@ -99,6 +99,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `DuplicateNameUiTest` (2) | UI | Duplicate-name error shown and SAVE disabled when a task or reward name conflicts with an existing one, case-insensitive |
 | `RewardLimitUiTest` (1) | UI | Tapping the reward FAB at `maxRewardCount` shows the max-limit tooltip instead of navigating to Reward Edit |
 | `TaskEditScreenUiTest` (9) | UI | Delete confirmation removes the task and returns to the Tasks list; icon picker selection updates the icon button and dismisses the dialog; group picker — selecting an existing group updates the header label, typing a new group name clears that selection, clearing the new-group text reverts to the optional label; auto-points sliders drive the computed total (checked against `PointFormulaTest`'s known formula output); manual points field strips non-digit input; reward-link checkbox includes/excludes the task and enables/disables the mandatory-star and repeatable-refresh toggles, which reset together when unchecked; editing an existing task's name/icon/group/points persists after Save; reopening a task already linked to a reward pre-populates the reward-link checkbox and mandatory state from its existing link; adding a task from an existing (already-saved) reward's own Detail screen shows the "used in" line instead of the checkbox list and pops back to Reward Detail with the task linked |
+| `SettingsScreenUiTest` (10) | UI | Nickname typed in Settings shows in the home greeting ("Earn It, Name!"); clearing it shows "Earn It!" with no address; enabling random nickname overrides the typed name on the greeting; Show Quote toggle hides/shows the daily quote section on Home; editing Max Reward Count through the Settings field (not the repository directly) still triggers the FAB's max-limit tooltip; mascot picker's default unlocked set is exactly Pugsly and Tabby, with the next-locked mascot's unlock hint shown and further-locked mascots showing neither name nor hint; selecting an unlocked mascot persists after `activityRule.scenario.recreate()`; About/Data & Backup/Clean Up rows navigate to their respective screens |
 
 ---
 
@@ -168,7 +169,7 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
 | Unit (150+ tests) | Every build/push | `./gradlew test` |
-| Integration + UI, instrumented (~60 tests) | Every push/PR via CI (two parallel API 34 emulator jobs, Workflow 2 — sharded by layer); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
+| Integration + UI, instrumented (~75 tests) | Every push/PR via CI (two parallel API 34 emulator jobs, Workflow 2 — sharded by layer); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (4) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 
 See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the journeys that are deliberately never automated (not just deferred) — each crosses a system-process boundary (system file picker, Play Core API, widget activity chain, background `WorkManager` execution) that instrumented UI tests cannot drive reliably.
