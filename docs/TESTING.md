@@ -24,7 +24,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ```
                  [ Manual — 4 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
-            [ UI — ~40 tests ]          ComposeTestRule + Hilt, real DataStore
+            [ UI — ~50 tests ]          ComposeTestRule + Hilt, real DataStore
        [ Integration — ~30 tests ]      Real in-memory Room, no mocks
      [ Unit — 150+ tests ]              JVM, MockK DAOs, fast
 ```
@@ -73,7 +73,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ---
 
-## Instrumented Tests — `app/src/androidTest/` (~75 tests, requires device/emulator)
+## Instrumented Tests — `app/src/androidTest/` (~85 tests, requires device/emulator)
 
 **State isolation:** Every `@HiltAndroidTest` class using `createAndroidComposeRule<MainActivity>()` calls `resetAppState()` (in `TestStateReset.kt`) as the first line of its `@Before`, immediately after `hiltRule.inject()` and before any test-specific overrides (e.g. `settingsRepository.updateMaxRewardCount(...)`). This gives each test a clean database and default settings to start from, independent of what ran before it in the same instrumentation process. `RoomIntegrationBase`-based repository tests don't need this — each already gets its own fresh in-memory database per test.
 
@@ -100,6 +100,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `RewardLimitUiTest` (1) | UI | Tapping the reward FAB at `maxRewardCount` shows the max-limit tooltip instead of navigating to Reward Edit |
 | `TaskEditScreenUiTest` (9) | UI | Delete confirmation removes the task and returns to the Tasks list; icon picker selection updates the icon button and dismisses the dialog; group picker — selecting an existing group updates the header label, typing a new group name clears that selection, clearing the new-group text reverts to the optional label; auto-points sliders drive the computed total (checked against `PointFormulaTest`'s known formula output); manual points field strips non-digit input; reward-link checkbox includes/excludes the task and enables/disables the mandatory-star and repeatable-refresh toggles, which reset together when unchecked; editing an existing task's name/icon/group/points persists after Save; reopening a task already linked to a reward pre-populates the reward-link checkbox and mandatory state from its existing link; adding a task from an existing (already-saved) reward's own Detail screen shows the "used in" line instead of the checkbox list and pops back to Reward Detail with the task linked |
 | `SettingsScreenUiTest` (11) | UI | Nickname typed in Settings shows in the home greeting ("Earn It, Name!"); clearing it shows "Earn It!" with no address; enabling random nickname overrides the typed name on the greeting; Show Quote toggle hides/shows the daily quote section on Home; Max Reward Count defaults to 5 on a fresh install; editing Max Reward Count through the Settings slider (not the repository directly) still triggers the FAB's max-limit tooltip; mascot picker's default unlocked set is exactly Pugsly and Tabby, with the next-locked mascot's unlock hint shown and further-locked mascots showing neither name nor hint; selecting an unlocked mascot persists after `activityRule.scenario.recreate()`; About/Data & Backup/Clean Up rows navigate to their respective screens |
+| `RewardEditScreenUiTest` (10) | UI | Delete confirmation removes the reward and returns to the Prizes list; icon picker selection updates the icon button and dismisses the dialog; cost field strips non-digit input; an included task row's mandatory-star and repeatable-refresh toggles flip their content description, and unchecking the row removes the task with mandatory/repeatable reset together; editing an existing reward's name/cost/description/icon persists after Save; reopening a reward already linked to a mandatory task pre-populates that task's mandatory icon state; two tasks added via the dialog's checkbox list in one session toggle/remove independently of each other; selecting an existing task through the dialog and setting its mandatory flag inline carries that flag through on confirm; the Browse Library button navigates to Task Library; adding two new tasks in a row via "Create your own" on an *unsaved* reward currently drops the first task's inclusion (pinned as a known bug, not desired behavior — see `CLEANUP_BACKLOG.md`) |
 
 ---
 
@@ -190,8 +191,8 @@ Covered by manual testing, not automation — see [MANUAL_TEST_PLAN.md](MANUAL_T
 **TipViewModel**
 `MockTipRepository` returns hardcoded prices and always succeeds. Tests written against it would validate the mock, not the billing path. Tests deferred until `MockTipRepository` is replaced with real RevenueCat calls; the `TipRepository` interface boundary makes the swap straightforward.
 
-**Group view UI**
-Collapse/expand state, "Other" section behaviour, and select-all checkbox logic in `AddTaskToRewardDialog` are pure UI state with no database writes at risk. The instrumented test setup required to drive these interactions is disproportionate to the risk. Verified manually before each release.
+**`AddTaskToRewardDialog` group view UI**
+Collapse/expand state, "Other" section behaviour, select-all checkbox logic, and the name-search filter (shown once more than 7 tasks are available) are pure display/filtering state with no database writes at risk. The instrumented test setup required to drive these interactions is disproportionate to the risk. Verified manually before each release. This is narrower than it used to be: the dialog's actual task-selection mechanism — checking a task, optionally toggling its mandatory/repeatable flags inline, and confirming — is covered by `RewardEditScreenUiTest.existingTaskSelection_viaDialogCarriesMandatoryFlagThroughToIncludedList`, since that flow does carry real state into what eventually gets saved.
 
 **Transaction rollback on partial failure**
 `EarnItRepository`'s multi-step mutations (`importFromJson`, `deleteReward`, `clearAllTasks`/`clearAllRewards`/`clearAllLogs`, `importTemplate`, `copyRewardFromEntry`, `claimReward`, `saveRewardTasks`, `updateTaskRewards`) are wrapped in `database.withTransaction { }` so a crash mid-sequence can't leave the DB half-mutated. The unit tests (MockK-mocked database) verify DAO call sequencing, not real rollback — MockK can't simulate Room's actual transaction/rollback behaviour. An instrumented test against a real in-memory Room database, forcing one DAO call in a wrapped sequence to throw and asserting the rest never committed, would close this gap. Not yet written.

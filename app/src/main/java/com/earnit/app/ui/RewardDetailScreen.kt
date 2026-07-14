@@ -66,6 +66,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -325,6 +327,7 @@ private fun RewardHeaderCard(
                         .clip(RoundedCornerShape(50))
                         .background(MaterialTheme.colorScheme.secondary)
                         .clickable(onClick = onEditClick)
+                        .semantics { contentDescription = Strings.EDIT_REWARD_DESC }
                         .padding(horizontal = 14.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {

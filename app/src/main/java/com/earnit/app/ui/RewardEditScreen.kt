@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -54,12 +55,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -67,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.earnit.app.data.EarnItUiState
+import com.earnit.app.data.TaskEntity
 import com.earnit.app.viewmodel.EarnItViewModel
 import kotlinx.coroutines.launch
 
@@ -147,43 +152,6 @@ fun RewardEditScreen(
         }
     }
 
-    if (showAddTaskDialog) {
-        AddTaskToRewardDialog(
-            allTasks = uiState.tasks,
-            includedTaskIds =
-                taskState.entries
-                    .filter { it.value.included }
-                    .map { it.key }
-                    .toSet(),
-            onDismiss = { showAddTaskDialog = false },
-            onAddTasks = { tasks ->
-                tasks.forEach { (task, flags) ->
-                    taskState[task.id] = flags.copy(included = true)
-                }
-                showAddTaskDialog = false
-            },
-            onCreateNew = {
-                awaitingNewTask = true
-                showAddTaskDialog = false
-                navController.navigate(Screen.TaskEdit.route(0L, rewardId, name))
-            },
-            onBrowseLibrary = {
-                showAddTaskDialog = false
-                navController.navigate(Screen.TaskLibrary.route)
-            },
-        )
-    }
-    if (showIconPicker) {
-        EmojiPickerDialog(
-            current = icon,
-            onPick = {
-                icon = it
-                showIconPicker = false
-            },
-            onDismiss = { showIconPicker = false },
-        )
-    }
-
     val includedTasks = uiState.tasks.filter { taskState[it.id]?.included == true }
     val nameConflict =
         !pendingRewardSaveNav &&
@@ -195,27 +163,167 @@ fun RewardEditScreen(
                     it.reward.id != rewardId
             }
     val canSave = name.isNotBlank() && !nameConflict
+    val rewardNameForDelete =
+        uiState.rewardProgressList
+            .find { it.reward.id == rewardId }
+            ?.reward
+            ?.name ?: name
 
+    RewardEditDialogs(
+        uiState = uiState,
+        taskState = taskState,
+        showAddTaskDialog = showAddTaskDialog,
+        onDismissAddTaskDialog = { showAddTaskDialog = false },
+        onCreateNewTask = {
+            awaitingNewTask = true
+            showAddTaskDialog = false
+            navController.navigate(Screen.TaskEdit.route(0L, rewardId, name))
+        },
+        onBrowseLibrary = {
+            showAddTaskDialog = false
+            navController.navigate(Screen.TaskLibrary.route)
+        },
+        showIconPicker = showIconPicker,
+        currentIcon = icon,
+        onPickIcon = {
+            icon = it
+            showIconPicker = false
+        },
+        onDismissIconPicker = { showIconPicker = false },
+        showDeleteDialog = showDeleteDialog,
+        onDismissDeleteDialog = { showDeleteDialog = false },
+        rewardNameForDelete = rewardNameForDelete,
+        onConfirmDelete = {
+            viewModel.deleteReward(rewardId) {
+                navController.navigate(Screen.Home.route) {
+                    popUpTo(Screen.Home.route) { inclusive = false }
+                    launchSingleTop = true
+                }
+            }
+        },
+    )
+
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } },
+    ) {
+        RewardEditTitleBar(
+            isNew = isNew,
+            onBack = { navController.popBackStack() },
+            onDeleteClick = { showDeleteDialog = true },
+        )
+
+        // ── Scrollable content ────────────────────────────────────────────────
+        LazyColumn(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item {
+                RewardIconAndNameField(
+                    icon = icon,
+                    onIconClick = { showIconPicker = true },
+                    name = name,
+                    onNameChange = { name = it },
+                    nameConflict = nameConflict,
+                )
+            }
+            item {
+                RewardCostAndDescriptionFields(
+                    cost = cost,
+                    onCostChange = { cost = it },
+                    description = description,
+                    onDescriptionChange = { description = it },
+                    onImeDone = { focusManager.clearFocus() },
+                )
+            }
+            rewardEditTasksSection(
+                includedTasks = includedTasks,
+                taskState = taskState,
+                canAddTask = name.isNotBlank(),
+                onAddTaskClick = { showAddTaskDialog = true },
+            )
+        }
+
+        RewardEditBottomBar(
+            canSave = canSave,
+            onCancel = { navController.popBackStack() },
+            onSave = {
+                view.hapticTap()
+                val taskTriples =
+                    taskState.entries
+                        .filter { it.value.included }
+                        .map { (id, s) -> Triple(id, s.isMandatory, s.isRepeatable) }
+                viewModel.saveReward(rewardId, name.trim(), cost.toIntOrNull() ?: 10, description.trim(), icon, taskTriples)
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(Strings.REWARD_SAVED, duration = SnackbarDuration.Short)
+                }
+                if (!isNew) {
+                    navController.popBackStack()
+                } else {
+                    pendingRewardSaveNav = true
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun RewardEditDialogs(
+    uiState: EarnItUiState,
+    taskState: SnapshotStateMap<Long, TaskEditState>,
+    showAddTaskDialog: Boolean,
+    onDismissAddTaskDialog: () -> Unit,
+    onCreateNewTask: () -> Unit,
+    onBrowseLibrary: () -> Unit,
+    showIconPicker: Boolean,
+    currentIcon: String,
+    onPickIcon: (String) -> Unit,
+    onDismissIconPicker: () -> Unit,
+    showDeleteDialog: Boolean,
+    onDismissDeleteDialog: () -> Unit,
+    rewardNameForDelete: String,
+    onConfirmDelete: () -> Unit,
+) {
+    if (showAddTaskDialog) {
+        AddTaskToRewardDialog(
+            allTasks = uiState.tasks,
+            includedTaskIds =
+                taskState.entries
+                    .filter { it.value.included }
+                    .map { it.key }
+                    .toSet(),
+            onDismiss = onDismissAddTaskDialog,
+            onAddTasks = { tasks ->
+                tasks.forEach { (task, flags) ->
+                    taskState[task.id] = flags.copy(included = true)
+                }
+                onDismissAddTaskDialog()
+            },
+            onCreateNew = onCreateNewTask,
+            onBrowseLibrary = onBrowseLibrary,
+        )
+    }
+    if (showIconPicker) {
+        EmojiPickerDialog(
+            current = currentIcon,
+            onPick = onPickIcon,
+            onDismiss = onDismissIconPicker,
+        )
+    }
     if (showDeleteDialog) {
-        val rewardName =
-            uiState.rewardProgressList
-                .find { it.reward.id == rewardId }
-                ?.reward
-                ?.name ?: name
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
+            onDismissRequest = onDismissDeleteDialog,
             title = { Text(Strings.REWARD_DELETE_TITLE, color = MaterialTheme.colorScheme.primary) },
-            text = { Text(Strings.rewardDeleteBody(rewardName)) },
+            text = { Text(Strings.rewardDeleteBody(rewardNameForDelete)) },
             confirmButton = {
                 Button(
-                    onClick = {
-                        viewModel.deleteReward(rewardId) {
-                            navController.navigate(Screen.Home.route) {
-                                popUpTo(Screen.Home.route) { inclusive = false }
-                                launchSingleTop = true
-                            }
-                        }
-                    },
+                    onClick = onConfirmDelete,
                     colors =
                         ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error,
@@ -231,9 +339,7 @@ fun RewardEditScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    showDeleteDialog = false
-                }) {
+                TextButton(onClick = onDismissDeleteDialog) {
                     Text(
                         "CANCEL",
                         style = MaterialTheme.typography.labelSmall,
@@ -244,251 +350,267 @@ fun RewardEditScreen(
             },
         )
     }
+}
 
-    Column(
+@Composable
+private fun RewardEditTitleBar(
+    isNew: Boolean,
+    onBack: () -> Unit,
+    onDeleteClick: () -> Unit,
+) {
+    Row(
         modifier =
             Modifier
-                .fillMaxSize()
-                .pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } },
+                .fillMaxWidth()
+                .padding(start = 4.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        // ── Title bar ─────────────────────────────────────────────────────────
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(start = 4.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = { navController.popBackStack() }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = Strings.BACK_DESC)
+        IconButton(onClick = onBack) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = Strings.BACK_DESC)
+        }
+        Text(
+            if (isNew) Strings.REWARD_EDIT_NEW else Strings.REWARD_EDIT_EXISTING,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        if (!isNew) {
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = onDeleteClick) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = Strings.DELETE_REWARD_DESC,
+                    tint = MaterialTheme.colorScheme.error,
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun RewardIconAndNameField(
+    icon: String,
+    onIconClick: () -> Unit,
+    name: String,
+    onNameChange: (String) -> Unit,
+    nameConflict: Boolean,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OutlinedButton(
+            onClick = onIconClick,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.size(56.dp),
+            contentPadding = PaddingValues(0.dp),
+        ) {
             Text(
-                if (isNew) Strings.REWARD_EDIT_NEW else Strings.REWARD_EDIT_EXISTING,
+                if (icon.isNotEmpty()) icon else "🎯",
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
             )
-            if (!isNew) {
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = { showDeleteDialog = true }) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = Strings.DELETE_REWARD_DESC,
-                        tint = MaterialTheme.colorScheme.error,
-                    )
-                }
-            }
         }
+        OutlinedTextField(
+            value = name,
+            onValueChange = { if (it.length <= REWARD_NAME_MAX_CHARS) onNameChange(it) },
+            label = { Text(Strings.REWARD_NAME_LABEL) },
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true,
+            isError = nameConflict,
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                ),
+        )
+    }
+    if (nameConflict) {
+        Text(
+            Strings.rewardDuplicateError(name.trim()),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(start = 4.dp, top = 2.dp),
+        )
+    }
+}
 
-        // ── Scrollable content ────────────────────────────────────────────────
-        LazyColumn(
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+@Composable
+private fun RewardCostAndDescriptionFields(
+    cost: String,
+    onCostChange: (String) -> Unit,
+    description: String,
+    onDescriptionChange: (String) -> Unit,
+    onImeDone: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedTextField(
+            value = cost,
+            onValueChange = { onCostChange(it.filter { c -> c.isDigit() }) },
+            label = { Text(Strings.REWARD_COST_LABEL) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done,
+                ),
+            keyboardActions = KeyboardActions(onDone = { onImeDone() }),
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                ),
+        )
+        OutlinedTextField(
+            value = description,
+            onValueChange = { if (it.length <= REWARD_DESC_MAX_CHARS) onDescriptionChange(it) },
+            label = { Text(Strings.REWARD_DESC_LABEL) },
+            placeholder = { Text(Strings.REWARD_DESC_PLACEHOLDER) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            maxLines = 3,
+            supportingText = { Text("${description.length}/$REWARD_DESC_MAX_CHARS") },
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                ),
+        )
+    }
+}
+
+private fun LazyListScope.rewardEditTasksSection(
+    includedTasks: List<TaskEntity>,
+    taskState: SnapshotStateMap<Long, TaskEditState>,
+    canAddTask: Boolean,
+    onAddTaskClick: () -> Unit,
+) {
+    if (includedTasks.isNotEmpty()) {
+        item {
+            Text(
+                Strings.REWARD_TASKS_SECTION,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+        }
+        items(includedTasks, key = { it.id }) { task ->
+            val state = taskState[task.id] ?: TaskEditState()
+            RewardEditTaskRow(
+                task = task,
+                state = state,
+                onUncheck = {
+                    taskState[task.id] = state.copy(included = false, isMandatory = false, isRepeatable = false)
+                },
+                onToggleMandatory = { taskState[task.id] = state.copy(isMandatory = !state.isMandatory) },
+                onToggleRepeatable = { taskState[task.id] = state.copy(isRepeatable = !state.isRepeatable) },
+            )
+        }
+    }
+    item {
+        OutlinedButton(
+            onClick = onAddTaskClick,
+            enabled = canAddTask,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary),
         ) {
-            item {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedButton(
-                        onClick = { showIconPicker = true },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.size(56.dp),
-                        contentPadding = PaddingValues(0.dp),
-                    ) {
-                        Text(
-                            if (icon.isNotEmpty()) icon else "🎯",
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                    }
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { if (it.length <= REWARD_NAME_MAX_CHARS) name = it },
-                        label = { Text(Strings.REWARD_NAME_LABEL) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
-                        isError = nameConflict,
-                        colors =
-                            OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                unfocusedLabelColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                            ),
-                    )
-                }
-                if (nameConflict) {
-                    Text(
-                        Strings.rewardDuplicateError(name.trim()),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(start = 4.dp, top = 2.dp),
-                    )
-                }
-            }
-            item {
-                OutlinedTextField(
-                    value = cost,
-                    onValueChange = { cost = it.filter { c -> c.isDigit() } },
-                    label = { Text(Strings.REWARD_COST_LABEL) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    keyboardOptions =
-                        KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Done,
-                        ),
-                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                        ),
-                )
-            }
-            item {
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { if (it.length <= REWARD_DESC_MAX_CHARS) description = it },
-                    label = { Text(Strings.REWARD_DESC_LABEL) },
-                    placeholder = { Text(Strings.REWARD_DESC_PLACEHOLDER) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    maxLines = 3,
-                    supportingText = { Text("${description.length}/$REWARD_DESC_MAX_CHARS") },
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                        ),
-                )
-            }
-            if (includedTasks.isNotEmpty()) {
-                item {
-                    Text(
-                        Strings.REWARD_TASKS_SECTION,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.secondary,
-                    )
-                }
-                items(includedTasks, key = { it.id }) { task ->
-                    val state = taskState[task.id] ?: TaskEditState()
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Checkbox(
-                                checked = true,
-                                onCheckedChange = {
-                                    taskState[task.id] =
-                                        state.copy(included = false, isMandatory = false, isRepeatable = false)
-                                },
-                                colors =
-                                    CheckboxDefaults.colors(
-                                        checkedColor = MaterialTheme.colorScheme.primary,
-                                        uncheckedColor = MaterialTheme.colorScheme.secondary,
-                                        checkmarkColor = MaterialTheme.colorScheme.onPrimary,
-                                    ),
-                            )
-                            Text(task.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                            IconButton(
-                                onClick = { taskState[task.id] = state.copy(isMandatory = !state.isMandatory) },
-                            ) {
-                                Icon(
-                                    if (state.isMandatory) Icons.Default.Star else Icons.Outlined.Star,
-                                    contentDescription = if (state.isMandatory) Strings.REWARD_MANDATORY_DESC else Strings.REWARD_OPTIONAL_DESC,
-                                    tint =
-                                        if (state.isMandatory) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                                        },
-                                    modifier = Modifier.size(22.dp),
-                                )
-                            }
-                            IconButton(
-                                onClick = { taskState[task.id] = state.copy(isRepeatable = !state.isRepeatable) },
-                            ) {
-                                Icon(
-                                    Icons.Default.Refresh,
-                                    contentDescription = if (state.isRepeatable) Strings.REWARD_REPEATABLE_DESC else Strings.REWARD_NOT_REPEATABLE_DESC,
-                                    tint =
-                                        if (state.isRepeatable) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                                        },
-                                    modifier = Modifier.size(22.dp),
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            item {
-                OutlinedButton(
-                    onClick = { showAddTaskDialog = true },
-                    enabled = name.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary),
-                ) {
-                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(Strings.REWARD_ADD_TASK_BTN)
-                }
-            }
+            Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(Strings.REWARD_ADD_TASK_BTN)
         }
+    }
+}
 
-        // ── Fixed bottom buttons ──────────────────────────────────────────────
+@Composable
+private fun RewardEditTaskRow(
+    task: TaskEntity,
+    state: TaskEditState,
+    onUncheck: () -> Unit,
+    onToggleMandatory: () -> Unit,
+    onToggleRepeatable: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
         Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            EarnItOutlinedButton(
-                text = "CANCEL",
-                onClick = { navController.popBackStack() },
-                modifier = Modifier.weight(1f),
+            Checkbox(
+                checked = true,
+                onCheckedChange = { onUncheck() },
+                colors =
+                    CheckboxDefaults.colors(
+                        checkedColor = MaterialTheme.colorScheme.primary,
+                        uncheckedColor = MaterialTheme.colorScheme.secondary,
+                        checkmarkColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+                modifier = Modifier.semantics { contentDescription = Strings.REWARD_INCLUDED_DESC },
             )
-            EarnItPrimaryButton(
-                text = "SAVE",
-                enabled = canSave,
-                modifier = Modifier.weight(2f),
-                onClick = {
-                    view.hapticTap()
-                    val taskTriples =
-                        taskState.entries
-                            .filter { it.value.included }
-                            .map { (id, s) -> Triple(id, s.isMandatory, s.isRepeatable) }
-                    viewModel.saveReward(rewardId, name.trim(), cost.toIntOrNull() ?: 10, description.trim(), icon, taskTriples)
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar(Strings.REWARD_SAVED, duration = SnackbarDuration.Short)
-                    }
-                    if (!isNew) {
-                        navController.popBackStack()
-                    } else {
-                        pendingRewardSaveNav = true
-                    }
-                },
-            )
+            Text(task.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+            IconButton(onClick = onToggleMandatory) {
+                Icon(
+                    if (state.isMandatory) Icons.Default.Star else Icons.Outlined.Star,
+                    contentDescription = if (state.isMandatory) Strings.REWARD_MANDATORY_DESC else Strings.REWARD_OPTIONAL_DESC,
+                    tint =
+                        if (state.isMandatory) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        },
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            IconButton(onClick = onToggleRepeatable) {
+                Icon(
+                    Icons.Default.Refresh,
+                    contentDescription = if (state.isRepeatable) Strings.REWARD_REPEATABLE_DESC else Strings.REWARD_NOT_REPEATABLE_DESC,
+                    tint =
+                        if (state.isRepeatable) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        },
+                    modifier = Modifier.size(22.dp),
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun RewardEditBottomBar(
+    canSave: Boolean,
+    onCancel: () -> Unit,
+    onSave: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        EarnItOutlinedButton(
+            text = "CANCEL",
+            onClick = onCancel,
+            modifier = Modifier.weight(1f),
+        )
+        EarnItPrimaryButton(
+            text = "SAVE",
+            enabled = canSave,
+            modifier = Modifier.weight(2f),
+            onClick = onSave,
+        )
     }
 }
