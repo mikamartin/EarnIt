@@ -92,8 +92,9 @@ graph LR
 | [`docs/EARNIT_SPEC.md`](docs/EARNIT_SPEC.md) | Full product spec — feature definitions, data model, screen map |
 | [`docs/TESTING.md`](docs/TESTING.md) | Test strategy, coverage tables, known gaps and deferrals |
 | [`docs/MANUAL_TEST_PLAN.md`](docs/MANUAL_TEST_PLAN.md) | Manual-only test journeys with rationale, cadence, and steps |
-| [`docs/DEV_PLAYBOOK.md`](docs/DEV_PLAYBOOK.md) | Post-work cleanup checklist, ship checklist, tooling upgrade reference |
-| [`docs/CLEANUP_LOG.md`](docs/CLEANUP_LOG.md) | Timestamped record of every cleanup pass and what was found |
+| [`docs/DEV_PLAYBOOK.md`](docs/DEV_PLAYBOOK.md) | Ship checklist, release process, tooling upgrade reference |
+| [`docs/CLEANUP_RULES.md`](docs/CLEANUP_RULES.md) | Post-work cleanup checklist and log retention rule |
+| [`docs/CLEANUP_LOG.md`](docs/CLEANUP_LOG.md) | The 3 most recent cleanup passes and what was found |
 | [`docs/CLOSED_TESTING_GUIDE.md`](docs/CLOSED_TESTING_GUIDE.md) | Plain-language testing guide for Play closed testing recruits |
 
 ---
