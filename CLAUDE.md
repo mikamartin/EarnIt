@@ -37,8 +37,9 @@ This repo is also a portfolio piece. It's built with heavy AI assistance, and th
 - [EARNIT_SPEC.md](docs/EARNIT_SPEC.md) — what the app does, architecture, deferred ideas
 - [TESTING.md](docs/TESTING.md) — test strategy, coverage, cadence
 - [MANUAL_TEST_PLAN.md](docs/MANUAL_TEST_PLAN.md) — the journeys that are deliberately manual-only, not just deferred
-- [DEV_PLAYBOOK.md](docs/DEV_PLAYBOOK.md) — post-work cleanup checklist, ship checklist, tooling upgrade reference
-- [CLEANUP_LOG.md](docs/CLEANUP_LOG.md) — log of every cleanup pass, in order
+- [DEV_PLAYBOOK.md](docs/DEV_PLAYBOOK.md) — ship checklist, release process, tooling upgrade reference
+- [CLEANUP_RULES.md](docs/CLEANUP_RULES.md) — post-work cleanup checklist and log retention rule
+- [CLEANUP_LOG.md](docs/CLEANUP_LOG.md) — the 3 most recent cleanup passes
 - [CLOSED_TESTING_GUIDE.md](docs/CLOSED_TESTING_GUIDE.md) — plain-language testing guide for Play closed testing recruits
 
 ## Commit messages
@@ -57,7 +58,7 @@ Follows [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## Working agreements
 
-- After any significant feature work, walk through steps in `DEV_PLAYBOOK.md` §1 Post-Work Cleanup and log a new pass in `CLEANUP_LOG.md`.
+- After any significant feature work, walk through the checklist in `CLEANUP_RULES.md` and log a new pass in `CLEANUP_LOG.md`.
 - Keep `EARNIT_SPEC.md` in sync with what was actually built — update it when implementation diverges from the spec intentionally; if it diverged unintentionally, that's a bug to fix, not a spec update.
 - Flag `DEV_PLAYBOOK.md` ship checklist items if a task touches them, and strike resolved items out entirely — the checklist should only ever contain open work.
 
