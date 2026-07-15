@@ -15,15 +15,6 @@ On a brand-new, not-yet-saved reward, tapping "Add task" → "Create your own" t
 
 ---
 
-## Visual Polish
-
-### Reward Detail progress bar shows the current-points number in dark, muted text at low progress
-`RewardDetailScreen.kt`'s progress bar (~line 431) has two rendering modes for the current-points number depending on fill level. At progress ≤ 12%, the number is drawn to the left of the fill, over the light cream unfilled track, colored `MaterialTheme.colorScheme.onSurfaceVariant` — a dark, muted brownish-gray in the app's warm color schemes. Once progress exceeds 12%, the number instead sits inside the colored fill in plain white. A reward with little progress logged so far (e.g. "Nice dinner" in test data) reads as dull/off compared to one further along (e.g. "New trainers"), which shows the crisp white variant.
-
-**Desired fix:** always render the number inside the colored fill in white, regardless of progress level, instead of switching to the dark-text/outside-track mode below the 12% threshold — likely means anchoring the number just past the start of the fill (with a minimum offset) rather than branching on `progress <= 0.12f`.
-
----
-
 ## Test Coverage
 
 ### Logging against an archived reward has no repository guard, and no test

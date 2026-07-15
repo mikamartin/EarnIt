@@ -64,6 +64,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
@@ -429,35 +430,32 @@ private fun RewardProgressBar(
                 }
             }
             if (!rp.canClaim) {
-                if (progress <= 0.12f) {
-                    if (rp.totalPoints > 0) {
-                        Box(
-                            modifier = Modifier.fillMaxSize().padding(start = 8.dp),
-                            contentAlignment = Alignment.CenterStart,
-                        ) {
-                            Text(
-                                "${rp.totalPoints}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
-                    }
-                } else {
+                if (rp.totalPoints > 0) {
+                    // Anchor floored to keep the number clear of the left rounded corner at very low
+                    // progress; a text shadow keeps it legible when it falls outside the colored fill.
+                    val textAnchor = progress.coerceAtLeast(0.12f)
                     Row(modifier = Modifier.fillMaxSize()) {
                         Box(
-                            modifier = Modifier.weight(progress.coerceAtLeast(0.001f)).fillMaxHeight(),
+                            modifier = Modifier.weight(textAnchor).fillMaxHeight(),
                             contentAlignment = Alignment.CenterEnd,
                         ) {
                             Text(
                                 "${rp.totalPoints}",
-                                style = MaterialTheme.typography.labelLarge,
+                                style =
+                                    MaterialTheme.typography.labelLarge.copy(
+                                        shadow =
+                                            Shadow(
+                                                color = Color.Black.copy(alpha = 0.8f),
+                                                offset = Offset(0f, 1f),
+                                                blurRadius = 3f,
+                                            ),
+                                    ),
                                 color = Color.White,
                                 fontWeight = FontWeight.ExtraBold,
                                 modifier = Modifier.padding(end = 7.dp),
                             )
                         }
-                        Spacer(modifier = Modifier.weight((1f - progress).coerceAtLeast(0.001f)))
+                        Spacer(modifier = Modifier.weight((1f - textAnchor).coerceAtLeast(0.001f)))
                     }
                 }
                 // Target cost: consistent dark-amber regardless of fill level

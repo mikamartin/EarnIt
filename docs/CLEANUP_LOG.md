@@ -8,25 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 40 — `chore/remove-optimal-reward-count` branch, merged via PR #29 (backfill entry)
-
-Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s `optimalRewardCount` item, flagged during Pass 39. This entry is written after the fact — the branch shipped without a matching log entry, caught while auditing the backlog for the next split branch (Pass 41).
-
-#### Dead Code & Hygiene ✅ (1 fix)
-- **Fixed:** removed `optimalRewardCount` end-to-end — `AppSettings.optimalRewardCount` field, `SettingsRepository`'s `OPTIMAL_REWARD_COUNT` DataStore key + read + `updateOptimalRewardCount`, `EarnItViewModel.updateOptimalRewardCount`, the field and its row in `SettingsScreen`'s `SettingsRewardsSection`, and `Strings.SETTINGS_OPTIMAL_LABEL`. Only `maxRewardCount` remains, matching what's actually consumed by the app.
-
-#### Complexity & Pattern Health ✅ (1 fix)
-- `SettingsRewardsSection`'s two side-by-side `OutlinedTextField`s (Optimal + Max) replaced with a single `SliderRow` (range `1..10`, `showValue = true`) bound directly to `maxRewardCount` — reuses the same slider component `TaskEditScreen`'s auto-points fields already use, instead of a bespoke text field. `SliderRow` extended with `range`/`showValue` parameters (previously hardcoded to `1..5`, label-only) to support this.
-
-#### Spec Review ✅ (1 fix)
-- `EARNIT_SPEC.md` §6 Settings table: dropped the Optimal Reward Count row; Max Reward Count default corrected `7` → `5` and described as "set via a 1–10 slider in Settings." §10 Screen Map: `Reward Limits` section renamed to `Max Rewards` (matches `Strings.SETTINGS_SECTION_REWARDS`), row text simplified to "max count input."
-
-#### Tests ✅ (1 test count updated, no new file)
-- `SettingsScreenUiTest`: existing Max Reward Count test updated to drive the slider instead of the text field, plus a new case asserting the default is `5` on a fresh install. Test count for that file `10` → `11`.
-- `TESTING.md` updated: `SettingsScreenUiTest` row test count and description updated; no pyramid-count change (rounds to the same `~40`).
-
----
-
 ### Pass 41 — `refactor/split-reward-edit-screen` branch
 
 Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s `RewardEditScreen.kt` item (~420 lines in one composable) — same pattern as the `RewardDetailScreen`/`TaskEditScreen`/`SettingsScreen` splits: pull screen-only pieces into `private` composables in the same file, no new files/folders, no behavior change. Test coverage for this screen was audited up front rather than after the fact, since the `TaskEditScreen` and `SettingsScreen` splits both found real gaps this way.
@@ -121,3 +102,42 @@ Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s `HomeScreen.kt` item (~320 li
 - `TESTING.md` required no count updates — no tests added/removed by this pass, and its existing `RewardLimitUiTest`/`SettingsScreenUiTest` rows already described only the tooltip.
 - **Found, unrelated to this branch's scope:** `RewardDetailScreen.kt` (not touched by this split) renders its current-points number in dark, muted `onSurfaceVariant` text below ~12% progress instead of the white it uses once the fill takes over, making low-progress rewards look inconsistent with further-along ones — noticed during the user's manual pass on unrelated test data. Logged as a new `CLEANUP_BACKLOG.md` Visual Polish item since it's pre-existing and outside this branch.
 - `./gradlew ktlintCheck`, `assembleDebug`, `test`, and `connectedDebugAndroidTest` (full suite, 84/84) all pass, run sequentially per `CLAUDE.md`.
+
+---
+
+### Pass 43 — `fix/reward-progress-bar-contrast` branch
+
+Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s Visual Polish item, flagged during Pass 42: `RewardDetailScreen.kt`'s progress bar showed the current-points number in dark, muted text below ~12% progress instead of the white it used above that threshold, making low-progress rewards look inconsistent with further-along ones.
+
+#### Duplication ✅ (checked, none found)
+- Grepped for `Shadow(` across `app/src/main/java` — this is the only text-shadow use in the codebase, so the fix introduces a new pattern rather than duplicating or diverging from an existing one.
+
+#### Decoupling ✅ (n/a)
+- Pure rendering change inside a single composable; no business logic involved.
+
+#### Complexity & Pattern Health ✅ (net reduction, verified across themes)
+- The two conditional branches (`progress <= 0.12f` dark-text vs. white) collapsed into one: the number is now always white, right-anchored via `weight(progress.coerceAtLeast(0.12f))` instead of switching layouts at the threshold. Read all of `ColorSchemes.kt` to confirm the fix holds for every `AppColorScheme` (Warm Gold, Ocean Blue, Forest) and both light/dark mode — the unfilled track background is a fixed cream gradient independent of theme, so a text shadow (not a theme-specific tweak) is sufficient for legibility in every combination.
+
+#### Dead Code & Hygiene ✅ (checked)
+- `ktlintCheck` passed (catches unused imports; `Shadow` import is used).
+- `git status` re-checked after the doc edits below — clean apart from the intended files: `RewardDetailScreen.kt`, `CLEANUP_BACKLOG.md`, `CLEANUP_LOG.md`.
+
+#### Naming Consistency ✅ (n/a)
+- No new symbols beyond a single local `val textAnchor`.
+
+#### Hardcoded Values ✅ (reviewed, left inline — not a gap)
+- The shadow's alpha (`0.8f`), offset, and blur radius are new magic numbers, but single-use and commented in place. Not promoted to a named constant: nothing else in the file needs them, so a constant would add an abstraction without a second caller to justify it.
+
+#### Accessibility ✅ (n/a)
+- No new interactive elements.
+
+#### Deprecated APIs ✅
+- None touched.
+
+#### Spec Review ✅ (checked, no changes needed)
+- Grepped `EARNIT_SPEC.md` for progress-bar-related terms — it doesn't describe this rendering-level detail (only that a progress bar exists), so no drift to reconcile.
+
+#### Tests ✅ (checked, no gap — not just skipped)
+- Grepped `app/src/androidTest` for the old threshold/color/field name — the only `totalPoints` hits are repository-level point-balance assertions in `StartOverTest`/`HappyPathTest`, unrelated to this rendering branch. No existing test needed updating.
+- No automated test added for the color/shadow itself: not `Repository`/`ViewModel` logic, and the codebase has no screenshot/pixel-level testing infrastructure anywhere (checked against the pattern in every prior pass) — Compose's testing APIs don't cleanly assert rendered text color without pixel diffing. Manual on-device verification is the established way visual-only changes get checked here (matches Pass 42's banner-removal precedent). Confirmed manually across progress levels, with shadow opacity tuned from the user's on-device feedback (0.45 → 0.7 → 0.8).
+- `./gradlew ktlintCheck`, `assembleDebug`, and `test` all pass, run sequentially per `CLAUDE.md`. No instrumented-suite run — no androidTest files changed.
