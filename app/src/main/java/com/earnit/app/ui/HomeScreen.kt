@@ -15,8 +15,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -27,6 +25,7 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -41,6 +40,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -64,6 +65,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -81,6 +83,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.earnit.app.data.AppSettings
 import com.earnit.app.data.EarnItUiState
 import com.earnit.app.data.MascotId
 import com.earnit.app.data.Mascots
@@ -154,23 +157,142 @@ fun QuoteOfTheDay() {
 }
 
 @Composable
-private fun SlideUpVisibility(
-    visible: Boolean,
-    content: @Composable () -> Unit,
-) {
-    AnimatedVisibility(
-        visible = visible,
-        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-    ) { content() }
-}
-
-@Composable
 private fun FadeVisibility(
     visible: Boolean,
     content: @Composable () -> Unit,
 ) {
     AnimatedVisibility(visible = visible, enter = fadeIn(), exit = fadeOut()) { content() }
+}
+
+@Composable
+private fun HomeHeader(
+    mascotScale: Float,
+    settings: AppSettings,
+    nickname: String,
+    onMascotTap: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 0.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        val mascotDrawable =
+            Mascots.all
+                .find { it.id == settings.selectedMascotId }
+                ?.drawable
+        if (mascotDrawable != null) {
+            androidx.compose.foundation.Image(
+                painter = painterResource(mascotDrawable),
+                contentDescription = null,
+                modifier =
+                    Modifier
+                        .size(150.dp)
+                        .scale(mascotScale)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onMascotTap,
+                        ),
+            )
+        }
+        Text(
+            Strings.appTitle(nickname),
+            fontWeight = FontWeight.ExtraBold,
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+@Composable
+private fun HomeDialogs(
+    logDialogRewardId: Long?,
+    claimDialogRewardId: Long?,
+    reorderedList: List<RewardProgress>,
+    viewModel: EarnItViewModel,
+    notesMandatory: Boolean,
+    onDismissLog: () -> Unit,
+    onDismissClaim: () -> Unit,
+) {
+    logDialogRewardId?.let { rewardId ->
+        reorderedList.find { it.reward.id == rewardId }?.let { dialogRp ->
+            LogTaskDialog(
+                rp = dialogRp,
+                viewModel = viewModel,
+                notesMandatory = notesMandatory,
+                onDismiss = onDismissLog,
+            )
+        }
+    }
+    claimDialogRewardId?.let { rewardId ->
+        reorderedList.find { it.reward.id == rewardId }?.let { dialogRp ->
+            ClaimDialog(
+                rewardName = dialogRp.reward.name,
+                onStartOver = {
+                    viewModel.claimReward(rewardId, startOver = true)
+                    onDismissClaim()
+                },
+                onArchive = {
+                    viewModel.claimReward(rewardId, startOver = false)
+                    onDismissClaim()
+                },
+                onDismiss = onDismissClaim,
+            )
+        }
+    }
+}
+
+@Composable
+private fun BoxScope.HomeAddRewardFab(
+    isEmpty: Boolean,
+    atMax: Boolean,
+    fabPulseScale: Float,
+    showMaxTooltip: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+        contentAlignment = Alignment.BottomEnd,
+    ) {
+        Box(modifier = Modifier.align(Alignment.TopCenter)) {
+            FadeVisibility(visible = showMaxTooltip) {
+                Box(
+                    modifier =
+                        Modifier
+                            .padding(bottom = 8.dp)
+                            .shadow(2.dp, RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.primary)
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                ) {
+                    Text(
+                        Strings.MAX_REWARD_TOOLTIP,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                }
+            }
+        }
+        Box(
+            modifier =
+                Modifier
+                    .scale(if (isEmpty) fabPulseScale else 1f)
+                    .size(56.dp)
+                    .alpha(if (atMax) 0.4f else 1f)
+                    .shadow(if (atMax) 2.dp else 6.dp, RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.primary)
+                    .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = Strings.NEW_REWARD_DESC,
+                tint = Color.White,
+                modifier = Modifier.size(30.dp),
+            )
+        }
+    }
 }
 
 @Composable
@@ -196,23 +318,8 @@ fun HomeScreen(
         animationSpec = infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "fabPulse",
     )
-    var showMaxBanner by remember { mutableStateOf(false) }
     var showMaxTooltip by remember { mutableStateOf(false) }
     val homeScope = rememberCoroutineScope()
-    val listSize = uiState.rewardProgressList.size
-    var prevListSize by remember { mutableStateOf(listSize) }
-
-    LaunchedEffect(listSize) {
-        val addedOne = listSize == prevListSize + 1
-        if (addedOne && listSize >= settings.maxRewardCount) {
-            showMaxBanner = true
-            delay(3000)
-            showMaxBanner = false
-        } else if (listSize < settings.maxRewardCount) {
-            showMaxBanner = false
-        }
-        prevListSize = listSize
-    }
 
     LaunchedEffect(uiState.rewardProgressList) {
         if (isDragging) return@LaunchedEffect
@@ -244,72 +351,34 @@ fun HomeScreen(
         viewModel.runStartupUnlockCheck()
     }
 
-    logDialogRewardId?.let { rewardId ->
-        reorderedList.find { it.reward.id == rewardId }?.let { dialogRp ->
-            LogTaskDialog(rp = dialogRp, viewModel = viewModel, notesMandatory = settings.notesMandatory, onDismiss = {
-                logDialogRewardId =
-                    null
-            })
-        }
-    }
-    claimDialogRewardId?.let { rewardId ->
-        reorderedList.find { it.reward.id == rewardId }?.let { dialogRp ->
-            ClaimDialog(
-                rewardName = dialogRp.reward.name,
-                onStartOver = {
-                    viewModel.claimReward(rewardId, startOver = true)
-                    claimDialogRewardId = null
-                },
-                onArchive = {
-                    viewModel.claimReward(rewardId, startOver = false)
-                    claimDialogRewardId = null
-                },
-                onDismiss = { claimDialogRewardId = null },
-            )
-        }
-    }
+    HomeDialogs(
+        logDialogRewardId = logDialogRewardId,
+        claimDialogRewardId = claimDialogRewardId,
+        reorderedList = reorderedList,
+        viewModel = viewModel,
+        notesMandatory = settings.notesMandatory,
+        onDismissLog = { logDialogRewardId = null },
+        onDismissClaim = { claimDialogRewardId = null },
+    )
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 0.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            val mascotDrawable =
-                Mascots.all
-                    .find { it.id == settings.selectedMascotId }
-                    ?.drawable
-            if (mascotDrawable != null) {
-                androidx.compose.foundation.Image(
-                    painter = painterResource(mascotDrawable),
-                    contentDescription = null,
-                    modifier =
-                        Modifier
-                            .size(150.dp)
-                            .scale(mascotScale.value)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                            ) {
-                                if (settings.devModeEnabled || settings.selectedMascotId != MascotId.PUGSLY) return@clickable
-                                val updated = PugslyGesture.nextState(pugslyTapTimestamps, System.currentTimeMillis())
-                                pugslyTapTimestamps.clear()
-                                pugslyTapTimestamps.addAll(updated)
-                                if (PugslyGesture.isComplete(pugslyTapTimestamps)) {
-                                    pugslyTapTimestamps.clear()
-                                    viewModel.enableDevMode()
-                                    viewModel.bounceMascot()
-                                }
-                            },
-                )
-            }
-            Text(
-                Strings.appTitle(if (settings.useRandomNickname) viewModel.sessionNickname else settings.nickname),
-                fontWeight = FontWeight.ExtraBold,
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
+        HomeHeader(
+            mascotScale = mascotScale.value,
+            settings = settings,
+            nickname = if (settings.useRandomNickname) viewModel.sessionNickname else settings.nickname,
+            onMascotTap = {
+                if (!settings.devModeEnabled && settings.selectedMascotId == MascotId.PUGSLY) {
+                    val updated = PugslyGesture.nextState(pugslyTapTimestamps, System.currentTimeMillis())
+                    pugslyTapTimestamps.clear()
+                    pugslyTapTimestamps.addAll(updated)
+                    if (PugslyGesture.isComplete(pugslyTapTimestamps)) {
+                        pugslyTapTimestamps.clear()
+                        viewModel.enableDevMode()
+                        viewModel.bounceMascot()
+                    }
+                }
+            },
+        )
         val accentPalette = LocalEarnItAccents.current.cardPalette
         Box(modifier = Modifier.weight(1f)) {
             LazyColumn(
@@ -318,179 +387,150 @@ fun HomeScreen(
                 contentPadding = PaddingValues(top = 4.dp, bottom = 88.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                if (settings.showQuote) {
-                    item { QuoteOfTheDay() }
-                }
-                if (reorderedList.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().padding(top = 64.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                Strings.HOME_EMPTY_REWARDS,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            )
+                homeRewardListItems(
+                    showQuote = settings.showQuote,
+                    reorderedList = reorderedList,
+                    accentPalette = accentPalette,
+                    listState = listState,
+                    isDragging = isDragging,
+                    onDraggingChange = { isDragging = it },
+                    draggingIndex = draggingIndex,
+                    onDraggingIndexChange = { draggingIndex = it },
+                    draggingRewardId = draggingRewardId,
+                    onDraggingRewardIdChange = { draggingRewardId = it },
+                    onReorderCommitted = { viewModel.updateRewardsOrder(reorderedList.map { it.reward.id }) },
+                    onCardClick = { rewardId ->
+                        if (!isDragging) navController.navigate(Screen.RewardDetail.route(rewardId))
+                    },
+                    onLogTask = { logDialogRewardId = it },
+                    onClaim = { claimDialogRewardId = it },
+                    onAddTask = { navController.navigate(Screen.RewardDetail.route(it, autoOpenAddTask = true)) },
+                )
+            }
+            HomeAddRewardFab(
+                isEmpty = isEmpty,
+                atMax = atMax,
+                fabPulseScale = fabPulseScale,
+                showMaxTooltip = showMaxTooltip,
+                onClick = {
+                    if (!atMax) {
+                        navController.navigate(Screen.RewardEdit.route(0L))
+                    } else {
+                        showMaxTooltip = true
+                        homeScope.launch {
+                            delay(2000)
+                            showMaxTooltip = false
                         }
                     }
-                } else {
-                    val maxCost = reorderedList.maxOfOrNull { it.reward.cost } ?: 0
-                    itemsIndexed(reorderedList, key = { _, rp -> rp.reward.id }) { index, rp ->
-                        var accumulatedDragY by remember { mutableStateOf(0f) }
-                        val cardModifier =
-                            Modifier
-                                .animateItem()
-                                .pointerInput(rp.reward.id) {
-                                    detectDragGesturesAfterLongPress(
-                                        onDragStart = {
-                                            isDragging = true
-                                            draggingRewardId = rp.reward.id
-                                            draggingIndex = reorderedList.indexOfFirst { it.reward.id == rp.reward.id }
-                                            accumulatedDragY = 0f
-                                        },
-                                        onDrag = { change, dragAmount ->
-                                            change.consume()
-                                            accumulatedDragY += dragAmount.y
-                                            val currentIdx = draggingIndex
-                                            if (currentIdx >= 0) {
-                                                val visibleItems = listState.layoutInfo.visibleItemsInfo
-                                                val draggedInfo = visibleItems.find { it.index == currentIdx }
-                                                if (draggedInfo != null) {
-                                                    val center =
-                                                        draggedInfo.offset + draggedInfo.size / 2 + accumulatedDragY
-                                                    val target =
-                                                        visibleItems.firstOrNull { item ->
-                                                            item.index != currentIdx &&
-                                                                center > item.offset &&
-                                                                center < item.offset + item.size
-                                                        }
-                                                    if (target != null) {
-                                                        reorderedList.add(
-                                                            target.index,
-                                                            reorderedList.removeAt(currentIdx),
-                                                        )
-                                                        draggingIndex = target.index
-                                                        accumulatedDragY = 0f
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        onDragEnd = {
-                                            isDragging = false
-                                            draggingRewardId = null
-                                            draggingIndex = -1
-                                            accumulatedDragY = 0f
-                                            viewModel.updateRewardsOrder(reorderedList.map { it.reward.id })
-                                        },
-                                        onDragCancel = {
-                                            isDragging = false
-                                            draggingRewardId = null
-                                            draggingIndex = -1
-                                            accumulatedDragY = 0f
-                                        },
-                                    )
-                                }
-                        RewardProgressCard(
-                            rp = rp,
-                            accentColor = accentPalette[index % accentPalette.size],
-                            modifier = cardModifier,
-                            isBeingDragged = draggingRewardId == rp.reward.id,
-                            isTopTier = rp.reward.cost == maxCost && maxCost > 0,
-                            onCardClick = {
-                                if (!isDragging) {
-                                    navController.navigate(
-                                        Screen.RewardDetail.route(rp.reward.id),
-                                    )
-                                }
-                            },
-                            onLogTask = { logDialogRewardId = rp.reward.id },
-                            onClaim = { claimDialogRewardId = rp.reward.id },
-                            onAddTask = {
-                                navController.navigate(Screen.RewardDetail.route(rp.reward.id, autoOpenAddTask = true))
-                            },
-                        )
-                    }
-                }
-            }
-            Box(modifier = Modifier.align(Alignment.BottomCenter)) {
-                SlideUpVisibility(visible = showMaxBanner) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
-                                .shadow(4.dp, RoundedCornerShape(16.dp))
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer)
-                                .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(16.dp))
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            Strings.MAX_REWARD_BANNER,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                    }
-                }
-            }
+                },
+            )
+        }
+    }
+}
 
+private fun LazyListScope.homeRewardListItems(
+    showQuote: Boolean,
+    reorderedList: SnapshotStateList<RewardProgress>,
+    accentPalette: List<Color>,
+    listState: LazyListState,
+    isDragging: Boolean,
+    onDraggingChange: (Boolean) -> Unit,
+    draggingIndex: Int,
+    onDraggingIndexChange: (Int) -> Unit,
+    draggingRewardId: Long?,
+    onDraggingRewardIdChange: (Long?) -> Unit,
+    onReorderCommitted: () -> Unit,
+    onCardClick: (Long) -> Unit,
+    onLogTask: (Long) -> Unit,
+    onClaim: (Long) -> Unit,
+    onAddTask: (Long) -> Unit,
+) {
+    if (showQuote) {
+        item { QuoteOfTheDay() }
+    }
+    if (reorderedList.isEmpty()) {
+        item {
             Box(
-                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-                contentAlignment = Alignment.BottomEnd,
+                modifier = Modifier.fillMaxWidth().padding(top = 64.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                Box(modifier = Modifier.align(Alignment.TopCenter)) {
-                    FadeVisibility(visible = showMaxTooltip) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .padding(bottom = 8.dp)
-                                    .shadow(2.dp, RoundedCornerShape(8.dp))
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.colorScheme.primary)
-                                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                        ) {
-                            Text(
-                                Strings.MAX_REWARD_BANNER,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                            )
-                        }
-                    }
-                }
-                Box(
-                    modifier =
-                        Modifier
-                            .scale(if (isEmpty) fabPulseScale else 1f)
-                            .size(56.dp)
-                            .alpha(if (atMax) 0.4f else 1f)
-                            .shadow(if (atMax) 2.dp else 6.dp, RoundedCornerShape(16.dp))
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(MaterialTheme.colorScheme.primary)
-                            .clickable {
-                                if (!atMax) {
-                                    navController.navigate(Screen.RewardEdit.route(0L))
-                                } else {
-                                    showMaxTooltip = true
-                                    homeScope.launch {
-                                        delay(2000)
-                                        showMaxTooltip = false
-                                    }
-                                }
-                            },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = Strings.NEW_REWARD_DESC,
-                        tint = Color.White,
-                        modifier = Modifier.size(30.dp),
-                    )
-                }
+                Text(
+                    Strings.HOME_EMPTY_REWARDS,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
             }
         }
+        return
+    }
+    val maxCost = reorderedList.maxOfOrNull { it.reward.cost } ?: 0
+    itemsIndexed(reorderedList, key = { _, rp -> rp.reward.id }) { index, rp ->
+        var accumulatedDragY by remember { mutableStateOf(0f) }
+        val cardModifier =
+            Modifier
+                .animateItem()
+                .pointerInput(rp.reward.id) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = {
+                            onDraggingChange(true)
+                            onDraggingRewardIdChange(rp.reward.id)
+                            onDraggingIndexChange(reorderedList.indexOfFirst { it.reward.id == rp.reward.id })
+                            accumulatedDragY = 0f
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            accumulatedDragY += dragAmount.y
+                            val currentIdx = draggingIndex
+                            if (currentIdx >= 0) {
+                                val visibleItems = listState.layoutInfo.visibleItemsInfo
+                                val draggedInfo = visibleItems.find { it.index == currentIdx }
+                                if (draggedInfo != null) {
+                                    val center =
+                                        draggedInfo.offset + draggedInfo.size / 2 + accumulatedDragY
+                                    val target =
+                                        visibleItems.firstOrNull { item ->
+                                            item.index != currentIdx &&
+                                                center > item.offset &&
+                                                center < item.offset + item.size
+                                        }
+                                    if (target != null) {
+                                        reorderedList.add(
+                                            target.index,
+                                            reorderedList.removeAt(currentIdx),
+                                        )
+                                        onDraggingIndexChange(target.index)
+                                        accumulatedDragY = 0f
+                                    }
+                                }
+                            }
+                        },
+                        onDragEnd = {
+                            onDraggingChange(false)
+                            onDraggingRewardIdChange(null)
+                            onDraggingIndexChange(-1)
+                            accumulatedDragY = 0f
+                            onReorderCommitted()
+                        },
+                        onDragCancel = {
+                            onDraggingChange(false)
+                            onDraggingRewardIdChange(null)
+                            onDraggingIndexChange(-1)
+                            accumulatedDragY = 0f
+                        },
+                    )
+                }
+        RewardProgressCard(
+            rp = rp,
+            accentColor = accentPalette[index % accentPalette.size],
+            modifier = cardModifier,
+            isBeingDragged = draggingRewardId == rp.reward.id,
+            isTopTier = rp.reward.cost == maxCost && maxCost > 0,
+            onCardClick = { onCardClick(rp.reward.id) },
+            onLogTask = { onLogTask(rp.reward.id) },
+            onClaim = { onClaim(rp.reward.id) },
+            onAddTask = { onAddTask(rp.reward.id) },
+        )
     }
 }
 
