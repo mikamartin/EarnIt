@@ -429,7 +429,7 @@ private fun RewardProgressBar(
                     )
                 }
             }
-            if (!rp.canClaim) {
+            if (rp.showsProgressNumbers) {
                 if (rp.totalPoints > 0) {
                     // Anchor floored to keep the number clear of the left rounded corner at very low
                     // progress; a text shadow keeps it legible when it falls outside the colored fill.
