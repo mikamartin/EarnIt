@@ -141,11 +141,11 @@ class SettingsScreenUiTest {
 
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
             composeTestRule
-                .onAllNodesWithText(Strings.MAX_REWARD_BANNER)
+                .onAllNodesWithText(Strings.MAX_REWARD_TOOLTIP)
                 .fetchSemanticsNodes()
                 .isNotEmpty()
         }
-        composeTestRule.onNodeWithText(Strings.MAX_REWARD_BANNER).assertIsDisplayed()
+        composeTestRule.onNodeWithText(Strings.MAX_REWARD_TOOLTIP).assertIsDisplayed()
     }
 
     @Test

@@ -28,7 +28,7 @@ object Strings {
     const val CLEANUP_DISCLAIMER =
         "All clean up actions are permanent. Once deleted, there is no way to recover your data."
 
-    const val MAX_REWARD_BANNER =
+    const val MAX_REWARD_TOOLTIP =
         "Max number of in progress rewards reached!"
 
     const val MASCOT_NONE_LABEL = "None"

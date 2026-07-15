@@ -8,50 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 39 — `refactor/split-settings-screen` branch
-
-Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s `SettingsScreen.kt` item (~430 lines in one composable) — same pattern as the `RewardDetailScreen`/`TaskEditScreen` splits: pull screen-only pieces into `private` composables in the same file, no new files/folders, no behavior change.
-
-#### Duplication ✅ (1 reviewed, not fixed)
-- `SettingsAppearanceSection`, `SettingsRewardsSection`, and `SettingsTasksSection` each still hand-roll the same section-header `Row` (bold label + optional `InfoIconButton`) instead of extending the existing `SettingsSectionHeader` helper (used as-is by About/Data/Clean Up, which have no trailing icon) with an optional trailing-content slot. Pre-existing duplication, not introduced by this split — left as-is since fixing it changes `SettingsSectionHeader`'s signature, beyond a pure structural split. Worth a follow-up if this file is touched again.
-
-#### Decoupling ✅ (1 fix)
-- **Fixed:** `showRewardsInfo`/`optimalText`/`maxText` (Rewards) and `showTasksInfo` (Tasks) were hoisted to the top of `SettingsScreen` even though nothing outside their own section ever read them — pure prop-drilling with no purpose. Moved into `SettingsRewardsSection`/`SettingsTasksSection` themselves. Only `showMascotPicker`/`highlightedMascot` stay hoisted at the orchestrator, since they're genuinely driven from outside (the `viewModel.openMascotPicker` `LaunchedEffect`, fired when a claim unlocks a new mascot).
-
-#### Complexity & Pattern Health ✅
-- `SettingsScreen` cut from ~430 lines to a 58-line orchestrator (state + one `LaunchedEffect` + six section calls) plus 8 private helpers: `SettingsAboutSection`, `SettingsAppearanceSection` (which itself calls `SettingsNicknameCard`/`SettingsThemeCard`/`SettingsMascotAndQuoteCard`), `SettingsRewardsSection`, `SettingsTasksSection`, `SettingsDataSection`, `SettingsCleanUpSection`.
-- `SettingsNicknameCard`/`SettingsThemeCard`/`SettingsMascotAndQuoteCard` each have exactly one caller (`SettingsAppearanceSection`) — reviewed against "is this extraction earning its keep": yes, this is the same card-per-composable pattern the backlog itself specified, and matches `RewardDetailScreen`'s single-caller helpers from its own split.
-
-#### Dead Code & Hygiene ✅
-- No unused imports (ktlint's unused-import rule ran clean on every check).
-- `git status` clean apart from the intended 4 files (`SettingsScreen.kt`, `SettingsScreenUiTest.kt`, `TESTING.md`, `CLEANUP_BACKLOG.md`).
-
-#### Naming Consistency ✅
-- New composables follow the existing `Settings*` naming already established by `SettingsCard`/`SettingsSectionHeader`/`ThemeChip`/`MascotPickerDialog`/`DangerButton` in this file.
-
-#### Hardcoded Values ✅
-- None touched.
-
-#### Accessibility ✅ (1 fix)
-- **Fixed:** the "Show daily quote" `Switch` had no `contentDescription` — every other toggle on this screen (Notes Required) already does. Added `contentDescription = Strings.SETTINGS_QUOTE_TOGGLE`, reusing the existing label string, matching the Notes Required precedent exactly. Needed to make the toggle reliably targetable in the new instrumented test, but it's a genuine pre-existing accessibility gap independent of that.
-
-#### Deprecated APIs ✅
-- None touched.
-
-#### Spec Review ✅ (2 findings — 1 fixed, 1 flagged not actioned)
-- **Fixed:** the Max Reward Count row said only "Hard cap; banner shown when exceeded," which undersold what's actually built and confirmed intended: the FAB dims to 40% opacity at the cap but stays tappable (not a disabled button) — tapping it shows a 2s tooltip instead of navigating, and a separate 3s banner auto-appears the moment a new reward reaches the cap. Row expanded to describe both surfaces and the FAB's non-disabled tappable state.
-- **Found while writing spec-grounded tests, not actioned:** `optimalRewardCount` is read back from DataStore and displayed in its own edit field, but is never consumed anywhere else in the app — no banner, no home-screen guidance, nothing reads it besides the Settings field itself. The spec table describes it as "Soft limit; shown as guidance," which isn't true today. Pre-existing (not introduced by this branch), out of scope for a structural-split pass to fix since closing it is a product decision (what should "shown as guidance" look like?), not a mechanical fix — flagged to the user rather than silently patched or silently left in the spec.
-
-#### Tests ✅ (10 new tests, spec-grounded)
-- Reviewed instrumented coverage of `SettingsScreen` before writing anything: `SettingsUiTest` (colour scheme persistence, Notes Required) and `SettingsTipUiTest` (discoverability tip) were the only coverage; nickname, random nickname, show-quote, mascot picker, reward-count fields via the UI itself, and the About/Data/Clean Up nav rows had none.
-- Added `SettingsScreenUiTest` (10 tests, new file), each grounded in an `EARNIT_SPEC.md` §6 line rather than mirroring implementation: nickname typed in Settings shows in the home greeting; clearing it shows "Earn It!" with no address (the exact spec wording); enabling random nickname overrides the typed name on the greeting ("chosen each session instead of the saved name"); Show Quote toggle hides/shows the daily quote section on Home; Max Reward Count edited through the Settings field itself (not the repository, closing the gap `RewardLimitUiTest` left) still enforces the FAB's max-limit tooltip; the mascot picker's default unlocked set is exactly Pugsly and Tabby per the spec table, with the next-locked mascot's unlock hint shown and further-locked mascots showing neither name nor hint; selecting an unlocked mascot persists after `activityRule.scenario.recreate()`; About/Data & Backup/Clean Up rows navigate to their respective screens.
-- One test initially failed on-device (`mascotPicker_defaultUnlockedSet...`): `onNodeWithText("Pugsly").assertIsDisplayed()` found 2 nodes, not 1 — the mascot-picker dialog doesn't unmount the row behind it, and that row already shows "Pugsly" as the current-mascot label. Fixed by asserting via `onAllNodesWithText(...).isNotEmpty()` instead of requiring a single unique match.
-- Full instrumented suite run on a connected emulator, not just compiled: 73/73 pass (was 63 before this branch).
-- `TESTING.md` updated: `SettingsScreenUiTest` row added; UI test pyramid count `~30` → `~40` (rounded).
-- `./gradlew ktlintCheck`, `test`, `assembleDebugAndroidTest`, `assembleDebug`, and `connectedDebugAndroidTest` (full suite) all pass, run sequentially per `CLAUDE.md`.
-
----
-
 ### Pass 40 — `chore/remove-optimal-reward-count` branch, merged via PR #29 (backfill entry)
 
 Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s `optimalRewardCount` item, flagged during Pass 39. This entry is written after the fact — the branch shipped without a matching log entry, caught while auditing the backlog for the next split branch (Pass 41).
@@ -117,3 +73,51 @@ Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s `RewardEditScreen.kt` item (~
 - Full instrumented suite run on a connected emulator twice, not just compiled: first run (6-test version) 79/80 pass (was 74 before this branch — 73 as of Pass 39, +1 from Pass 40's `SettingsScreenUiTest` addition), with the one failure (`taskRow_mandatoryRepeatableTogglesAndUncheckRemoves`, teardown-only: `ActivityScenario.close()`: "Activity never becomes requested state [DESTROYED]", after its own assertions had already passed) confirmed as an emulator-load flake by re-running in isolation twice, both clean — not the same root cause as Pass 37/38's cross-test data leakage, since this test's `@Before` already runs `resetAppState()`. `RewardEditScreenUiTest` alone (10-test version) re-ran clean, 10/10.
 - `TESTING.md` updated: `RewardEditScreenUiTest` row description and count (6 → 10); UI test pyramid count `~40` → `~50`; instrumented-suite header count `~75` → `~85` (both rounded); the `AddTaskToRewardDialog` deferral note narrowed to what's actually still deferred (collapse/expand, select-all, search filter) now that the selection mechanism itself is covered.
 - `./gradlew ktlintCheck`, `assembleDebug`, `test`, `assembleDebugAndroidTest`, and `connectedDebugAndroidTest` (full suite, 84 tests, targeted at the emulator to avoid the known Android 16 physical-device gap — see `TESTING.md` Deferrals) all pass, run sequentially per `CLAUDE.md`. Full-suite re-run after the final 4-test addition: 84/84 clean, in 5m52s — no flakes this time.
+
+---
+
+### Pass 42 — `refactor/split-home-screen` branch
+
+Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s `HomeScreen.kt` item (~320 lines in one composable) — same pattern as the `RewardDetailScreen`/`TaskEditScreen`/`SettingsScreen`/`RewardEditScreen` splits: pull screen-only pieces into `private` composables in the same file, no new files/folders. One deliberate behavior change was made alongside the split (confirmed with the user, not silently bundled): the bottom slide-up "max reward banner" (`showMaxBanner`, its `LaunchedEffect`, and its UI) was removed entirely, since it duplicated the FAB tooltip's message in a second on-screen location. The FAB tooltip itself was kept, with `Strings.MAX_REWARD_BANNER` renamed to `MAX_REWARD_TOOLTIP` to match what it now actually is.
+
+#### Duplication ✅ (reviewed, nothing new)
+- No styling/gradient patterns repeated inline beyond what already existed pre-split; the extracted helpers carry code forward verbatim.
+
+#### Decoupling ✅ (reviewed, nothing to change)
+- `HomeDialogs` takes the full `EarnItViewModel` — checked whether this could be narrowed to specific lambdas, but `LogTaskDialog`/`ClaimDialog` (`SharedDialogs.kt`) already require the full `viewModel` in their own public signature and are shared with `RewardDetailScreen`, so narrowing would mean changing a shared dialog's API, out of scope for a structural-split branch.
+- `homeRewardListItems` (a `LazyListScope` extension, same shape as Pass 41's `rewardEditTasksSection`) takes `isDragging`/`draggingIndex`/`draggingRewardId` as individual value+callback pairs rather than bundled state. Confirmed via grep that `draggingIndex`/`draggingRewardId` are read/written only inside this function, while `isDragging` is also read by the orchestrator's list-sync `LaunchedEffect` — so at least `isDragging` must stay hoisted. `LazyListScope`'s content lambda isn't itself a composable context, so `remember` can't live inside `homeRewardListItems` directly; hoisting is required, not avoidable. Bundling the drag-index/id pair into one hoisted value would trim the 15-parameter signature but changes state shape, not just relocates it — left as a future opportunity if this file is touched again, not actioned here.
+
+#### Complexity & Pattern Health ✅
+- `HomeScreen(...)` cut from ~320 lines to a ~131-line orchestrator (state + 3 `LaunchedEffect`s + dialogs call + `Column { HomeHeader, LazyColumn, HomeAddRewardFab }`) plus 4 private helpers: `HomeHeader`, `HomeDialogs`, `BoxScope.HomeAddRewardFab`, `LazyListScope.homeRewardListItems`.
+- Confirmed via grep that each of the 4 new helpers has exactly one call site — reviewed against "is this extraction earning its keep": yes, consistent with the single-caller pattern already accepted in Pass 39/41.
+
+#### Dead Code & Hygiene ✅ (1 fix)
+- **Fixed:** a stale comment in `RewardLimitUiTest.kt` still said "MAX_REWARD_BANNER text becomes visible" after the `Strings` constant was renamed to `MAX_REWARD_TOOLTIP`.
+- No unused imports (ktlint clean on every check, re-verified after all edits).
+- Confirmed via diff that no new `Color(0xFF...)` literals were introduced.
+- `git status` clean apart from the intended files: `HomeScreen.kt`, `RewardLimitUiTest.kt`, `SettingsScreenUiTest.kt`, `Strings.kt`, `EARNIT_SPEC.md`, `CLEANUP_BACKLOG.md`, `CLEANUP_LOG.md`.
+
+#### Naming Consistency ✅
+- New composables follow the existing `Home*`/`*Dialogs` naming already established (`HomeDialogs` ↔ `RewardEditDialogs`/`TaskEditDialogs`).
+
+#### Hardcoded Values ✅
+- None introduced; existing values (16.dp, 56.dp, etc.) carried over unchanged.
+
+#### Accessibility ✅ (reviewed, nothing new)
+- Confirmed via `git show HEAD` that the mascot `Image`'s `contentDescription = null` predates this branch — not introduced or touched by the split.
+- The FAB's `Icon` keeps its existing `contentDescription = Strings.NEW_REWARD_DESC`, unchanged.
+
+#### Deprecated APIs ✅
+- None touched.
+
+#### Spec Review ✅ (1 fix)
+- **Fixed:** `EARNIT_SPEC.md` §6 Settings table's Max Reward Count row still described "A separate 3s banner also auto-appears the moment a new reward reaches the cap" (added in Pass 39) — that banner was removed as part of this split, so the row was trimmed to describe only the tooltip behavior that remains.
+- Checked §10 Screen Map's "Prizes (Home)" row against current behavior (progress cards, mascot, quote of the day) — still accurate, no further drift.
+
+#### Tests ✅ (1 fix, 1 new gap logged, 1 unrelated gap found and logged)
+- Coverage reviewed for the area before finalizing: FAB→RewardEdit navigation under the cap (`SaveNavigationUiTest`), FAB tooltip at the cap (`RewardLimitUiTest`, `SettingsScreenUiTest`), empty state (`EmptyStateUiTest`), show-quote toggle (`SettingsScreenUiTest`), card tap/log/claim dialogs (`UiHappyPathTest`), and reorder persistence (`SortOrderTest`, unit) are all still exercised and unaffected by the split.
+- **Gap found and logged, not fixed here:** the drag-to-reorder gesture itself (relocated into `homeRewardListItems`) has no automated coverage at any level and isn't mentioned in `TESTING.md`'s Tier 4 or "Not Covered" sections — pre-existing, not introduced by this split. Logged as a new `CLEANUP_BACKLOG.md` Test Coverage item rather than left unmentioned.
+- No test ever exercised the removed bottom banner's own behavior (its 3s auto-show/hide timing), so nothing needed to be deleted for its removal.
+- `TESTING.md` required no count updates — no tests added/removed by this pass, and its existing `RewardLimitUiTest`/`SettingsScreenUiTest` rows already described only the tooltip.
+- **Found, unrelated to this branch's scope:** `RewardDetailScreen.kt` (not touched by this split) renders its current-points number in dark, muted `onSurfaceVariant` text below ~12% progress instead of the white it uses once the fill takes over, making low-progress rewards look inconsistent with further-along ones — noticed during the user's manual pass on unrelated test data. Logged as a new `CLEANUP_BACKLOG.md` Visual Polish item since it's pre-existing and outside this branch.
+- `./gradlew ktlintCheck`, `assembleDebug`, `test`, and `connectedDebugAndroidTest` (full suite, 84/84) all pass, run sequentially per `CLAUDE.md`.

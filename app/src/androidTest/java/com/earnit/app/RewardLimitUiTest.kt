@@ -64,14 +64,14 @@ class RewardLimitUiTest {
         // ── Tap the FAB while at max ───────────────────────────────────────────
         composeTestRule.onNodeWithContentDescription("New Reward").performClick()
 
-        // The tooltip must appear — MAX_REWARD_BANNER text becomes visible
+        // The tooltip must appear — MAX_REWARD_TOOLTIP text becomes visible
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
             composeTestRule
-                .onAllNodesWithText(Strings.MAX_REWARD_BANNER)
+                .onAllNodesWithText(Strings.MAX_REWARD_TOOLTIP)
                 .fetchSemanticsNodes()
                 .isNotEmpty()
         }
-        composeTestRule.onNodeWithText(Strings.MAX_REWARD_BANNER).assertIsDisplayed()
+        composeTestRule.onNodeWithText(Strings.MAX_REWARD_TOOLTIP).assertIsDisplayed()
 
         // We must NOT have navigated to the reward edit screen
         assertTrue(
