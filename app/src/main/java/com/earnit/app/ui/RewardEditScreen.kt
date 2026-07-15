@@ -53,6 +53,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
@@ -75,6 +76,26 @@ import com.earnit.app.data.TaskEntity
 import com.earnit.app.viewmodel.EarnItViewModel
 import kotlinx.coroutines.launch
 
+// Every "Create your own task" round-trip through TaskEditScreen disposes and recreates
+// RewardEditScreen's composition, so taskState must survive via rememberSaveable — a plain
+// remember silently drops any task added before the most recent round-trip.
+private val TaskStateMapSaver =
+    listSaver<SnapshotStateMap<Long, TaskEditState>, Any>(
+        save = { map -> map.flatMap { (id, state) -> listOf(id, state.included, state.isMandatory, state.isRepeatable) } },
+        restore = { flat ->
+            val map = mutableStateMapOf<Long, TaskEditState>()
+            for (i in flat.indices step 4) {
+                map[flat[i] as Long] =
+                    TaskEditState(
+                        included = flat[i + 1] as Boolean,
+                        isMandatory = flat[i + 2] as Boolean,
+                        isRepeatable = flat[i + 3] as Boolean,
+                    )
+            }
+            map
+        },
+    )
+
 @Composable
 fun RewardEditScreen(
     rewardId: Long,
@@ -92,8 +113,8 @@ fun RewardEditScreen(
     var showIconPicker by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    val taskState = remember { mutableStateMapOf<Long, TaskEditState>() }
-    var taskStateReady by remember { mutableStateOf(false) }
+    val taskState = rememberSaveable(saver = TaskStateMapSaver) { mutableStateMapOf() }
+    var taskStateReady by rememberSaveable { mutableStateOf(false) }
     var awaitingNewTask by rememberSaveable { mutableStateOf(false) }
     val pendingTaskId by viewModel.pendingTaskId.collectAsState()
     val pendingRewardId by viewModel.pendingRewardId.collectAsState()
