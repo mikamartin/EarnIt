@@ -229,7 +229,7 @@ Settings are persisted via DataStore Preferences.
 |---|---|---|---|
 | Colour Scheme | Enum | `WARM_GOLD` | `WARM_GOLD`, `OCEAN_BLUE`, `FOREST` |
 | Notes Mandatory | Boolean | false | When true, a note is required on every log |
-| Max Reward Count | Int | 5 | Hard cap, set via a 1–10 slider in Settings. FAB dims to 40% opacity at the cap but remains tappable — tapping it shows a 2s tooltip instead of navigating. A separate 3s banner also auto-appears the moment a new reward reaches the cap. |
+| Max Reward Count | Int | 5 | Hard cap, set via a 1–10 slider in Settings. FAB dims to 40% opacity at the cap but remains tappable — tapping it shows a 2s tooltip instead of navigating. |
 | Nickname | String | `"Babe"` | Displayed in the home screen greeting. Clearing the field stores `""` — greeting shows "Earn It!" with no address. |
 | Use Random Nickname | Boolean | false | When true, a random fun nickname is chosen each session instead of the saved name |
 | Selected Mascot | MascotId? | `PUGSLY` | Active mascot shown on the home screen; `null` = hidden. Migrated from legacy `show_pugsly` boolean. |

@@ -4,17 +4,6 @@
 
 ---
 
-## Complexity & Pattern Health
-
-### single oversized composables with no internal extraction
-Well past the ~150-line guideline, comparable in scope to the `EarnItApp.kt` split done in Pass 10. Extraction pattern: pull screen-only pieces into `private` composables in the same file (matches the existing convention in `DataScreen.kt`/`TaskEditScreen.kt`), no new files/folders, no behavior changes — pure structural split, verified via ktlint + `assembleDebug` + `./gradlew test` + a manual exploratory pass per screen.
-
-| File | Size | Status |
-|---|---|---|
-| `HomeScreen.kt` | ~320 lines in `HomeScreen(...)` | Planned — `refactor/split-home-screen` |
-
----
-
 ## Correctness
 
 ### Adding two new tasks in a row to an unsaved reward silently drops the first one
@@ -23,6 +12,15 @@ On a brand-new, not-yet-saved reward, tapping "Add task" → "Create your own" t
 **Root cause:** `RewardEditScreen.kt`'s `taskState`/`taskStateReady` are plain `remember`, not `rememberSaveable`. Each "Create your own" round-trip navigates to `TaskEditScreen` and back, and Navigation Compose disposes `RewardEditScreen`'s composition while it's off the back stack — so both reset. The startup `LaunchedEffect` then re-derives every task's inclusion from the (still-unsaved, `cur == null`) reward, defaulting everything — including the task the user already added — back to not-included. Only the *current* `pendingTaskId` (which does survive, via `rememberSaveable`) gets explicitly re-included afterward, so each new "create new task" round-trip clobbers whichever task was added before it.
 
 **Current status:** pinned, not fixed. `RewardEditScreenUiTest.sequentialCreateNewTasks_onUnsavedReward_onlyLastOneStaysIncluded` documents today's actual (buggy) behavior as a red-test-in-waiting rather than leaving it silently uncovered. Fixing it properly likely means making `taskState` survive the round-trip (e.g. a custom `Saver`, or restructuring so the reward is saved as a draft before the first task is added) — a real behavior change, out of scope for a structural-split branch.
+
+---
+
+## Visual Polish
+
+### Reward Detail progress bar shows the current-points number in dark, muted text at low progress
+`RewardDetailScreen.kt`'s progress bar (~line 431) has two rendering modes for the current-points number depending on fill level. At progress ≤ 12%, the number is drawn to the left of the fill, over the light cream unfilled track, colored `MaterialTheme.colorScheme.onSurfaceVariant` — a dark, muted brownish-gray in the app's warm color schemes. Once progress exceeds 12%, the number instead sits inside the colored fill in plain white. A reward with little progress logged so far (e.g. "Nice dinner" in test data) reads as dull/off compared to one further along (e.g. "New trainers"), which shows the crisp white variant.
+
+**Desired fix:** always render the number inside the colored fill in white, regardless of progress level, instead of switching to the dark-text/outside-track mode below the 12% threshold — likely means anchoring the number just past the start of the fill (with a minimum offset) rather than branching on `progress <= 0.12f`.
 
 ---
 
@@ -39,5 +37,8 @@ No `androidx.test.uiautomator` dependency currently exists in `app/build.gradle.
 
 ### Cancel/dismiss buttons are untested across the entire app, not just one screen
  every screen's Cancel button and every dialog's dismiss button (dialog Cancel/backdrop-dismiss included) across the whole app is untested. Each one is a one-line `popBackStack()`/`onDismiss()` callback with no logic, which is why none have been covered so far — but "untested everywhere" is itself worth deciding on deliberately rather than by accretion. Options if picked up: a shared parametrized test helper, or accept the current risk explicitly in `TESTING.md` with a stated rationale (matching the `AddTaskToRewardDialog` group-view precedent) instead of leaving it merely unmentioned.
+
+### Drag-to-reorder gesture on Home has no automated coverage
+The long-press-and-drag reordering logic in `HomeScreen.kt`'s `homeRewardListItems` (drag start/move/end/cancel handling, mid-drag position swapping, and the final `viewModel.updateRewardsOrder` commit) has no automated test at any level — not unit, not instrumented. `SortOrderTest` covers the repository-level persistence (`updateRewardsSortOrder`) once a final order is handed to it, but nothing exercises the gesture that produces that order. Not mentioned in `TESTING.md`'s Tier 4 or "Not Covered" sections, so it's currently untested by omission rather than by a documented decision. Compose's drag-gesture testing support is limited (long-press-then-drag is nontrivial to model reliably via `performTouchInput`), so closing this gap cleanly likely means extracting the reorder-target computation (the "which item are we hovering over" math) into a plain testable function — the same pattern `WidgetActionButtonTest` used to pull decision logic out of a Glance composable — leaving only the actual `pointerInput` wiring as manual-only surface.
 
 ---
