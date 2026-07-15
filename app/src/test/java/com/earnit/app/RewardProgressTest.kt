@@ -107,6 +107,59 @@ class RewardProgressTest {
     }
 
     @Test
+    fun `showsProgressNumbers true when points below cost`() {
+        val progress =
+            RewardProgress(
+                reward = reward(20),
+                taskRefs = emptyList(),
+                mandatoryTasks = emptyList(),
+                optionalTasks = emptyList(),
+                activeLogs = listOf(log(1L, 5)),
+            )
+        assertTrue(progress.showsProgressNumbers)
+    }
+
+    @Test
+    fun `showsProgressNumbers false when points meet cost and mandatory task unlogged`() {
+        val mandatory = task(1L)
+        val progress =
+            RewardProgress(
+                reward = reward(5),
+                taskRefs = listOf(ref(1L, isMandatory = true)),
+                mandatoryTasks = listOf(mandatory),
+                optionalTasks = emptyList(),
+                activeLogs = listOf(log(2L, 10)),
+            )
+        assertFalse(progress.showsProgressNumbers)
+    }
+
+    @Test
+    fun `showsProgressNumbers false when reward can be claimed`() {
+        val progress =
+            RewardProgress(
+                reward = reward(5),
+                taskRefs = emptyList(),
+                mandatoryTasks = emptyList(),
+                optionalTasks = listOf(task(1L)),
+                activeLogs = listOf(log(1L, 5)),
+            )
+        assertFalse(progress.showsProgressNumbers)
+    }
+
+    @Test
+    fun `showsProgressNumbers false when cost is zero and no mandatory tasks`() {
+        val progress =
+            RewardProgress(
+                reward = reward(0),
+                taskRefs = emptyList(),
+                mandatoryTasks = emptyList(),
+                optionalTasks = emptyList(),
+                activeLogs = emptyList(),
+            )
+        assertFalse(progress.showsProgressNumbers)
+    }
+
+    @Test
     fun `loggableTasks includes task not yet logged`() {
         val t1 = task(1L)
         val progress =
