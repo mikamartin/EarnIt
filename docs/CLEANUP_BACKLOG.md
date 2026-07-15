@@ -4,17 +4,6 @@
 
 ---
 
-## Correctness
-
-### Adding two new tasks in a row to an unsaved reward silently drops the first one
-On a brand-new, not-yet-saved reward, tapping "Add task" → "Create your own" twice in a row (creating and saving two separate new tasks before saving the reward itself) results in only the *second* task staying included — the first silently disappears from the list.
-
-**Root cause:** `RewardEditScreen.kt`'s `taskState`/`taskStateReady` are plain `remember`, not `rememberSaveable`. Each "Create your own" round-trip navigates to `TaskEditScreen` and back, and Navigation Compose disposes `RewardEditScreen`'s composition while it's off the back stack — so both reset. The startup `LaunchedEffect` then re-derives every task's inclusion from the (still-unsaved, `cur == null`) reward, defaulting everything — including the task the user already added — back to not-included. Only the *current* `pendingTaskId` (which does survive, via `rememberSaveable`) gets explicitly re-included afterward, so each new "create new task" round-trip clobbers whichever task was added before it.
-
-**Current status:** pinned, not fixed. `RewardEditScreenUiTest.sequentialCreateNewTasks_onUnsavedReward_onlyLastOneStaysIncluded` documents today's actual (buggy) behavior as a red-test-in-waiting rather than leaving it silently uncovered. Fixing it properly likely means making `taskState` survive the round-trip (e.g. a custom `Saver`, or restructuring so the reward is saved as a draft before the first task is added) — a real behavior change, out of scope for a structural-split branch.
-
----
-
 ## Test Coverage
 
 ### Logging against an archived reward has no repository guard, and no test
