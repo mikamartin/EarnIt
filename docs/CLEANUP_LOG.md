@@ -8,55 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 41 — `refactor/split-reward-edit-screen` branch
-
-Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s `RewardEditScreen.kt` item (~420 lines in one composable) — same pattern as the `RewardDetailScreen`/`TaskEditScreen`/`SettingsScreen` splits: pull screen-only pieces into `private` composables in the same file, no new files/folders, no behavior change. Test coverage for this screen was audited up front rather than after the fact, since the `TaskEditScreen` and `SettingsScreen` splits both found real gaps this way.
-
-#### Duplication ✅ (1 reviewed, not fixed)
-- `RewardIconAndNameField` and `RewardCostAndDescriptionFields` each still repeat the same `OutlinedTextFieldDefaults.colors(...)` block per field — pre-existing duplication carried over unchanged from the original single composable, not introduced by this split. Same category of finding as Pass 39's `SettingsSectionHeader` note; left as-is since fixing it means introducing a shared colors constant beyond a pure structural split.
-
-#### Decoupling ✅ (reviewed, nothing to hoist)
-- Unlike Pass 39's `SettingsScreen` split, no state here was safe to move down into a single section: `name`/`cost`/`description`/`icon` and the three dialog-visibility flags are each read from at least two of {a field section, the dialogs, the bottom-bar save, or a `LaunchedEffect`}. All stay hoisted at the orchestrator, passed down as value+lambda pairs — same shape as `TaskEditScreen`'s own orchestrator state.
-
-#### Complexity & Pattern Health ✅
-- `RewardEditScreen` cut from ~420 lines to a ~290-line orchestrator (state + 3 `LaunchedEffect`s + dialogs call + title bar + `LazyColumn` + bottom bar) plus 7 private helpers: `RewardEditDialogs`, `RewardEditTitleBar`, `RewardIconAndNameField`, `RewardCostAndDescriptionFields`, `LazyListScope.rewardEditTasksSection`, `RewardEditTaskRow`, `RewardEditBottomBar`.
-- One shape difference from the other three splits: this screen's task list uses `LazyColumn` + `items(includedTasks, key = { it.id })` for real keying, which a plain `@Composable` can't emit. `rewardEditTasksSection` is written as an extension function on `LazyListScope` instead — the standard Compose pattern for extracting list content — so the emitted items and keys are unchanged from before the split.
-- `RewardEditTaskRow` has exactly one caller (`rewardEditTasksSection`'s `items{}`) — reviewed against "is this extraction earning its keep": yes, it isolates the per-row Card content the same way `RewardDetailScreen`'s single-caller helpers did in its own split.
-
-#### Dead Code & Hygiene ✅
-- No unused imports (ktlint's unused-import rule ran clean on every check).
-- `git status` clean apart from the intended files: `RewardEditScreen.kt`, `RewardEditScreenUiTest.kt` (new), `Strings.kt`, `RewardDetailScreen.kt`, `TESTING.md`, `CLEANUP_BACKLOG.md`, `CLEANUP_LOG.md` (the test-coverage follow-up below didn't add any new files).
-
-#### Naming Consistency ✅
-- New composables follow the existing `Reward*`/`TaskEdit*` naming convention already established by the `TaskEditScreen` split (`RewardEditDialogs` ↔ `TaskEditDialogs`, `RewardEditTitleBar` ↔ `TaskEditTitleBar`, etc.).
-
-#### Hardcoded Values ✅
-- None touched.
-
-#### Accessibility ✅ (2 fixes)
-- **Fixed:** the included-task row's `Checkbox` had no `contentDescription` — the only way to un-include a task was a bare checkbox with no accessible label. Added `Strings.REWARD_INCLUDED_DESC` ("Included"), needed to make the checkbox targetable in the new instrumented test, but also a genuine pre-existing accessibility gap independent of that (same category as Pass 39's `SETTINGS_QUOTE_TOGGLE` fix).
-- **Fixed (drive-by, different file):** `RewardDetailScreen`'s edit button (`RewardHeaderCard`) is the *only* way to reach Reward Edit for an existing reward, and it had `contentDescription = null` on its `Icon` with no label anywhere on the clickable `Box` — the exact same gap `TaskDetailScreen`'s equivalent edit button already had fixed (`Strings.EDIT_TASK_DESC`). Added the missing `Strings.EDIT_REWARD_DESC` via `.semantics { contentDescription = ... }` on the `Box`, mirroring `TaskDetailScreen.kt`'s pattern exactly. Required to reach the existing-reward edit/pre-population tests at all; flagged here since it's outside `RewardEditScreen.kt` itself.
-
-#### Deprecated APIs ✅
-- None touched.
-
-#### Spec Review ✅ (no changes needed)
-- `EARNIT_SPEC.md` §10 Screen Map's "Reward Edit" row was checked against current behavior — name, icon, description, cost, linked tasks, duplicate-name handling, "Add task" gating, and post-save navigation are all still accurately described. No drift, since the split is behavior-preserving.
-
-#### Tests ✅ (10 new tests, real gap closed, one real bug found)
-- Coverage audited before writing anything, not after: grepped `app/src/androidTest` for `RewardEdit`/`saveReward`/`deleteReward` — `RewardEditScreen` had no dedicated UI test file. Only incidental coverage existed: `SaveNavigationUiTest` (post-save nav, create-task-from-reward-form), `MaxLengthUiTest` (name/description char caps), `DuplicateNameUiTest` (duplicate reward name). Untested: icon picker, cost field's digit filter, the included-task row's mandatory/repeatable toggles and uncheck-to-remove, editing-and-persisting an existing reward, and task-link pre-population on reopen — the same shape of gap the `TaskEditScreen` split found and closed on the task side.
-- First pass added 6 tests covering the above. Reviewing that pass against what it actually exercised (prompted by a direct question about it, not a self-review) surfaced three more gaps worth closing rather than leaving for a manual-only check: no test used more than one task in the included list at once (so nothing proved per-row toggle isolation), no test drove `AddTaskToRewardDialog`'s *own* checkbox-selection path (only the "create new" shortcut), and the "Browse Library" entry point from that dialog was untested from every call site in the app, not just this one.
-- Investigated whether those three were genuinely worth automating or reasonably deferred like the dialog's collapse/expand/select-all UI state already is (see `TESTING.md`'s `AddTaskToRewardDialog` deferral note): row isolation and the checkbox-selection path both feed real state into what eventually gets saved, so they're closed; Cancel/dismiss buttons (checked broadly — untested on *every* screen and dialog in the app, not specific to this one) and the dialog's internal collapse/expand/select-all/search-filter state stay deferred, logged as their own `CLEANUP_BACKLOG.md` items rather than silently dropped.
-- Added 4 more tests to `RewardEditScreenUiTest` (10 total): `taskRows_multipleTasksToggleAndRemoveIndependently` (two tasks added via the dialog's checkbox list in one session toggle/remove independently — each assertion scoped to its own row via `onSiblings()` + `filterToOne(hasContentDescription(...))` rather than a bare `onNodeWithContentDescription()`, since `REWARD_MANDATORY_DESC`/`REWARD_OPTIONAL_DESC`/etc. aren't unique per row and the `LazyColumn`'s viewport doesn't reliably keep both rows composed at once on a small screen); `existingTaskSelection_viaDialogCarriesMandatoryFlagThroughToIncludedList` (selecting an existing task via the dialog's checkbox and toggling its mandatory flag inline, before confirming, carries that flag through to the included list); `addTaskDialog_browseLibraryNavigatesToTaskLibrary` (smoke test for the navigation call this split's own extraction touched); and one bug-documenting test (below).
-- **Found a real, pre-existing bug while writing the row-isolation test**, not a test artifact: adding two new tasks in a row via "Create your own" to an *unsaved* reward silently drops the first task's inclusion. Root cause: `taskState`/`taskStateReady` are plain `remember`, and Navigation Compose disposes+recreates `RewardEditScreen`'s composition on every round-trip to `TaskEditScreen` and back, resetting both; the startup effect then re-derives every task's inclusion from the still-unsaved reward (which has none), and only the single most recent `pendingTaskId` gets explicitly restored. Confirmed pre-existing, not introduced by this split, by reading the `LaunchedEffect` logic (copied verbatim, unchanged). Decision (discussed with the user): defer the actual fix — out of scope for a structural-split branch — but don't leave it silently uncovered. Rewrote the original isolation test to add both tasks via the dialog's checkbox list instead (a path that doesn't hit the bug, since it never leaves the screen), and added `sequentialCreateNewTasks_onUnsavedReward_onlyLastOneStaysIncluded` as a dedicated regression test pinning today's actual (buggy) behavior — a red test for a future fix to turn green, not a silent gap. Logged as its own `CLEANUP_BACKLOG.md` Correctness item with root cause, current status, and a workaround for users today.
-- Two rounds of on-device iteration to make the row-isolation test itself reliable, both logged so the reasoning isn't lost: (1) chaining "create task → assert" for two tasks back-to-back without a wait in between raced the async `pendingTaskId` propagation — the same class of flake Pass 37/38 already hit and fixed for a different test — fixed by asserting after each creation before starting the next; (2) `Strings.REWARD_ADD_TASK_BTN` and `Strings.ADD_TASK_DIALOG_TITLE` are both literally `"Add task"`, so a bare `onNodeWithText` match on the dialog title was ambiguous against the still-present button behind it — removed that assertion rather than special-case a match.
-- One test initially timed out on-device (`editExistingReward_taskLinksPrepopulateFromExistingLinks`): the shared `waitForRewardDetail()` helper waits for the empty-state copy (`REWARD_DETAIL_NO_TASKS`), but this test's reward has a task, so that text never appears. Fixed by waiting for the task's own name instead.
-- Full instrumented suite run on a connected emulator twice, not just compiled: first run (6-test version) 79/80 pass (was 74 before this branch — 73 as of Pass 39, +1 from Pass 40's `SettingsScreenUiTest` addition), with the one failure (`taskRow_mandatoryRepeatableTogglesAndUncheckRemoves`, teardown-only: `ActivityScenario.close()`: "Activity never becomes requested state [DESTROYED]", after its own assertions had already passed) confirmed as an emulator-load flake by re-running in isolation twice, both clean — not the same root cause as Pass 37/38's cross-test data leakage, since this test's `@Before` already runs `resetAppState()`. `RewardEditScreenUiTest` alone (10-test version) re-ran clean, 10/10.
-- `TESTING.md` updated: `RewardEditScreenUiTest` row description and count (6 → 10); UI test pyramid count `~40` → `~50`; instrumented-suite header count `~75` → `~85` (both rounded); the `AddTaskToRewardDialog` deferral note narrowed to what's actually still deferred (collapse/expand, select-all, search filter) now that the selection mechanism itself is covered.
-- `./gradlew ktlintCheck`, `assembleDebug`, `test`, `assembleDebugAndroidTest`, and `connectedDebugAndroidTest` (full suite, 84 tests, targeted at the emulator to avoid the known Android 16 physical-device gap — see `TESTING.md` Deferrals) all pass, run sequentially per `CLAUDE.md`. Full-suite re-run after the final 4-test addition: 84/84 clean, in 5m52s — no flakes this time.
-
----
-
 ### Pass 42 — `refactor/split-home-screen` branch
 
 Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s `HomeScreen.kt` item (~320 lines in one composable) — same pattern as the `RewardDetailScreen`/`TaskEditScreen`/`SettingsScreen`/`RewardEditScreen` splits: pull screen-only pieces into `private` composables in the same file, no new files/folders. One deliberate behavior change was made alongside the split (confirmed with the user, not silently bundled): the bottom slide-up "max reward banner" (`showMaxBanner`, its `LaunchedEffect`, and its UI) was removed entirely, since it duplicated the FAB tooltip's message in a second on-screen location. The FAB tooltip itself was kept, with `Strings.MAX_REWARD_BANNER` renamed to `MAX_REWARD_TOOLTIP` to match what it now actually is.
@@ -141,3 +92,46 @@ Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s Visual Polish item, flagged d
 - Grepped `app/src/androidTest` for the old threshold/color/field name — the only `totalPoints` hits are repository-level point-balance assertions in `StartOverTest`/`HappyPathTest`, unrelated to this rendering branch. No existing test needed updating.
 - No automated test added for the color/shadow itself: not `Repository`/`ViewModel` logic, and the codebase has no screenshot/pixel-level testing infrastructure anywhere (checked against the pattern in every prior pass) — Compose's testing APIs don't cleanly assert rendered text color without pixel diffing. Manual on-device verification is the established way visual-only changes get checked here (matches Pass 42's banner-removal precedent). Confirmed manually across progress levels, with shadow opacity tuned from the user's on-device feedback (0.45 → 0.7 → 0.8).
 - `./gradlew ktlintCheck`, `assembleDebug`, and `test` all pass, run sequentially per `CLAUDE.md`. No instrumented-suite run — no androidTest files changed.
+
+---
+
+### Pass 44 — `fix/reward-edit-task-state-loss` branch
+
+Fixes [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s Correctness item: adding two new tasks in a row via "Create your own" to an unsaved reward silently dropped the first. Root cause: `RewardEditScreen.kt`'s `taskState`/`taskStateReady` were plain `remember`, reset every time Navigation Compose disposed the screen's composition for a `TaskEditScreen` round-trip; the startup effect then re-derived inclusion from the still-unsaved (task-less) reward. Fix: a custom `Saver` so `taskState` survives via `rememberSaveable`, the same mechanism already used by the screen's other form fields.
+
+#### Duplication ✅ (checked, none found)
+- Grepped for existing `Saver(`/`listSaver`/`mapSaver` usage across `app/src/main/java` — none exists yet, so `TaskStateMapSaver` is the first custom `Saver` in the codebase rather than diverging from or duplicating an established one.
+
+#### Decoupling ✅ (n/a)
+- Pure UI-state persistence change inside a single composable; no business logic touched.
+
+#### Complexity & Pattern Health ✅ (reviewed remember vs rememberSaveable across the file)
+- Reviewed every other `remember`/`rememberSaveable` in `RewardEditScreen.kt` while fixing this one: `showAddTaskDialog`/`showIconPicker`/`showDeleteDialog` are transient dialog-visibility flags, correctly reset on recomposition; `pendingRewardSaveNav` is a short-lived flag that never spans a `TaskEdit` round-trip, so plain `remember` is correct there too. Only `taskState`/`taskStateReady` needed the fix.
+- `TaskStateMapSaver`'s `step 4` restore loop pairs directly with the 4-element tuple built two lines above in `save` — left inline rather than a named constant since the two are adjacent in one small function and self-evidently paired.
+
+#### Dead Code & Hygiene ✅
+- ktlint clean.
+- `git status` clean apart from the intended files: `RewardEditScreen.kt`, `RewardEditScreenUiTest.kt`, `CLEANUP_BACKLOG.md`, `DEV_PLAYBOOK.md`, `TESTING.md`.
+
+#### Naming Consistency ✅
+- `TaskStateMapSaver` follows Kotlin's PascalCase convention for a `val` holding a reusable, type-like instance; no existing `Saver` naming precedent to match since this is the first one in the codebase.
+
+#### Hardcoded Values ✅ (n/a)
+- None introduced.
+
+#### Accessibility ✅ (n/a)
+- No UI elements touched.
+
+#### Deprecated APIs ✅
+- None touched.
+
+#### Spec Review ✅ (checked, no changes needed)
+- Grepped `EARNIT_SPEC.md` for `taskState`/related terms — this is an internal persistence detail, not spec-level behavior, so no drift to reconcile. Checked the Deferred Ideas section for anything related — none.
+
+#### Tests ✅ (1 test flipped, no new gap)
+- `RewardEditScreenUiTest.sequentialCreateNewTasks_onUnsavedReward_onlyLastOneStaysIncluded`, which pinned the bug as a red-test-in-waiting (added in Pass 41), was flipped to `...bothStayIncluded` and now asserts both tasks survive the round-trips — this is the regression test the fix needed, already in place rather than a new gap to close.
+- `RewardEditScreenUiTest` re-run alone on a connected emulator: 10/10 pass. Full instrumented suite re-run: 84/84 pass, no regressions.
+- `./gradlew ktlintCheck`, `test`, and `assembleDebug` all pass, run sequentially per `CLAUDE.md`. No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required on its own — covered anyway by the full `connectedDebugAndroidTest` run.
+- `TESTING.md` updated: the `RewardEditScreenUiTest` row's description of the sequential-create scenario now describes the fixed behavior instead of the pinned bug; the "True process death and restore" Not Covered entry updated to reflect that `RewardEditScreen`'s `taskState`/`taskStateReady` now survive via `rememberSaveable` (only `TaskEditScreen`'s `rewardLinkState` remains on plain `remember`).
+- `DEV_PLAYBOOK.md` Known Limitations: the `taskState` half of the rotation-loss bullet removed now that it's fixed; `rewardLinkState` (TaskEditScreen) stays, since fixing it was explicitly kept out of scope for this branch (confirmed with the user).
+- `CLEANUP_BACKLOG.md`: the Correctness section (this item) removed now that it's actioned.

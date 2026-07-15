@@ -260,14 +260,10 @@ class RewardEditScreenUiTest {
     }
 
     @Test
-    fun sequentialCreateNewTasks_onUnsavedReward_onlyLastOneStaysIncluded() {
-        // Documents a known, pre-existing bug (see CLEANUP_BACKLOG.md) rather than leaving it
-        // silently uncovered: RewardEditScreen's taskState/taskStateReady are plain `remember`,
-        // not `rememberSaveable`. Every "Create your own" round-trip through TaskEditScreen
-        // disposes and recreates RewardEditScreen's composition, resetting both — the startup
-        // effect then re-derives every task's inclusion from the (still-unsaved) reward, which
-        // has none, silently dropping any earlier task the user had already added. This test
-        // pins today's actual behavior so a future fix has a red test to turn green.
+    fun sequentialCreateNewTasks_onUnsavedReward_bothStayIncluded() {
+        // Each "Create your own" tap round-trips through TaskEditScreen and back, disposing and
+        // recreating RewardEditScreen's composition — taskState must survive that via
+        // rememberSaveable, or the earlier task silently drops out.
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithContentDescription(Strings.NEW_REWARD_DESC).performClick()
         composeTestRule.onNodeWithText(Strings.REWARD_NAME_LABEL).performTextInput("Cleanup Weekend")
@@ -288,9 +284,8 @@ class RewardEditScreenUiTest {
             composeTestRule.onAllNodesWithText("Dishes").fetchSemanticsNodes().isNotEmpty()
         }
 
-        // Today's actual behavior: Vacuum's inclusion was lost when the screen was
-        // disposed/recreated for the second task's round-trip.
-        composeTestRule.onNodeWithText("Vacuum").assertDoesNotExist()
+        // Both tasks must have survived the two round-trips through TaskEditScreen.
+        composeTestRule.onNodeWithText("Vacuum").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText("Dishes").performScrollTo().assertIsDisplayed()
     }
 
