@@ -28,7 +28,7 @@ This repo is also a portfolio piece. It's built with heavy AI assistance, and th
 4. **Human reviews diff and does exploratory/manual testing** — inspect the changes, run the app, test affected flows
 5. **Commit** — one subject-line commit per logical change (`type: description`)
 6. **Push** — `git push -u origin branch-name`
-7. **Open PR** — `gh pr create` with title and summary; CI runs automatically
+7. **Open PR** — `gh pr create` with a Conventional Commits-style title (see below) and a summary; no "Generated with Claude Code" footer; CI runs automatically
 8. **Human reviews on GitHub and merges** — never merge without explicit go-ahead
 9. **Pull and clean up locally** — `git checkout main && git pull origin main && git branch -d branch-name`
 
@@ -42,11 +42,13 @@ This repo is also a portfolio piece. It's built with heavy AI assistance, and th
 - [CLEANUP_LOG.md](docs/CLEANUP_LOG.md) — the 3 most recent cleanup passes
 - [CLOSED_TESTING_GUIDE.md](docs/CLOSED_TESTING_GUIDE.md) — plain-language testing guide for Play closed testing recruits
 
-## Commit messages
+## Commit and PR titles
 
 Follows [Conventional Commits](https://www.conventionalcommits.org/).
 
 **Format:** `type: short description` — subject line ≤ 72 characters, imperative mood ("Add" not "Added"). Subject line only — no body. Context belongs in the branch name, PR description, or CLEANUP_LOG.md.
+
+**PR titles use the same format as commit subjects** — same types, same length and mood rules.
 
 **Types:**
 - `feat` — new feature or user-visible behaviour change
@@ -58,6 +60,7 @@ Follows [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## Working agreements
 
+- Code comments and doc updates (`DEV_PLAYBOOK.md`, `TESTING.md`, `EARNIT_SPEC.md`, etc.) describe the current state and behaviour, not the history of what was wrong or changed to get here. State the rule or behaviour directly; don't narrate the prior bug or implementation. Keep it concise. (`CLEANUP_LOG.md` is the exception — it's a retrospective record by design.)
 - After any significant feature work, walk through the checklist in `CLEANUP_RULES.md` and log a new pass in `CLEANUP_LOG.md`.
 - Keep `EARNIT_SPEC.md` in sync with what was actually built — update it when implementation diverges from the spec intentionally; if it diverged unintentionally, that's a bug to fix, not a spec update.
 - Flag `DEV_PLAYBOOK.md` ship checklist items if a task touches them, and strike resolved items out entirely — the checklist should only ever contain open work.
