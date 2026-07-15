@@ -113,6 +113,7 @@ data class RewardProgress(
     val canClaim: Boolean get() =
         totalPoints >= reward.cost &&
             mandatoryTasks.all { mt -> activeLogs.any { it.taskId == mt.id } }
+    val showsProgressNumbers: Boolean get() = !canClaim && totalPoints < reward.cost
     val allTasks: List<TaskEntity> get() = mandatoryTasks + optionalTasks
     val loggableTasks: List<TaskEntity> get() {
         val completedIds = activeLogs.map { it.taskId }.toSet()
