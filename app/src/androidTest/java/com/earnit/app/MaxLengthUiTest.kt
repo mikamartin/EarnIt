@@ -7,6 +7,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.earnit.app.data.SettingsRepository
 import com.earnit.app.ui.NICKNAME_MAX_CHARS
 import com.earnit.app.ui.REWARD_DESC_MAX_CHARS
 import com.earnit.app.ui.REWARD_NAME_MAX_CHARS
@@ -15,10 +16,12 @@ import com.earnit.app.ui.TASK_GROUP_MAX_CHARS
 import com.earnit.app.ui.TASK_NAME_MAX_CHARS
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
+import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import javax.inject.Inject
 
 /**
  * Verifies that name/description fields accept input up to their character cap
@@ -34,10 +37,16 @@ class MaxLengthUiTest {
     @get:Rule(order = 1)
     val composeTestRule = createAndroidComposeRule<MainActivity>()
 
+    @Inject lateinit var settingsRepository: SettingsRepository
+
     @Before
     fun setUp() {
         hiltRule.inject()
         resetAppState()
+        runBlocking {
+            settingsRepository.updateNickname("Babe")
+            settingsRepository.updateUseRandomNickname(false)
+        }
     }
 
     @Test
@@ -101,7 +110,7 @@ class MaxLengthUiTest {
         val atCap = "E".repeat(NICKNAME_MAX_CHARS)
 
         composeTestRule.onNodeWithContentDescription("Settings").performClick()
-        // Default nickname is "Babe" (SettingsRepository) — clear it before testing the cap.
+        // Nickname seeded to "Babe" in setUp() — clear it before testing the cap.
         composeTestRule.onNodeWithText("Babe").performTextClearance()
         composeTestRule.onNodeWithText(Strings.SETTINGS_NAME_PLACEHOLDER).performTextInput(atCap)
         composeTestRule.onNodeWithText(atCap).assertExists()
