@@ -71,6 +71,35 @@ class TaskEditScreenUiTest {
     }
 
     @Test
+    fun screenCancel_popsBackWithoutSavingTask() {
+        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
+        composeTestRule.onNodeWithContentDescription("New Task").performClick()
+        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Abandoned Task")
+
+        composeTestRule.onNodeWithText("CANCEL").performClick()
+
+        composeTestRule.onNodeWithText("Abandoned Task").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("New Task").assertIsDisplayed()
+    }
+
+    @Test
+    fun deleteDialog_cancelKeepsTask() {
+        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
+        composeTestRule.onNodeWithContentDescription("New Task").performClick()
+        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Keep Me Task")
+        composeTestRule.onNodeWithText("SAVE").performClick()
+        waitForTaskDetail()
+
+        composeTestRule.onNodeWithContentDescription(Strings.EDIT_TASK_DESC).performClick()
+        composeTestRule.onNodeWithContentDescription(Strings.DELETE_TASK_DESC).performClick()
+        composeTestRule.onNodeWithText(Strings.TASK_DELETE_TITLE).assertIsDisplayed()
+
+        composeTestRule.cancelDialogAndAssertDismissed(Strings.TASK_DELETE_TITLE)
+
+        composeTestRule.onNodeWithText("Keep Me Task").assertIsDisplayed()
+    }
+
+    @Test
     fun iconPicker_selectingEmojiUpdatesButtonAndDismissesDialog() {
         composeTestRule.onNodeWithContentDescription("Tasks").performClick()
         composeTestRule.onNodeWithContentDescription("New Task").performClick()

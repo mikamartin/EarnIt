@@ -318,6 +318,49 @@ class RewardEditScreenUiTest {
     }
 
     @Test
+    fun screenCancel_popsBackWithoutSavingReward() {
+        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
+        composeTestRule.onNodeWithContentDescription(Strings.NEW_REWARD_DESC).performClick()
+        composeTestRule.onNodeWithText(Strings.REWARD_NAME_LABEL).performTextInput("Abandoned Reward")
+
+        composeTestRule.onNodeWithText("CANCEL").performClick()
+
+        composeTestRule.onNodeWithText("Abandoned Reward").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription(Strings.NEW_REWARD_DESC).assertIsDisplayed()
+    }
+
+    @Test
+    fun emojiPicker_cancelKeepsPreviousIcon() {
+        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
+        composeTestRule.onNodeWithContentDescription(Strings.NEW_REWARD_DESC).performClick()
+
+        composeTestRule.onNodeWithText("🎯").performClick()
+        composeTestRule.onNodeWithText(Strings.TASK_ICON_PICKER_TITLE).assertIsDisplayed()
+
+        composeTestRule.cancelDialogAndAssertDismissed(Strings.TASK_ICON_PICKER_TITLE)
+
+        composeTestRule.onNodeWithText("🎯").assertIsDisplayed()
+    }
+
+    @Test
+    fun deleteDialog_cancelKeepsReward() {
+        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
+        composeTestRule.onNodeWithContentDescription(Strings.NEW_REWARD_DESC).performClick()
+        composeTestRule.onNodeWithText(Strings.REWARD_NAME_LABEL).performTextInput("Keep Me Reward")
+        composeTestRule.onNodeWithText("SAVE").performClick()
+        waitForRewardDetail()
+
+        composeTestRule.onNodeWithContentDescription(Strings.EDIT_REWARD_DESC).performClick()
+        composeTestRule.onNodeWithContentDescription(Strings.DELETE_REWARD_DESC).performClick()
+        composeTestRule.onNodeWithText(Strings.REWARD_DELETE_TITLE).assertIsDisplayed()
+
+        composeTestRule.cancelDialogAndAssertDismissed(Strings.REWARD_DELETE_TITLE)
+
+        // Still on Reward Edit, with the reward's name intact — nothing was deleted.
+        composeTestRule.onNodeWithText("Keep Me Reward").assertIsDisplayed()
+    }
+
+    @Test
     fun addTaskDialog_browseLibraryNavigatesToTaskLibrary() {
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithContentDescription(Strings.NEW_REWARD_DESC).performClick()

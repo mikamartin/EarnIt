@@ -11,6 +11,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.MascotId
 import com.earnit.app.data.SettingsRepository
@@ -176,6 +177,21 @@ class SettingsScreenUiTest {
 
         val saved = runBlocking { settingsRepository.settings.first() }
         assertEquals(MascotId.TABBY, saved.selectedMascotId)
+    }
+
+    @Test
+    fun mascotPicker_backPressDismiss_doesNotChangeSelection() {
+        composeTestRule.onNodeWithContentDescription("Settings").performClick()
+        composeTestRule.onNodeWithText(Strings.MASCOT_SECTION_TITLE).performScrollTo().performClick()
+        composeTestRule.onNodeWithText(Strings.MASCOT_PICKER_TITLE).assertIsDisplayed()
+
+        // No explicit Cancel/Close button exists on this dialog — its only dismiss path is
+        // backdrop tap or the system back gesture.
+        Espresso.pressBack()
+
+        composeTestRule.onNodeWithText(Strings.MASCOT_PICKER_TITLE).assertDoesNotExist()
+        val saved = runBlocking { settingsRepository.settings.first() }
+        assertEquals(MascotId.PUGSLY, saved.selectedMascotId)
     }
 
     @Test

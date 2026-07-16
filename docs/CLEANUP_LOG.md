@@ -8,45 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 43 — `fix/reward-progress-bar-contrast` branch
-
-Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s Visual Polish item, flagged during Pass 42: `RewardDetailScreen.kt`'s progress bar showed the current-points number in dark, muted text below ~12% progress instead of the white it used above that threshold, making low-progress rewards look inconsistent with further-along ones.
-
-#### Duplication ✅ (checked, none found)
-- Grepped for `Shadow(` across `app/src/main/java` — this is the only text-shadow use in the codebase, so the fix introduces a new pattern rather than duplicating or diverging from an existing one.
-
-#### Decoupling ✅ (n/a)
-- Pure rendering change inside a single composable; no business logic involved.
-
-#### Complexity & Pattern Health ✅ (net reduction, verified across themes)
-- The two conditional branches (`progress <= 0.12f` dark-text vs. white) collapsed into one: the number is now always white, right-anchored via `weight(progress.coerceAtLeast(0.12f))` instead of switching layouts at the threshold. Read all of `ColorSchemes.kt` to confirm the fix holds for every `AppColorScheme` (Warm Gold, Ocean Blue, Forest) and both light/dark mode — the unfilled track background is a fixed cream gradient independent of theme, so a text shadow (not a theme-specific tweak) is sufficient for legibility in every combination.
-
-#### Dead Code & Hygiene ✅ (checked)
-- `ktlintCheck` passed (catches unused imports; `Shadow` import is used).
-- `git status` re-checked after the doc edits below — clean apart from the intended files: `RewardDetailScreen.kt`, `CLEANUP_BACKLOG.md`, `CLEANUP_LOG.md`.
-
-#### Naming Consistency ✅ (n/a)
-- No new symbols beyond a single local `val textAnchor`.
-
-#### Hardcoded Values ✅ (reviewed, left inline — not a gap)
-- The shadow's alpha (`0.8f`), offset, and blur radius are new magic numbers, but single-use and commented in place. Not promoted to a named constant: nothing else in the file needs them, so a constant would add an abstraction without a second caller to justify it.
-
-#### Accessibility ✅ (n/a)
-- No new interactive elements.
-
-#### Deprecated APIs ✅
-- None touched.
-
-#### Spec Review ✅ (checked, no changes needed)
-- Grepped `EARNIT_SPEC.md` for progress-bar-related terms — it doesn't describe this rendering-level detail (only that a progress bar exists), so no drift to reconcile.
-
-#### Tests ✅ (checked, no gap — not just skipped)
-- Grepped `app/src/androidTest` for the old threshold/color/field name — the only `totalPoints` hits are repository-level point-balance assertions in `StartOverTest`/`HappyPathTest`, unrelated to this rendering branch. No existing test needed updating.
-- No automated test added for the color/shadow itself: not `Repository`/`ViewModel` logic, and the codebase has no screenshot/pixel-level testing infrastructure anywhere (checked against the pattern in every prior pass) — Compose's testing APIs don't cleanly assert rendered text color without pixel diffing. Manual on-device verification is the established way visual-only changes get checked here (matches Pass 42's banner-removal precedent). Confirmed manually across progress levels, with shadow opacity tuned from the user's on-device feedback (0.45 → 0.7 → 0.8).
-- `./gradlew ktlintCheck`, `assembleDebug`, and `test` all pass, run sequentially per `CLAUDE.md`. No instrumented-suite run — no androidTest files changed.
-
----
-
 ### Pass 44 — `fix/reward-edit-task-state-loss` branch
 
 Fixes [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s Correctness item: adding two new tasks in a row via "Create your own" to an unsaved reward silently dropped the first. Root cause: `RewardEditScreen.kt`'s `taskState`/`taskStateReady` were plain `remember`, reset every time Navigation Compose disposed the screen's composition for a `TaskEditScreen` round-trip; the startup effect then re-derived inclusion from the still-unsaved (task-less) reward. Fix: a custom `Saver` so `taskState` survives via `rememberSaveable`, the same mechanism already used by the screen's other form fields.
@@ -127,4 +88,48 @@ Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "True process death and resto
 - No `AppModule`/`TestAppModule`/`@Inject` changes, but `./gradlew assembleDebugAndroidTest` was run anyway given the new file — confirms `ActivityScenario` resolves without adding the `uiautomator` dependency the backlog item originally assumed was needed (unused once the approach changed from a real `am force-stop` to the in-process approximation).
 - `./gradlew ktlintCheck`, `test`, `assembleDebug`, and `connectedDebugAndroidTest` all pass, run sequentially per `CLAUDE.md`.
 - `TESTING.md`: new `ProcessDeathRestoreTest` row added to the Instrumented Tests table; the "True process death and restore" entry moved from "Not Covered" to a new "Covered" entry describing exactly what the approximation does and doesn't prove; instrumented total (~85 → ~90) and UI-tier pyramid count (~50 → ~55) nudged to match the actual current count (88), which had drifted past its prior rounding bucket.
+- `CLEANUP_BACKLOG.md`: this item removed now that it's actioned.
+
+---
+
+### Pass 46 — `test/cancel-dismiss-coverage` branch
+
+Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "Cancel/dismiss buttons untested across the entire app" item: 15 distinct Cancel/dialog-dismiss surfaces across 8 files had zero dedicated cancel-path coverage — some dialogs were tested on their confirm path only; `CleanUpScreen` and `TaskLibraryScreen` had no test file at all. Research during planning found a real inventory of every surface (confirmed via grep, not assumption) before writing anything.
+
+#### Duplication ✅ (1 shared helper extracted)
+- New `CancelDismissAssertions.kt` — `cancelDialogAndAssertDismissed(dialogMarkerText, cancelText)` — removes the repeated "click Cancel, assert the dialog is gone" boilerplate across ~11 dialog tests. Deliberately left as a helper, not a forced one-shape-fits-all abstraction: each test still supplies its own setup and its own side-effect assertion (no task created, no log recorded, reward not archived), since those genuinely differ per dialog.
+- `CleanUpScreenUiTest`'s private `assertCancelClearsNothing` helper mirrors the existing `waitForRewardDetail()`-style per-class private helper pattern (`RewardEditScreenUiTest`, `TaskEditScreenUiTest`) rather than promoting it to a shared file — its assertions (repository row counts) are specific to that screen.
+
+#### Decoupling ✅ (n/a)
+- Test-only files; no production code touched.
+
+#### Complexity & Pattern Health ✅ (checked)
+- `cancelDialogAndAssertDismissed` is a single ~10-line extension function on `SemanticsNodeInteractionsProvider` — no new interface or base class introduced.
+- Confirmed via grep that `isDialog()`-based scoping was necessary, not incidental complexity: several dialogs render a Cancel button with the exact text "CANCEL" while an identically-labeled button from the screen behind them is still in the merged semantics tree (Compose dialogs don't dispose the underlying screen), so a plain `onNodeWithText("CANCEL")` would match two nodes. Validated this technique on-device with one test before rolling it out to the other ten.
+
+#### Dead Code & Hygiene ✅ (checked)
+- ktlint clean on every check, re-verified after all edits (including the debugging round below).
+- Diagnostic code added while tracking down two real test bugs (`printToLog`, `onRoot`, a `Thread.sleep`) was removed before finalizing — none of it reached this state; confirmed via a final read of `TaskLibraryScreenUiTest.kt`.
+- `git status` clean apart from the intended files: `CancelDismissAssertions.kt`, `CleanUpScreenUiTest.kt`, `TaskLibraryScreenUiTest.kt`, `SharedDialogsCancelUiTest.kt`, `RewardEditScreenUiTest.kt`, `TaskEditScreenUiTest.kt`, `SettingsScreenUiTest.kt`, `TESTING.md`, `CLEANUP_BACKLOG.md`, `CLEANUP_LOG.md`.
+
+#### Naming Consistency ✅ (checked)
+- Listed every non-`*Test.kt` file already in `app/src/androidTest/java/com/earnit/app` (`HiltTestRunner.kt`, `RoomIntegrationBase.kt`, `TestStateReset.kt`) to confirm `CancelDismissAssertions.kt` follows the established precedent for a non-suffixed helper sitting flat in the same package, rather than inventing a new convention.
+
+#### Hardcoded Values ✅ (n/a)
+- No UI code touched; test literals ("Morning Run", "Walk Dog", etc.) match existing fixture naming used elsewhere in this suite.
+
+#### Accessibility ✅ (n/a)
+- No production UI touched.
+
+#### Deprecated APIs ✅ (checked)
+- Recompiled (`compileDebugAndroidTestKotlin`) and grepped the output for deprecation warnings — none from this diff.
+
+#### Spec Review ✅ (checked, no changes needed)
+- Grepped `EARNIT_SPEC.md` for Cancel/dismiss/Clean Up/Task Library terms — the existing entries (e.g. the Task Library row already describing "tasks with duplicate names are skipped and listed in a post-import dialog") already match current behavior. No behavior changed by this pass, only coverage added, so no drift to reconcile.
+
+#### Tests ✅ (4 new files, 3 real bugs found and fixed on-device, docs updated)
+- Three real bugs were found and fixed by actually running the new tests on a connected emulator, not just compiling them: (1) `CleanUpScreenUiTest`'s navigation to the Clean Up row needed `.performScrollTo()` — without it, the click missed and every assertion after failed confusingly two steps later; added an immediate post-navigation assertion so a future failure like this points at the right step. (2) The same screen's `DangerButton` uppercases its label at render time (`SettingsScreen.kt`) — `onNodeWithText` is case-sensitive by default, so the button was never found; fixed with `ignoreCase = true`. (3) `TaskLibraryScreenUiTest`'s "ADD 10 TASKS" button lives inside a `LazyColumn` below 10 task rows — composed (found by `waitUntil`) but not actually on-screen, so `performClick()` silently did nothing; fixed with `.performScrollTo()`, confirmed via a `printToLog` tree dump before landing on the real cause.
+- New/changed test classes run alone first (`RewardEditScreenUiTest`, `TaskEditScreenUiTest`, `SettingsScreenUiTest`, `CleanUpScreenUiTest`, `TaskLibraryScreenUiTest`, `SharedDialogsCancelUiTest`), then the full instrumented suite (102/103 pass on the first full run; the one failure — a pre-existing, untouched test — and a second pre-existing test that failed on a separate full run were each re-run alone and passed cleanly, confirming emulator flakiness under long continuous runs rather than a regression).
+- No `AppModule`/`TestAppModule`/`@Inject` changes; `assembleDebugAndroidTest` was still run repeatedly during development to catch compile errors early.
+- `TESTING.md`: new rows for `CleanUpScreenUiTest`, `TaskLibraryScreenUiTest`, `SharedDialogsCancelUiTest`; existing `RewardEditScreenUiTest`/`TaskEditScreenUiTest`/`SettingsScreenUiTest` rows updated with their new cancel-path cases; a new "Covered" entry describing the shared helper and the `isDialog()`/`Espresso.pressBack()` techniques; instrumented total (~90 → ~105) and UI-tier pyramid count (~55 → ~70) updated to match.
 - `CLEANUP_BACKLOG.md`: this item removed now that it's actioned.
