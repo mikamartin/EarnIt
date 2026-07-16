@@ -24,7 +24,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ```
                  [ Manual — 4 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
-            [ UI — ~50 tests ]          ComposeTestRule + Hilt, real DataStore
+            [ UI — ~55 tests ]          ComposeTestRule + Hilt, real DataStore
        [ Integration — ~30 tests ]      Real in-memory Room, no mocks
      [ Unit — 150+ tests ]              JVM, MockK DAOs, fast
 ```
@@ -73,7 +73,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ---
 
-## Instrumented Tests — `app/src/androidTest/` (~85 tests, requires device/emulator)
+## Instrumented Tests — `app/src/androidTest/` (~90 tests, requires device/emulator)
 
 **State isolation:** Every `@HiltAndroidTest` class using `createAndroidComposeRule<MainActivity>()` calls `resetAppState()` (in `TestStateReset.kt`) as the first line of its `@Before`, immediately after `hiltRule.inject()` and before any test-specific overrides (e.g. `settingsRepository.updateMaxRewardCount(...)`). This gives each test a clean database and default settings to start from, independent of what ran before it in the same instrumentation process. `RoomIntegrationBase`-based repository tests don't need this — each already gets its own fresh in-memory database per test.
 
@@ -88,6 +88,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `NudgeDataTest` (6) | Repository | Real-Room coverage for the SQL `NudgeWorkerTest` only mocks: `getLastLogTimestamp` null with no logs / returns max among out-of-order logs; `getActiveRewardCount` zero with no rewards / counts only non-archived; `debugBackdateLastLog` caps every log newer than the cutoff (not just the single most-recent row) so the global max actually drops below it even with several near-simultaneous recent logs, leaves genuinely old logs untouched, safe no-op with no logs |
 | `WidgetFlashTest` (7) | Utility | `WidgetFlash` — set/isActive round-trip; false for different reward ID; false after expiry; false when nothing set; `remainingMs` positive when active, zero after expiry, zero for wrong reward |
 | `UiHappyPathTest` (1) | UI | Full Compose UI flow: create task → create reward → link from Reward Detail → log from Prizes home card → open detail → claim → verify claimed reward appears in History |
+| `ProcessDeathRestoreTest` (1) | UI | Approximates a cold start with no saved-instance-state Bundle (closes the managed `ActivityScenario`, launches a brand-new one): a logged task/reward's data survives the relaunch (Room), while having navigated to the Tasks tab beforehand does not (nav back stack resets to the default start screen) |
 | `SettingsUiTest` (2) | UI | Colour scheme selection persists after `activityRule.scenario.recreate()`; Notes required toggle disables LOG until a note is entered, enables it after |
 | `EmptyStateUiTest` (1) | UI | Fresh-install empty-state copy on all three tabs: Prizes ("No rewards yet"), Tasks ("No tasks yet"), History — both Completed Tasks and Claimed Rewards sub-tabs |
 | `TaskLibraryImportUiTest` (1) | UI | Task Library: expand "Healthy Living" template, add all 10 tasks, verify they appear in the Tasks list |
@@ -155,6 +156,9 @@ Added after a manual test caught the widget showing no action button at all foll
 **Import file validation** (`JsonImportValidationTest`, `ImportViewModelErrorTest`, `ExportImportTest`, `ImportErrorUiTest`)
 Wrong-schema JSON (e.g. a random JSON file) throws `ImportWrongSchemaException` before touching the database — critical in Replace mode where silent failure would wipe user data. `ExportImportTest.importReplace_withWrongSchema_doesNotWipeExistingData` proves at integration level that existing DB rows survive a wrong-schema replace attempt (not just that the exception fires). Malformed JSON (invalid syntax even with an EarnIt key present) throws `ImportInvalidJsonException`. Each exception type maps to a specific user-facing string in the ViewModel and is verified against `importResult` StateFlow as well as the `onComplete` callback. UI tests verify the error messages actually appear on the Data & Backup screen.
 
+**Cold start with no saved-instance-state Bundle** (`ProcessDeathRestoreTest`)
+`SettingsUiTest` and others use `activityRule.scenario.recreate()` to cover config changes — that preserves the saved-instance-state Bundle, so it only proves `rememberSaveable` fields round-trip correctly, not that anything relies on Room/DataStore instead of Bundle survival. `ProcessDeathRestoreTest` closes the managed `ActivityScenario` and launches a brand-new one with no Bundle at all: a task logged against a reward before the "kill" is still visible after, while having navigated to the Tasks tab beforehand is not (the app reopens on its default start screen). This is an approximation, not a literal OS-level `am force-stop`: this repo runs instrumented tests with no Test Orchestrator configured, so the test shares a process with the app under test, and a real force-stop would kill the test itself mid-method. The approximation still resets the ViewModelStore and nav back stack (no Bundle to restore from); what it doesn't exercise is an actual kill of Application/Hilt-singleton-scoped state, since the process itself is never terminated — this app has no such state that matters functionally today.
+
 ### Not Covered by Automated Tests
 
 **Logging against an archived reward**
@@ -162,9 +166,6 @@ Once a reward is archived, its detail screen is unreachable through the normal U
 
 **Rapid double-tap logging**
 Tapping LOG twice in quick succession could theoretically insert duplicate log entries before ViewModel state updates. In practice, `viewModelScope.launch` serialises DAO writes through a single coroutine dispatcher and the LOG button's enabled state re-evaluates after each Room Flow emission. Not tested; the risk is low in a local single-user app and has not surfaced in manual testing.
-
-**True process death and restore**
-`SettingsUiTest` uses `activityRule.scenario.recreate()` to cover config changes (DataStore and ViewModel re-read). True process death — OS kills the process, user returns from Recents — is not tested; this would require UiAutomator shell commands to force-stop mid-session. `rememberSaveable` guards search query, note text fields, all `RewardEditScreen` form fields (including its `taskState`/`taskStateReady` checkbox state), and the `awaitingNewTask` flag (so the create-task-from-reward flow survives rotation mid-flow). `TaskEditScreen`'s equivalent dialog checkbox state (`rewardLinkState`) still uses `remember` and resets on config change; acknowledged in `DEV_PLAYBOOK.md`.
 
 ---
 

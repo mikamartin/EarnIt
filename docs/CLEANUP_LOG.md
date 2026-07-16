@@ -8,54 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 42 — `refactor/split-home-screen` branch
-
-Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s `HomeScreen.kt` item (~320 lines in one composable) — same pattern as the `RewardDetailScreen`/`TaskEditScreen`/`SettingsScreen`/`RewardEditScreen` splits: pull screen-only pieces into `private` composables in the same file, no new files/folders. One deliberate behavior change was made alongside the split (confirmed with the user, not silently bundled): the bottom slide-up "max reward banner" (`showMaxBanner`, its `LaunchedEffect`, and its UI) was removed entirely, since it duplicated the FAB tooltip's message in a second on-screen location. The FAB tooltip itself was kept, with `Strings.MAX_REWARD_BANNER` renamed to `MAX_REWARD_TOOLTIP` to match what it now actually is.
-
-#### Duplication ✅ (reviewed, nothing new)
-- No styling/gradient patterns repeated inline beyond what already existed pre-split; the extracted helpers carry code forward verbatim.
-
-#### Decoupling ✅ (reviewed, nothing to change)
-- `HomeDialogs` takes the full `EarnItViewModel` — checked whether this could be narrowed to specific lambdas, but `LogTaskDialog`/`ClaimDialog` (`SharedDialogs.kt`) already require the full `viewModel` in their own public signature and are shared with `RewardDetailScreen`, so narrowing would mean changing a shared dialog's API, out of scope for a structural-split branch.
-- `homeRewardListItems` (a `LazyListScope` extension, same shape as Pass 41's `rewardEditTasksSection`) takes `isDragging`/`draggingIndex`/`draggingRewardId` as individual value+callback pairs rather than bundled state. Confirmed via grep that `draggingIndex`/`draggingRewardId` are read/written only inside this function, while `isDragging` is also read by the orchestrator's list-sync `LaunchedEffect` — so at least `isDragging` must stay hoisted. `LazyListScope`'s content lambda isn't itself a composable context, so `remember` can't live inside `homeRewardListItems` directly; hoisting is required, not avoidable. Bundling the drag-index/id pair into one hoisted value would trim the 15-parameter signature but changes state shape, not just relocates it — left as a future opportunity if this file is touched again, not actioned here.
-
-#### Complexity & Pattern Health ✅
-- `HomeScreen(...)` cut from ~320 lines to a ~131-line orchestrator (state + 3 `LaunchedEffect`s + dialogs call + `Column { HomeHeader, LazyColumn, HomeAddRewardFab }`) plus 4 private helpers: `HomeHeader`, `HomeDialogs`, `BoxScope.HomeAddRewardFab`, `LazyListScope.homeRewardListItems`.
-- Confirmed via grep that each of the 4 new helpers has exactly one call site — reviewed against "is this extraction earning its keep": yes, consistent with the single-caller pattern already accepted in Pass 39/41.
-
-#### Dead Code & Hygiene ✅ (1 fix)
-- **Fixed:** a stale comment in `RewardLimitUiTest.kt` still said "MAX_REWARD_BANNER text becomes visible" after the `Strings` constant was renamed to `MAX_REWARD_TOOLTIP`.
-- No unused imports (ktlint clean on every check, re-verified after all edits).
-- Confirmed via diff that no new `Color(0xFF...)` literals were introduced.
-- `git status` clean apart from the intended files: `HomeScreen.kt`, `RewardLimitUiTest.kt`, `SettingsScreenUiTest.kt`, `Strings.kt`, `EARNIT_SPEC.md`, `CLEANUP_BACKLOG.md`, `CLEANUP_LOG.md`.
-
-#### Naming Consistency ✅
-- New composables follow the existing `Home*`/`*Dialogs` naming already established (`HomeDialogs` ↔ `RewardEditDialogs`/`TaskEditDialogs`).
-
-#### Hardcoded Values ✅
-- None introduced; existing values (16.dp, 56.dp, etc.) carried over unchanged.
-
-#### Accessibility ✅ (reviewed, nothing new)
-- Confirmed via `git show HEAD` that the mascot `Image`'s `contentDescription = null` predates this branch — not introduced or touched by the split.
-- The FAB's `Icon` keeps its existing `contentDescription = Strings.NEW_REWARD_DESC`, unchanged.
-
-#### Deprecated APIs ✅
-- None touched.
-
-#### Spec Review ✅ (1 fix)
-- **Fixed:** `EARNIT_SPEC.md` §6 Settings table's Max Reward Count row still described "A separate 3s banner also auto-appears the moment a new reward reaches the cap" (added in Pass 39) — that banner was removed as part of this split, so the row was trimmed to describe only the tooltip behavior that remains.
-- Checked §10 Screen Map's "Prizes (Home)" row against current behavior (progress cards, mascot, quote of the day) — still accurate, no further drift.
-
-#### Tests ✅ (1 fix, 1 new gap logged, 1 unrelated gap found and logged)
-- Coverage reviewed for the area before finalizing: FAB→RewardEdit navigation under the cap (`SaveNavigationUiTest`), FAB tooltip at the cap (`RewardLimitUiTest`, `SettingsScreenUiTest`), empty state (`EmptyStateUiTest`), show-quote toggle (`SettingsScreenUiTest`), card tap/log/claim dialogs (`UiHappyPathTest`), and reorder persistence (`SortOrderTest`, unit) are all still exercised and unaffected by the split.
-- **Gap found and logged, not fixed here:** the drag-to-reorder gesture itself (relocated into `homeRewardListItems`) has no automated coverage at any level and isn't mentioned in `TESTING.md`'s Tier 4 or "Not Covered" sections — pre-existing, not introduced by this split. Logged as a new `CLEANUP_BACKLOG.md` Test Coverage item rather than left unmentioned.
-- No test ever exercised the removed bottom banner's own behavior (its 3s auto-show/hide timing), so nothing needed to be deleted for its removal.
-- `TESTING.md` required no count updates — no tests added/removed by this pass, and its existing `RewardLimitUiTest`/`SettingsScreenUiTest` rows already described only the tooltip.
-- **Found, unrelated to this branch's scope:** `RewardDetailScreen.kt` (not touched by this split) renders its current-points number in dark, muted `onSurfaceVariant` text below ~12% progress instead of the white it uses once the fill takes over, making low-progress rewards look inconsistent with further-along ones — noticed during the user's manual pass on unrelated test data. Logged as a new `CLEANUP_BACKLOG.md` Visual Polish item since it's pre-existing and outside this branch.
-- `./gradlew ktlintCheck`, `assembleDebug`, `test`, and `connectedDebugAndroidTest` (full suite, 84/84) all pass, run sequentially per `CLAUDE.md`.
-
----
-
 ### Pass 43 — `fix/reward-progress-bar-contrast` branch
 
 Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s Visual Polish item, flagged during Pass 42: `RewardDetailScreen.kt`'s progress bar showed the current-points number in dark, muted text below ~12% progress instead of the white it used above that threshold, making low-progress rewards look inconsistent with further-along ones.
@@ -135,3 +87,44 @@ Fixes [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s Correctness item: adding two ne
 - `TESTING.md` updated: the `RewardEditScreenUiTest` row's description of the sequential-create scenario now describes the fixed behavior instead of the pinned bug; the "True process death and restore" Not Covered entry updated to reflect that `RewardEditScreen`'s `taskState`/`taskStateReady` now survive via `rememberSaveable` (only `TaskEditScreen`'s `rewardLinkState` remains on plain `remember`).
 - `DEV_PLAYBOOK.md` Known Limitations: the `taskState` half of the rotation-loss bullet removed now that it's fixed; `rewardLinkState` (TaskEditScreen) stays, since fixing it was explicitly kept out of scope for this branch (confirmed with the user).
 - `CLEANUP_BACKLOG.md`: the Correctness section (this item) removed now that it's actioned.
+
+---
+
+### Pass 45 — `test/process-death-restore` branch
+
+Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "True process death and restore" item: no automated test proved that Room-backed data survives a cold start, as opposed to `rememberSaveable` Bundle state (only covered via `activityRule.scenario.recreate()`, which preserves the Bundle). Research during planning found the item's original premise — a real `am force-stop` via a new `uiautomator` dependency — unusable here: this repo runs instrumented tests with no Test Orchestrator configured, so the test and the app under test share one OS process, and force-stopping the package would kill the test itself mid-method. Confirmed with the user: build an approximation instead (close the managed `ActivityScenario`, launch a brand-new one with no Bundle) rather than new script/CI tooling to drive a real two-phase kill.
+
+#### Duplication ✅ (checked, none found)
+- New test's setup (create task, create reward, link, log) mirrors `HappyPathTest`'s repository-level seeding verbatim rather than reinventing it.
+
+#### Decoupling ✅ (n/a)
+- Test-only file; no production code touched.
+
+#### Complexity & Pattern Health ✅ (checked)
+- `ProcessDeathRestoreTest.kt` is ~55 lines, one test method, no nested lambdas beyond the existing `runBlocking` seeding pattern.
+
+#### Dead Code & Hygiene ✅ (checked)
+- ktlint clean.
+- `git status` clean apart from the intended files: `ProcessDeathRestoreTest.kt`, `TESTING.md`, `CLEANUP_BACKLOG.md`, `CLEANUP_LOG.md`.
+
+#### Naming Consistency ✅
+- `ProcessDeathRestoreTest` follows the existing `*Test.kt` convention and sits flat in `app/src/androidTest/java/com/earnit/app`, matching every other UI test file's placement.
+
+#### Hardcoded Values ✅ (n/a)
+- Test literals ("Morning Run", "Coffee Treat") match `HappyPathTest`'s existing fixture values rather than introducing new ones.
+
+#### Accessibility ✅ (n/a)
+- No UI code touched.
+
+#### Deprecated APIs ✅
+- None used.
+
+#### Spec Review ✅ (checked, no changes needed)
+- Grepped `EARNIT_SPEC.md` for process-death/cold-start terms — the one hit (widget flash timer surviving process death) is unrelated to this test. No drift to reconcile.
+
+#### Tests ✅ (1 new file, docs updated)
+- New instrumented test run alone on a connected emulator first to confirm the close-and-relaunch technique actually works before trusting it: pass. Full instrumented suite re-run: 88/88 pass, no regressions.
+- No `AppModule`/`TestAppModule`/`@Inject` changes, but `./gradlew assembleDebugAndroidTest` was run anyway given the new file — confirms `ActivityScenario` resolves without adding the `uiautomator` dependency the backlog item originally assumed was needed (unused once the approach changed from a real `am force-stop` to the in-process approximation).
+- `./gradlew ktlintCheck`, `test`, `assembleDebug`, and `connectedDebugAndroidTest` all pass, run sequentially per `CLAUDE.md`.
+- `TESTING.md`: new `ProcessDeathRestoreTest` row added to the Instrumented Tests table; the "True process death and restore" entry moved from "Not Covered" to a new "Covered" entry describing exactly what the approximation does and doesn't prove; instrumented total (~85 → ~90) and UI-tier pyramid count (~50 → ~55) nudged to match the actual current count (88), which had drifted past its prior rounding bucket.
+- `CLEANUP_BACKLOG.md`: this item removed now that it's actioned.
