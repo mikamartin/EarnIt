@@ -1,6 +1,7 @@
 package com.earnit.app
 
 import com.earnit.app.data.CompletionLogEntity
+import com.earnit.app.data.RewardEntity
 import com.earnit.app.data.TaskEntity
 import io.mockk.coEvery
 import kotlinx.coroutines.runBlocking
@@ -26,6 +27,7 @@ class LogAttributionTest : RepositoryTestBase() {
                     points = 0,
                 )
             val captured = mutableListOf<CompletionLogEntity>()
+            coEvery { rewardDao.getReward(any()) } returns RewardEntity(id = 1, name = "Reward", cost = 5)
             coEvery { logDao.insertLog(capture(captured)) } returns 1L
 
             repository.logCompletion(task, rewardId = 10L, detail = "")
@@ -39,6 +41,7 @@ class LogAttributionTest : RepositoryTestBase() {
         runBlocking {
             val task = TaskEntity(id = 1, name = "Run", useAutoPoints = false, points = 7)
             val captured = mutableListOf<CompletionLogEntity>()
+            coEvery { rewardDao.getReward(any()) } returns RewardEntity(id = 1, name = "Reward", cost = 5)
             coEvery { logDao.insertLog(capture(captured)) } returns 1L
 
             repository.logCompletion(task, rewardId = 10L, detail = "")
@@ -53,6 +56,7 @@ class LogAttributionTest : RepositoryTestBase() {
         runBlocking {
             val task = TaskEntity(id = 5, name = "Yoga", useAutoPoints = false, points = 3)
             val captured = mutableListOf<CompletionLogEntity>()
+            coEvery { rewardDao.getReward(any()) } returns RewardEntity(id = 1, name = "Reward", cost = 5)
             coEvery { logDao.insertLog(capture(captured)) } returns 1L
 
             repository.logCompletion(task, rewardId = 42L, detail = "morning flow")
@@ -65,6 +69,7 @@ class LogAttributionTest : RepositoryTestBase() {
         runBlocking {
             val task = TaskEntity(id = 5, name = "Yoga", useAutoPoints = false, points = 3)
             val captured = mutableListOf<CompletionLogEntity>()
+            coEvery { rewardDao.getReward(any()) } returns RewardEntity(id = 1, name = "Reward", cost = 5)
             coEvery { logDao.insertLog(capture(captured)) } returns 1L
 
             repository.logCompletion(task, rewardId = 42L, detail = "morning flow")
@@ -78,6 +83,7 @@ class LogAttributionTest : RepositoryTestBase() {
         runBlocking {
             val task = TaskEntity(id = 1, name = "Run", useAutoPoints = false, points = 5)
             val captured = mutableListOf<CompletionLogEntity>()
+            coEvery { rewardDao.getReward(any()) } returns RewardEntity(id = 1, name = "Reward", cost = 5)
             coEvery { logDao.insertLog(capture(captured)) } returns 1L
 
             repository.logCompletion(task, rewardId = 1L, detail = "")

@@ -8,49 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 44 — `fix/reward-edit-task-state-loss` branch
-
-Fixes [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s Correctness item: adding two new tasks in a row via "Create your own" to an unsaved reward silently dropped the first. Root cause: `RewardEditScreen.kt`'s `taskState`/`taskStateReady` were plain `remember`, reset every time Navigation Compose disposed the screen's composition for a `TaskEditScreen` round-trip; the startup effect then re-derived inclusion from the still-unsaved (task-less) reward. Fix: a custom `Saver` so `taskState` survives via `rememberSaveable`, the same mechanism already used by the screen's other form fields.
-
-#### Duplication ✅ (checked, none found)
-- Grepped for existing `Saver(`/`listSaver`/`mapSaver` usage across `app/src/main/java` — none exists yet, so `TaskStateMapSaver` is the first custom `Saver` in the codebase rather than diverging from or duplicating an established one.
-
-#### Decoupling ✅ (n/a)
-- Pure UI-state persistence change inside a single composable; no business logic touched.
-
-#### Complexity & Pattern Health ✅ (reviewed remember vs rememberSaveable across the file)
-- Reviewed every other `remember`/`rememberSaveable` in `RewardEditScreen.kt` while fixing this one: `showAddTaskDialog`/`showIconPicker`/`showDeleteDialog` are transient dialog-visibility flags, correctly reset on recomposition; `pendingRewardSaveNav` is a short-lived flag that never spans a `TaskEdit` round-trip, so plain `remember` is correct there too. Only `taskState`/`taskStateReady` needed the fix.
-- `TaskStateMapSaver`'s `step 4` restore loop pairs directly with the 4-element tuple built two lines above in `save` — left inline rather than a named constant since the two are adjacent in one small function and self-evidently paired.
-
-#### Dead Code & Hygiene ✅
-- ktlint clean.
-- `git status` clean apart from the intended files: `RewardEditScreen.kt`, `RewardEditScreenUiTest.kt`, `CLEANUP_BACKLOG.md`, `DEV_PLAYBOOK.md`, `TESTING.md`.
-
-#### Naming Consistency ✅
-- `TaskStateMapSaver` follows Kotlin's PascalCase convention for a `val` holding a reusable, type-like instance; no existing `Saver` naming precedent to match since this is the first one in the codebase.
-
-#### Hardcoded Values ✅ (n/a)
-- None introduced.
-
-#### Accessibility ✅ (n/a)
-- No UI elements touched.
-
-#### Deprecated APIs ✅
-- None touched.
-
-#### Spec Review ✅ (checked, no changes needed)
-- Grepped `EARNIT_SPEC.md` for `taskState`/related terms — this is an internal persistence detail, not spec-level behavior, so no drift to reconcile. Checked the Deferred Ideas section for anything related — none.
-
-#### Tests ✅ (1 test flipped, no new gap)
-- `RewardEditScreenUiTest.sequentialCreateNewTasks_onUnsavedReward_onlyLastOneStaysIncluded`, which pinned the bug as a red-test-in-waiting (added in Pass 41), was flipped to `...bothStayIncluded` and now asserts both tasks survive the round-trips — this is the regression test the fix needed, already in place rather than a new gap to close.
-- `RewardEditScreenUiTest` re-run alone on a connected emulator: 10/10 pass. Full instrumented suite re-run: 84/84 pass, no regressions.
-- `./gradlew ktlintCheck`, `test`, and `assembleDebug` all pass, run sequentially per `CLAUDE.md`. No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required on its own — covered anyway by the full `connectedDebugAndroidTest` run.
-- `TESTING.md` updated: the `RewardEditScreenUiTest` row's description of the sequential-create scenario now describes the fixed behavior instead of the pinned bug; the "True process death and restore" Not Covered entry updated to reflect that `RewardEditScreen`'s `taskState`/`taskStateReady` now survive via `rememberSaveable` (only `TaskEditScreen`'s `rewardLinkState` remains on plain `remember`).
-- `DEV_PLAYBOOK.md` Known Limitations: the `taskState` half of the rotation-loss bullet removed now that it's fixed; `rewardLinkState` (TaskEditScreen) stays, since fixing it was explicitly kept out of scope for this branch (confirmed with the user).
-- `CLEANUP_BACKLOG.md`: the Correctness section (this item) removed now that it's actioned.
-
----
-
 ### Pass 45 — `test/process-death-restore` branch
 
 Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "True process death and restore" item: no automated test proved that Room-backed data survives a cold start, as opposed to `rememberSaveable` Bundle state (only covered via `activityRule.scenario.recreate()`, which preserves the Bundle). Research during planning found the item's original premise — a real `am force-stop` via a new `uiautomator` dependency — unusable here: this repo runs instrumented tests with no Test Orchestrator configured, so the test and the app under test share one OS process, and force-stopping the package would kill the test itself mid-method. Confirmed with the user: build an approximation instead (close the managed `ActivityScenario`, launch a brand-new one with no Bundle) rather than new script/CI tooling to drive a real two-phase kill.
@@ -132,4 +89,46 @@ Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "Cancel/dismiss buttons untes
 - New/changed test classes run alone first (`RewardEditScreenUiTest`, `TaskEditScreenUiTest`, `SettingsScreenUiTest`, `CleanUpScreenUiTest`, `TaskLibraryScreenUiTest`, `SharedDialogsCancelUiTest`), then the full instrumented suite (102/103 pass on the first full run; the one failure — a pre-existing, untouched test — and a second pre-existing test that failed on a separate full run were each re-run alone and passed cleanly, confirming emulator flakiness under long continuous runs rather than a regression).
 - No `AppModule`/`TestAppModule`/`@Inject` changes; `assembleDebugAndroidTest` was still run repeatedly during development to catch compile errors early.
 - `TESTING.md`: new rows for `CleanUpScreenUiTest`, `TaskLibraryScreenUiTest`, `SharedDialogsCancelUiTest`; existing `RewardEditScreenUiTest`/`TaskEditScreenUiTest`/`SettingsScreenUiTest` rows updated with their new cancel-path cases; a new "Covered" entry describing the shared helper and the `isDialog()`/`Espresso.pressBack()` techniques; instrumented total (~90 → ~105) and UI-tier pyramid count (~55 → ~70) updated to match.
+- `CLEANUP_BACKLOG.md`: this item removed now that it's actioned.
+
+---
+
+### Pass 47 — `fix/archived-reward-log-guard` branch
+
+Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "Logging against an archived reward has no repository guard, and no test" item. `EarnItRepository.logCompletion` inserted unconditionally with no check on the reward's archived state. Research during planning confirmed the realistic trigger: a stale UI surface (e.g. a reward claimed from one screen while its LOG button is still visible elsewhere) calling `logCompletion` after the reward is archived, producing an orphaned log with no `historyEntryId`. Confirmed with the user to add a repository-level guard (not just a documentation test): `logCompletion` now fetches the reward and returns early if it's missing or archived, silently skipping the insert rather than surfacing an error — matches the existing precedent in `claimReward` (`EarnItRepository.kt:154`, no-ops when the reward is missing) and needs no signature change since neither call site (`EarnItViewModel.logTask`, `WidgetTaskLogActivity`) inspects a result today.
+
+#### Duplication ✅ (checked, none found)
+- The new guard reuses `rewardDao.getReward`, already called identically in `claimReward` — no new DAO query added.
+
+#### Decoupling ✅ (n/a)
+- Change is contained entirely within `EarnItRepository`; no ViewModel or UI changes.
+
+#### Complexity & Pattern Health ✅ (checked)
+- Two-line early-return guard, no new branching structure or abstraction.
+
+#### Dead Code & Hygiene ✅
+- ktlint clean.
+- `git status` clean apart from the intended files: `EarnItRepository.kt`, `LogAttributionTest.kt`, `LogAgainstArchivedRewardTest.kt`, `TESTING.md`, `CLEANUP_BACKLOG.md`, `CLEANUP_LOG.md`.
+
+#### Naming Consistency ✅ (n/a)
+- No new files besides the test, which follows the existing `*Test.kt` convention and sits flat in `app/src/androidTest/java/com/earnit/app`, matching every other repository-tier test's placement.
+
+#### Hardcoded Values ✅ (n/a)
+- None introduced; test literals ("Morning Run", "Coffee Treat") match `HappyPathTest`'s existing fixture values.
+
+#### Accessibility ✅ (n/a)
+- No UI touched.
+
+#### Deprecated APIs ✅
+- None touched.
+
+#### Spec Review ✅ (checked, no changes needed)
+- Grepped `EARNIT_SPEC.md` for `logCompletion`/archived-reward terms — this is an internal robustness guard, not a documented behavior contract, so no drift to reconcile.
+
+#### Tests ✅ (1 new file, 1 existing file updated for a mock-strictness ripple, docs updated)
+- New `LogAgainstArchivedRewardTest.logCompletion_onArchivedReward_isSkipped` run alone on a connected API 34 emulator first: pass. Full instrumented suite re-run on the same emulator: 104/104 pass. One `RewardLimitUiTest` failure (unrelated to this change) plus a process crash occurred on the first full run; re-run alone it passed cleanly, and a second full run completed 104/104 clean — confirming emulator flakiness under a long continuous run, not a regression, consistent with the pattern noted in Pass 46.
+- Fixing the repository guard broke 5 pre-existing `LogAttributionTest` unit tests: `RepositoryTestBase`'s `rewardDao` mock is strict (not relaxed), and those tests called `logCompletion` without stubbing the new `rewardDao.getReward` call, so MockK threw. Fixed by adding `coEvery { rewardDao.getReward(any()) } returns RewardEntity(...)` to each, following the same explicit-per-test stubbing convention already used in `RepositoryBehaviourTest`/`ClaimRewardStartOverTest` rather than changing the shared base.
+- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required on its own — covered anyway by the full `connectedDebugAndroidTest` run.
+- `./gradlew ktlintCheck`, `test`, and `assembleDebug` all pass, run sequentially per `CLAUDE.md`.
+- `TESTING.md`: new `LogAgainstArchivedRewardTest` row added to the Instrumented Tests table (Repository layer); the "Logging against an archived reward" entry moved from "Not Covered" to a new "Covered" entry under Edge Cases describing the guard and why it's a silent skip rather than a surfaced error.
 - `CLEANUP_BACKLOG.md`: this item removed now that it's actioned.
