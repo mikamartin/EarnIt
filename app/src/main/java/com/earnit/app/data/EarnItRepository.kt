@@ -132,6 +132,8 @@ class EarnItRepository
             rewardId: Long,
             detail: String,
         ) {
+            val reward = rewardDao.getReward(rewardId) ?: return
+            if (reward.isArchived) return
             val points = task.effectivePoints()
             logDao.insertLog(
                 CompletionLogEntity(
