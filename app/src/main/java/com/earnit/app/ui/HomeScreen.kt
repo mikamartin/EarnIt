@@ -394,7 +394,7 @@ fun HomeScreen(
                     listState = listState,
                     isDragging = isDragging,
                     onDraggingChange = { isDragging = it },
-                    draggingIndex = draggingIndex,
+                    draggingIndex = { draggingIndex },
                     onDraggingIndexChange = { draggingIndex = it },
                     draggingRewardId = draggingRewardId,
                     onDraggingRewardIdChange = { draggingRewardId = it },
@@ -435,7 +435,7 @@ private fun LazyListScope.homeRewardListItems(
     listState: LazyListState,
     isDragging: Boolean,
     onDraggingChange: (Boolean) -> Unit,
-    draggingIndex: Int,
+    draggingIndex: () -> Int,
     onDraggingIndexChange: (Int) -> Unit,
     draggingRewardId: Long?,
     onDraggingRewardIdChange: (Long?) -> Unit,
@@ -481,7 +481,7 @@ private fun LazyListScope.homeRewardListItems(
                         onDrag = { change, dragAmount ->
                             change.consume()
                             accumulatedDragY += dragAmount.y
-                            val currentIdx = draggingIndex
+                            val currentIdx = draggingIndex()
                             if (currentIdx >= 0) {
                                 val visibleItems = listState.layoutInfo.visibleItemsInfo
                                 val draggedInfo = visibleItems.find { it.index == currentIdx }
@@ -489,17 +489,19 @@ private fun LazyListScope.homeRewardListItems(
                                     val center =
                                         draggedInfo.offset + draggedInfo.size / 2 + accumulatedDragY
                                     val target =
-                                        visibleItems.firstOrNull { item ->
-                                            item.index != currentIdx &&
-                                                center > item.offset &&
-                                                center < item.offset + item.size
-                                        }
-                                    if (target != null) {
-                                        reorderedList.add(
-                                            target.index,
-                                            reorderedList.removeAt(currentIdx),
+                                        DragReorder.targetIndex(
+                                            draggingIndex = currentIdx,
+                                            dragCenter = center,
+                                            visibleItems =
+                                                visibleItems.map {
+                                                    DragReorder.ItemBounds(it.index, it.offset, it.size)
+                                                },
                                         )
-                                        onDraggingIndexChange(target.index)
+                                    if (target != null) {
+                                        val newOrder = DragReorder.reordered(reorderedList, currentIdx, target)
+                                        reorderedList.clear()
+                                        reorderedList.addAll(newOrder)
+                                        onDraggingIndexChange(target)
                                         accumulatedDragY = 0f
                                     }
                                 }
