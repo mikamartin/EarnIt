@@ -70,6 +70,14 @@ interface CompletionLogDao {
     @Query("DELETE FROM completion_logs WHERE historyEntryId IS NULL")
     suspend fun deleteAllActiveLogs()
 
+    @Query(
+        "SELECT COUNT(*) FROM completion_logs WHERE taskId = :taskId AND rewardId = :rewardId AND historyEntryId IS NULL",
+    )
+    suspend fun getActiveLogCount(
+        taskId: Long,
+        rewardId: Long,
+    ): Int
+
     @Query("DELETE FROM completion_logs")
     suspend fun deleteAllLogs()
 

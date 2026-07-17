@@ -8,47 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 45 — `test/process-death-restore` branch
-
-Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "True process death and restore" item: no automated test proved that Room-backed data survives a cold start, as opposed to `rememberSaveable` Bundle state (only covered via `activityRule.scenario.recreate()`, which preserves the Bundle). Research during planning found the item's original premise — a real `am force-stop` via a new `uiautomator` dependency — unusable here: this repo runs instrumented tests with no Test Orchestrator configured, so the test and the app under test share one OS process, and force-stopping the package would kill the test itself mid-method. Confirmed with the user: build an approximation instead (close the managed `ActivityScenario`, launch a brand-new one with no Bundle) rather than new script/CI tooling to drive a real two-phase kill.
-
-#### Duplication ✅ (checked, none found)
-- New test's setup (create task, create reward, link, log) mirrors `HappyPathTest`'s repository-level seeding verbatim rather than reinventing it.
-
-#### Decoupling ✅ (n/a)
-- Test-only file; no production code touched.
-
-#### Complexity & Pattern Health ✅ (checked)
-- `ProcessDeathRestoreTest.kt` is ~55 lines, one test method, no nested lambdas beyond the existing `runBlocking` seeding pattern.
-
-#### Dead Code & Hygiene ✅ (checked)
-- ktlint clean.
-- `git status` clean apart from the intended files: `ProcessDeathRestoreTest.kt`, `TESTING.md`, `CLEANUP_BACKLOG.md`, `CLEANUP_LOG.md`.
-
-#### Naming Consistency ✅
-- `ProcessDeathRestoreTest` follows the existing `*Test.kt` convention and sits flat in `app/src/androidTest/java/com/earnit/app`, matching every other UI test file's placement.
-
-#### Hardcoded Values ✅ (n/a)
-- Test literals ("Morning Run", "Coffee Treat") match `HappyPathTest`'s existing fixture values rather than introducing new ones.
-
-#### Accessibility ✅ (n/a)
-- No UI code touched.
-
-#### Deprecated APIs ✅
-- None used.
-
-#### Spec Review ✅ (checked, no changes needed)
-- Grepped `EARNIT_SPEC.md` for process-death/cold-start terms — the one hit (widget flash timer surviving process death) is unrelated to this test. No drift to reconcile.
-
-#### Tests ✅ (1 new file, docs updated)
-- New instrumented test run alone on a connected emulator first to confirm the close-and-relaunch technique actually works before trusting it: pass. Full instrumented suite re-run: 88/88 pass, no regressions.
-- No `AppModule`/`TestAppModule`/`@Inject` changes, but `./gradlew assembleDebugAndroidTest` was run anyway given the new file — confirms `ActivityScenario` resolves without adding the `uiautomator` dependency the backlog item originally assumed was needed (unused once the approach changed from a real `am force-stop` to the in-process approximation).
-- `./gradlew ktlintCheck`, `test`, `assembleDebug`, and `connectedDebugAndroidTest` all pass, run sequentially per `CLAUDE.md`.
-- `TESTING.md`: new `ProcessDeathRestoreTest` row added to the Instrumented Tests table; the "True process death and restore" entry moved from "Not Covered" to a new "Covered" entry describing exactly what the approximation does and doesn't prove; instrumented total (~85 → ~90) and UI-tier pyramid count (~50 → ~55) nudged to match the actual current count (88), which had drifted past its prior rounding bucket.
-- `CLEANUP_BACKLOG.md`: this item removed now that it's actioned.
-
----
-
 ### Pass 46 — `test/cancel-dismiss-coverage` branch
 
 Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "Cancel/dismiss buttons untested across the entire app" item: 15 distinct Cancel/dialog-dismiss surfaces across 8 files had zero dedicated cancel-path coverage — some dialogs were tested on their confirm path only; `CleanUpScreen` and `TaskLibraryScreen` had no test file at all. Research during planning found a real inventory of every surface (confirmed via grep, not assumption) before writing anything.
@@ -131,4 +90,46 @@ Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "Logging against an archived 
 - No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required on its own — covered anyway by the full `connectedDebugAndroidTest` run.
 - `./gradlew ktlintCheck`, `test`, and `assembleDebug` all pass, run sequentially per `CLAUDE.md`.
 - `TESTING.md`: new `LogAgainstArchivedRewardTest` row added to the Instrumented Tests table (Repository layer); the "Logging against an archived reward" entry moved from "Not Covered" to a new "Covered" entry under Edge Cases describing the guard and why it's a silent skip rather than a surfaced error.
+- `CLEANUP_BACKLOG.md`: this item removed now that it's actioned.
+
+---
+
+### Pass 48 — `test/double-tap-logging` branch
+
+Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "Rapid double-tap logging" item. The backlog entry's premise was that `TESTING.md`'s existing framing (DAO writes serialized, button re-evaluates after each Flow emission) didn't actually rule out two `logCompletion` calls for the same non-repeatable task both succeeding. Confirmed with the user: write the concurrent repository test first and let its result decide whether a guard is warranted, rather than assuming either way. It confirmed the gap — `logCompletion` had no loggability check at all, only an archived-reward check, so two concurrent calls each inserted a log. Confirmed with the user to add a repository-level guard, mirroring `claimReward`'s and `logCompletion`'s existing archived-reward pattern (`fix/archived-reward-log-guard`, Pass 47).
+
+#### Duplication ✅ (checked, none found)
+- New DAO query (`getActiveLogCount`) is the only new query added; no existing query already answered "is there an active log for this task+reward."
+
+#### Decoupling ✅ (n/a)
+- Change is contained entirely within `EarnItRepository` and `Daos.kt`; no ViewModel or UI changes.
+
+#### Complexity & Pattern Health ✅ (checked)
+- Guard is a single early-return inside the existing `logCompletion`, now wrapped in `database.withTransaction { }` (same pattern as `claimReward`) so the check-then-insert is atomic across concurrent callers rather than just narrowing the race window.
+
+#### Dead Code & Hygiene ✅
+- ktlint clean.
+- `git status` clean apart from the intended files: `EarnItRepository.kt`, `Daos.kt`, `RepositoryTestBase.kt`, `ConcurrentLogCompletionTest.kt`, `TESTING.md`, `CLEANUP_BACKLOG.md`, `CLEANUP_LOG.md`.
+
+#### Naming Consistency ✅ (n/a)
+- `ConcurrentLogCompletionTest` follows the existing `*Test.kt` convention and sits flat in `app/src/androidTest/java/com/earnit/app`, matching every other repository-tier test's placement.
+
+#### Hardcoded Values ✅ (n/a)
+- None introduced; test literals ("Morning Run", "Coffee Treat") match `HappyPathTest`'s existing fixture values.
+
+#### Accessibility ✅ (n/a)
+- No UI touched.
+
+#### Deprecated APIs ✅
+- None touched.
+
+#### Spec Review ✅ (checked, no changes needed)
+- `EARNIT_SPEC.md`'s task field table already documents `Repeatable` as "If true, can be logged multiple times" — this pass makes actual behavior match that contract more robustly; no spec text was inaccurate.
+
+#### Tests ✅ (1 new file, 1 existing file updated for a mock-strictness ripple, docs updated)
+- New `ConcurrentLogCompletionTest` run alone first with the guard absent to confirm the race was real (2 logs written), then again after adding the guard (1 log written) — both runs on a connected emulator. Targeted subset (`HappyPathTest`, `LogAgainstArchivedRewardTest`, `StartOverTest`, `ExportImportTest`, `ClearCascadeTest`, `ConcurrentLogCompletionTest`) run together: 21/21 pass. Full instrumented suite: 105/105 pass, no regressions.
+- Adding the `rewardTaskDao.getTaskRefsForReward` call inside `logCompletion` broke 5 pre-existing `LogAttributionTest` unit tests (strict mock, unstubbed call). Fixed by adding a default `coEvery { rewardTaskDao.getTaskRefsForReward(any()) } returns emptyList()` to `RepositoryTestBase`'s init block, alongside the existing `withTransaction` stub, since this call is now on the path of every `logCompletion` invocation across the suite rather than specific to one test class.
+- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required on its own — covered anyway by the full `connectedDebugAndroidTest` run.
+- `./gradlew ktlintCheck`, `test`, and `assembleDebug` all pass, run sequentially per `CLAUDE.md`.
+- `TESTING.md`: new `ConcurrentLogCompletionTest` row added to the Instrumented Tests table (Repository layer); the "Rapid double-tap logging" entry moved from "Not Covered" (now empty, header removed) to a new "Covered" entry under Edge Cases describing the transaction-scoped guard.
 - `CLEANUP_BACKLOG.md`: this item removed now that it's actioned.

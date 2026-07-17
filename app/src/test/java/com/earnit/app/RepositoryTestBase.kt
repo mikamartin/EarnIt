@@ -38,6 +38,10 @@ abstract class RepositoryTestBase {
             @Suppress("UNCHECKED_CAST")
             (it.invocation.args[1] as suspend () -> Any?).invoke()
         }
+
+        // Default: no cross-ref found, so logCompletion's repeatable-guard check is skipped.
+        // Tests exercising that guard specifically override this per-test.
+        coEvery { rewardTaskDao.getTaskRefsForReward(any()) } returns emptyList()
     }
 
     protected val repository = EarnItRepository(database)

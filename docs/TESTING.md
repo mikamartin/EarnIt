@@ -83,6 +83,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 |---|---|---|
 | `HappyPathTest` (1) | Repository | Create task → create reward → link as mandatory → log → assert `canClaim` → claim → assert history entry + archived log + reward archived |
 | `LogAgainstArchivedRewardTest` (1) | Repository | `logCompletion` against a reward archived via `claimReward` is a no-op — no new log row is written and the existing history entry's logs are unchanged |
+| `ConcurrentLogCompletionTest` (1) | Repository | Two concurrent `logCompletion` calls for the same non-repeatable `(taskId, rewardId)` write only one log row — the repository-level guard, not just the UI's loggable-state filtering, prevents the duplicate |
 | `StartOverTest` (3) | Repository | `startOver=true` — reward stays active, history entry created, point balance resets to zero, second cycle immediately valid |
 | `ClearCascadeTest` (5) | Repository | `clearAllLogs` removes active + archived logs and history entries; `clearAllTasks` removes cross-refs, leaves reward; `clearAllRewards` removes cross-refs + active logs, leaves task; `deleteTask` / `deleteReward` cascade |
 | `ExportImportTest` (10) | Repository | Export → clear → import(replace) round-trip preserving all entity types; import(replace) preserves archived history; import(merge) preserves existing + adds new; file-based variants via temp `Uri`; malformed JSON → `ImportInvalidJsonException`; wrong-schema JSON → `ImportWrongSchemaException`; file-backed bad JSON and wrong-schema variants; wrong-schema replace attempt leaves existing DB data intact |
@@ -163,16 +164,14 @@ Wrong-schema JSON (e.g. a random JSON file) throws `ImportWrongSchemaException` 
 **Cold start with no saved-instance-state Bundle** (`ProcessDeathRestoreTest`)
 `SettingsUiTest` and others use `activityRule.scenario.recreate()` to cover config changes — that preserves the saved-instance-state Bundle, so it only proves `rememberSaveable` fields round-trip correctly, not that anything relies on Room/DataStore instead of Bundle survival. `ProcessDeathRestoreTest` closes the managed `ActivityScenario` and launches a brand-new one with no Bundle at all: a task logged against a reward before the "kill" is still visible after, while having navigated to the Tasks tab beforehand is not (the app reopens on its default start screen). This is an approximation, not a literal OS-level `am force-stop`: this repo runs instrumented tests with no Test Orchestrator configured, so the test shares a process with the app under test, and a real force-stop would kill the test itself mid-method. The approximation still resets the ViewModelStore and nav back stack (no Bundle to restore from); what it doesn't exercise is an actual kill of Application/Hilt-singleton-scoped state, since the process itself is never terminated — this app has no such state that matters functionally today.
 
+**Rapid double-tap logging** (`ConcurrentLogCompletionTest`)
+`logCompletion` runs inside `database.withTransaction { }` and no-ops if an active log already exists for a non-repeatable `(taskId, rewardId)` pair, so a fast double-tap on LOG can't insert two log rows. Enforced independently of `RewardProgress.loggableTasks`, the UI property that decides whether the LOG button is shown.
+
 **Logging against an archived reward** (`LogAgainstArchivedRewardTest`)
 `logCompletion` fetches the reward first and returns early if it's missing or already archived, rather than inserting unconditionally. Guards a stale-UI race (e.g. a reward claimed from one surface while another still shows its LOG button) from writing an orphaned log with no `historyEntryId`; the write is silently skipped rather than surfaced as an error, since neither call site (`EarnItViewModel.logTask`, `WidgetTaskLogActivity`) currently acts on `logCompletion`'s result.
 
 **Cancel/dismiss across every screen and dialog** (`RewardEditScreenUiTest`, `TaskEditScreenUiTest`, `SettingsScreenUiTest`, `CleanUpScreenUiTest`, `TaskLibraryScreenUiTest`, `SharedDialogsCancelUiTest`)
 Previously untested app-wide by accretion, not by a documented decision — each Cancel button and dialog dismiss is a one-line `popBackStack()`/`onDismiss()` callback with no logic, which is why none had been covered. A shared `cancelDialogAndAssertDismissed` helper (`CancelDismissAssertions.kt`) clicks a dialog's Cancel button — scoped to the dialog's own window via the `isDialog()` matcher, since several dialogs share the exact text "CANCEL" with a button on the screen behind them — and asserts the dialog is gone; each test still supplies its own setup and its own side-effect assertion (no task created, no log recorded, reward not archived, etc.). Dialogs with no explicit Cancel button (`MascotPickerDialog`, `TaskLibraryScreen`'s skipped-tasks dialog) are covered via `Espresso.pressBack()` instead, their only dismiss path.
-
-### Not Covered by Automated Tests
-
-**Rapid double-tap logging**
-Tapping LOG twice in quick succession could theoretically insert duplicate log entries before ViewModel state updates. In practice, `viewModelScope.launch` serialises DAO writes through a single coroutine dispatcher and the LOG button's enabled state re-evaluates after each Room Flow emission. Not tested; the risk is low in a local single-user app and has not surfaced in manual testing.
 
 ---
 
