@@ -131,9 +131,12 @@ class EarnItRepository
             task: TaskEntity,
             rewardId: Long,
             detail: String,
-        ) {
-            val reward = rewardDao.getReward(rewardId) ?: return
-            if (reward.isArchived) return
+        ) = database.withTransaction {
+            val reward = rewardDao.getReward(rewardId) ?: return@withTransaction
+            if (reward.isArchived) return@withTransaction
+            val crossRef = rewardTaskDao.getTaskRefsForReward(rewardId).find { it.taskId == task.id }
+            val isNonRepeatable = crossRef != null && !crossRef.isRepeatable
+            if (isNonRepeatable && logDao.getActiveLogCount(task.id, rewardId) > 0) return@withTransaction
             val points = task.effectivePoints()
             logDao.insertLog(
                 CompletionLogEntity(
