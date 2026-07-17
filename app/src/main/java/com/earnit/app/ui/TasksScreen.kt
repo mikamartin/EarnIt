@@ -284,17 +284,19 @@ fun TasksScreen(
                                                     val center =
                                                         draggedInfo.offset + draggedInfo.size / 2 + accumulatedDragY
                                                     val target =
-                                                        visibleItems.firstOrNull { item ->
-                                                            item.index != currentIdx &&
-                                                                center > item.offset &&
-                                                                center < item.offset + item.size
-                                                        }
-                                                    if (target != null) {
-                                                        reorderedList.add(
-                                                            target.index,
-                                                            reorderedList.removeAt(currentIdx),
+                                                        DragReorder.targetIndex(
+                                                            draggingIndex = currentIdx,
+                                                            dragCenter = center,
+                                                            visibleItems =
+                                                                visibleItems.map {
+                                                                    DragReorder.ItemBounds(it.index, it.offset, it.size)
+                                                                },
                                                         )
-                                                        draggingIndex = target.index
+                                                    if (target != null) {
+                                                        val newOrder = DragReorder.reordered(reorderedList, currentIdx, target)
+                                                        reorderedList.clear()
+                                                        reorderedList.addAll(newOrder)
+                                                        draggingIndex = target
                                                         accumulatedDragY = 0f
                                                     }
                                                 }

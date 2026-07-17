@@ -8,47 +8,40 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 46 — `test/cancel-dismiss-coverage` branch
+### Pass 49 — `test/drag-reorder-coverage` branch
 
-Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "Cancel/dismiss buttons untested across the entire app" item: 15 distinct Cancel/dialog-dismiss surfaces across 8 files had zero dedicated cancel-path coverage — some dialogs were tested on their confirm path only; `CleanUpScreen` and `TaskLibraryScreen` had no test file at all. Research during planning found a real inventory of every surface (confirmed via grep, not assumption) before writing anything.
+Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "Drag-to-reorder gesture on Home has no automated coverage" item. Extracted the hover-target/list-move math shared by Home's and Tasks' drag gestures into `DragReorder` (mirroring `WidgetActionButton`/`PugslyGesture`) — grepping for `detectDragGesturesAfterLongPress` beyond the file the backlog named surfaced an identical inlined copy in `TasksScreen.kt`, so both screens were wired to the shared object, closing real duplication too.
 
-#### Duplication ✅ (1 shared helper extracted)
-- New `CancelDismissAssertions.kt` — `cancelDialogAndAssertDismissed(dialogMarkerText, cancelText)` — removes the repeated "click Cancel, assert the dialog is gone" boilerplate across ~11 dialog tests. Deliberately left as a helper, not a forced one-shape-fits-all abstraction: each test still supplies its own setup and its own side-effect assertion (no task created, no log recorded, reward not archived), since those genuinely differ per dialog.
-- `CleanUpScreenUiTest`'s private `assertCancelClearsNothing` helper mirrors the existing `waitForRewardDetail()`-style per-class private helper pattern (`RewardEditScreenUiTest`, `TaskEditScreenUiTest`) rather than promoting it to a shared file — its assertions (repository row counts) are specific to that screen.
+Manual on-device testing (requested before trusting the `add`/`removeAt` → `clear`/`addAll` mutation-pattern change) found Home's drag didn't move cards at all — a pre-existing bug, not something this refactor introduced: `draggingIndex` was passed into `homeRewardListItems` as a plain `Int`, frozen by value inside the `pointerInput` closure, so `onDrag` always read a stale index. Fixed by changing it to a `() -> Int` getter. Also found, contrary to the backlog's own assumption, that Compose's `performTouchInput` (with `advanceEventTime` to clear the long-press threshold before moving) *can* drive the real gesture reliably, so `DragReorderUiTest` now exercises it end-to-end on both screens instead of leaving it manual-only.
 
-#### Decoupling ✅ (n/a)
-- Test-only files; no production code touched.
+#### Duplication ✅ — found and fixed
+Grepped `detectDragGesturesAfterLongPress` across `app/src/main` before and after: found `TasksScreen.kt`'s inlined copy of the reorder math pre-change; confirmed both screens delegate to `DragReorder` post-change (the two remaining call sites are the necessarily screen-specific gesture *wiring*, not the math).
 
-#### Complexity & Pattern Health ✅ (checked)
-- `cancelDialogAndAssertDismissed` is a single ~10-line extension function on `SemanticsNodeInteractionsProvider` — no new interface or base class introduced.
-- Confirmed via grep that `isDialog()`-based scoping was necessary, not incidental complexity: several dialogs render a Cancel button with the exact text "CANCEL" while an identically-labeled button from the screen behind them is still in the merged semantics tree (Compose dialogs don't dispose the underlying screen), so a plain `onNodeWithText("CANCEL")` would match two nodes. Validated this technique on-device with one test before rolling it out to the other ten.
+#### Decoupling ✅
+Reorder math moved out of two composables into a plain `ui`-package object — kept out of the ViewModel since it's Compose-layout-derived geometry (`LazyListItemInfo` offsets), matching the `PugslyGesture` precedent.
 
-#### Dead Code & Hygiene ✅ (checked)
-- ktlint clean on every check, re-verified after all edits (including the debugging round below).
-- Diagnostic code added while tracking down two real test bugs (`printToLog`, `onRoot`, a `Thread.sleep`) was removed before finalizing — none of it reached this state; confirmed via a final read of `TaskLibraryScreenUiTest.kt`.
-- `git status` clean apart from the intended files: `CancelDismissAssertions.kt`, `CleanUpScreenUiTest.kt`, `TaskLibraryScreenUiTest.kt`, `SharedDialogsCancelUiTest.kt`, `RewardEditScreenUiTest.kt`, `TaskEditScreenUiTest.kt`, `SettingsScreenUiTest.kt`, `TESTING.md`, `CLEANUP_BACKLOG.md`, `CLEANUP_LOG.md`.
+#### Complexity & Pattern Health ✅
+`DragReorder` is a two-function object with two real call sites (clears the "only one caller" flag). Checked composable length: `homeRewardListItems` unchanged (~105 lines); `TasksScreen` itself is ~272 lines but pre-existing and not grown by this diff — out of scope for a test-coverage pass.
 
-#### Naming Consistency ✅ (checked)
-- Listed every non-`*Test.kt` file already in `app/src/androidTest/java/com/earnit/app` (`HiltTestRunner.kt`, `RoomIntegrationBase.kt`, `TestStateReset.kt`) to confirm `CancelDismissAssertions.kt` follows the established precedent for a non-suffixed helper sitting flat in the same package, rather than inventing a new convention.
+#### Dead Code & Hygiene ✅
+Force-recompiled all three source sets (`compileDebugKotlin compileDebugUnitTestKotlin compileDebugAndroidTestKotlin --rerun`) and grepped for warnings — none from this diff. ktlint clean. `git status` clean apart from the intended files.
 
-#### Hardcoded Values ✅ (n/a)
-- No UI code touched; test literals ("Morning Run", "Walk Dog", etc.) match existing fixture naming used elsewhere in this suite.
+#### Naming Consistency ✅
+`DragReorder.kt`/`DragReorderTest.kt` follow the `PugslyGesture`/`PugslyGestureTest` flat-`ui`-package precedent. `DragReorderUiTest.kt`'s package (`com.earnit.app`, flat) and `*UiTest.kt` suffix checked against every other instrumented UI test file — matches. Its literal UI strings ("Reward name", "New Task", etc.) match the *majority* existing convention (`SaveNavigationUiTest` and others use literals too), though the suite is genuinely split — some newer files reference `Strings.kt` constants instead. Pre-existing inconsistency, not introduced here; left as-is rather than doing an unrelated suite-wide pass.
 
-#### Accessibility ✅ (n/a)
-- No production UI touched.
+#### Hardcoded Values / Accessibility / Deprecated APIs ✅ — n/a
+No UI or API surface touched beyond delegating existing math and the closure fix.
 
-#### Deprecated APIs ✅ (checked)
-- Recompiled (`compileDebugAndroidTestKotlin`) and grepped the output for deprecation warnings — none from this diff.
+#### Spec Review ✅
+Grepped `EARNIT_SPEC.md` for drag/reorder/sort-order terms — already describes both screens as drag-reorderable; this pass makes actual behavior match that description rather than changing it.
 
-#### Spec Review ✅ (checked, no changes needed)
-- Grepped `EARNIT_SPEC.md` for Cancel/dismiss/Clean Up/Task Library terms — the existing entries (e.g. the Task Library row already describing "tasks with duplicate names are skipped and listed in a post-import dialog") already match current behavior. No behavior changed by this pass, only coverage added, so no drift to reconcile.
-
-#### Tests ✅ (4 new files, 3 real bugs found and fixed on-device, docs updated)
-- Three real bugs were found and fixed by actually running the new tests on a connected emulator, not just compiling them: (1) `CleanUpScreenUiTest`'s navigation to the Clean Up row needed `.performScrollTo()` — without it, the click missed and every assertion after failed confusingly two steps later; added an immediate post-navigation assertion so a future failure like this points at the right step. (2) The same screen's `DangerButton` uppercases its label at render time (`SettingsScreen.kt`) — `onNodeWithText` is case-sensitive by default, so the button was never found; fixed with `ignoreCase = true`. (3) `TaskLibraryScreenUiTest`'s "ADD 10 TASKS" button lives inside a `LazyColumn` below 10 task rows — composed (found by `waitUntil`) but not actually on-screen, so `performClick()` silently did nothing; fixed with `.performScrollTo()`, confirmed via a `printToLog` tree dump before landing on the real cause.
-- New/changed test classes run alone first (`RewardEditScreenUiTest`, `TaskEditScreenUiTest`, `SettingsScreenUiTest`, `CleanUpScreenUiTest`, `TaskLibraryScreenUiTest`, `SharedDialogsCancelUiTest`), then the full instrumented suite (102/103 pass on the first full run; the one failure — a pre-existing, untouched test — and a second pre-existing test that failed on a separate full run were each re-run alone and passed cleanly, confirming emulator flakiness under long continuous runs rather than a regression).
-- No `AppModule`/`TestAppModule`/`@Inject` changes; `assembleDebugAndroidTest` was still run repeatedly during development to catch compile errors early.
-- `TESTING.md`: new rows for `CleanUpScreenUiTest`, `TaskLibraryScreenUiTest`, `SharedDialogsCancelUiTest`; existing `RewardEditScreenUiTest`/`TaskEditScreenUiTest`/`SettingsScreenUiTest` rows updated with their new cancel-path cases; a new "Covered" entry describing the shared helper and the `isDialog()`/`Espresso.pressBack()` techniques; instrumented total (~90 → ~105) and UI-tier pyramid count (~55 → ~70) updated to match.
-- `CLEANUP_BACKLOG.md`: this item removed now that it's actioned.
+#### Tests ✅ (3 new files, 1 real regression-tested bug fix)
+- `DragReorderTest` (9): pure hover-math and list-move unit tests.
+- `DragReorderUiTest` (2): drives the real long-press-drag via `performTouchInput` on both screens, asserting actual on-screen order. Verified this test fails against the pre-fix code with the same symptom found manually, and passes with the fix — confirmed by temporarily stashing the fix and re-running.
+- Ran on two connected devices (Pixel 6 API 34 emulator, Pixel 8 API 36) — 2/2 pass on both.
+- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially. No `AppModule`/`TestAppModule`/`@Inject` changes.
+- `TESTING.md`: new `DragReorderTest`/`DragReorderUiTest` rows and a Covered edge-case entry describing the bug; unit count 150+ → 165+ (actual count 164, rounded per `CLEANUP_RULES.md`); instrumented/UI pyramid counts (107/72 actual) still round to the existing ~105/~70 figures, unchanged.
+- `CLEANUP_BACKLOG.md`: this item removed and file deleted per its own disposal note.
 
 ---
 

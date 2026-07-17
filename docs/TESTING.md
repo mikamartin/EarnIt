@@ -26,7 +26,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
                  [ Manual — 4 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
             [ UI — ~70 tests ]          ComposeTestRule + Hilt, real DataStore
        [ Integration — ~30 tests ]      Real in-memory Room, no mocks
-     [ Unit — 150+ tests ]              JVM, MockK DAOs, fast
+     [ Unit — 165+ tests ]              JVM, MockK DAOs, fast
 ```
 
 **Run unit tests** (JVM, no device needed)
@@ -43,7 +43,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ---
 
-## Unit Tests — `app/src/test/` (150+ tests)
+## Unit Tests — `app/src/test/` (165+ tests)
 
 | File | What it covers |
 |---|---|
@@ -70,6 +70,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `NudgeWorkerTest` (8) | `NudgeWorker.doWork()` via `androidx.work:work-testing`'s `TestListenableWorkerBuilder` + Robolectric — real notification posted with correct title/body per stage (asserted via `NotificationManager` shadow) and correct `SettingsRepository.updateNudgeState` call for each `NudgeDecider` outcome (first nudge, second nudge, no-op under threshold, no active reward, never logged, stage-2 cap, streak reset), plus the `POST_NOTIFICATIONS`-denied path (state still recorded, no notification shown) |
 | `NudgeDebugToolsTest` (3) | `EarnItViewModel.debugGetLastLogIdleHours` — whole-hour idle time from a real timestamp, null when nothing's ever been logged; `debugBackdateLastLog` writes to the repository and invokes its completion callback exactly once (the ordering the "48H"/"96H" dev buttons rely on to avoid racing `NudgeWorker` against an in-flight write) |
 | `PugslyGestureTest` (10) | `PugslyGesture.nextState`/`isComplete` — the tap-timing state machine behind the secret mascot gesture: group-gap boundary (exact pass, one ms over resets), pause-window boundaries (one ms short/over resets, exact min/max accepted), full 7-tap success path, and mid-pattern resets (extra tap before the pause, a slow tap mid-second-burst) |
+| `DragReorderTest` (9) | `DragReorder.targetIndex`/`reordered` — the hover-target math and list-move step shared by Home's reward-list and Tasks' task-list long-press-drag reorder gestures: no target while still over the dragged item's own slot, correct target over another slot, dragged item excluded even if the center falls back inside its own bounds, leading/trailing edge boundaries (exclusive), moving an item down/up shifts the in-between items correctly, and a multi-step sequence (drag down twice, up once) ends at the correct final order |
 
 ---
 
@@ -109,6 +110,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `CleanUpScreenUiTest` (4) | UI | Each of the four destructive-action dialogs (Clear Logs / Clear Tasks / Clear Rewards / Wipe Everything) — Cancel dismisses the dialog and clears nothing, confirmed directly against the repository rather than just the UI |
 | `TaskLibraryScreenUiTest` (1) | UI | The skipped-tasks dialog's only dismiss path (backdrop/back-press — no explicit Cancel button, only "OK" which does the same navigate-back) still applies the already-completed import correctly |
 | `SharedDialogsCancelUiTest` (4) | UI | Cancel path for each dialog shared across screens: `LogTaskDialog` (no log recorded), `ClaimDialog` (reward stays active, not archived), `AddTaskToRewardDialog` (task not included), `LogForRewardDialog` (no log recorded) — none had a dedicated cancel-path test before, only confirm-path coverage |
+| `DragReorderUiTest` (2) | UI | Drives the real long-press-then-drag gesture via `performTouchInput` (down, an explicit stationary `advanceEventTime` past the long-press threshold, then `moveTo`) on both Home's reward cards and Tasks' task cards: dragging the first card past the other two lands it below both, asserted against actual on-screen position, not the underlying list state |
 
 ---
 
@@ -158,6 +160,9 @@ Both one-time nudges (widget nudge on Reward Detail, discoverability tip on Sett
 **Widget action-button selection** (`WidgetActionButtonTest`, `WidgetContentTest`)
 Added after a manual test caught the widget showing no action button at all following a task add via the widget's own new entry point (see `addTaskToReward` not refreshing the widget, fixed in the same change). The button-state decision (`CLAIM` / `LOG` / `ADD_TASK` / `NONE`) was extracted out of the Glance composable into a plain function so it's directly unit-testable; `WidgetContentTest` then renders the actual composables via `glance-testing` + Robolectric to confirm the right button (and only that button) appears with its click action wired, plus reward name/points/hint text. Neither test can verify the click actually reaches the intended `Intent` extras (`glance-testing`'s click-action matchers don't recognize the raw-`Intent` `actionStartActivity` overload this widget uses) — that part stays manual, per `MANUAL_TEST_PLAN.md`.
 
+**Drag-to-reorder gesture on Home and Tasks** (`DragReorderTest`, `DragReorderUiTest`)
+`DragReorderTest` unit-tests the hover-target/list-move math (`DragReorder`) shared by both screens. `DragReorderUiTest` drives the real long-press-drag via `performTouchInput` and asserts actual on-screen card order. Writing it caught a real bug: Home passed `draggingIndex` into `homeRewardListItems` as a plain `Int`, frozen by value inside the `pointerInput` closure, so `onDrag` always read a stale index and cards never moved. Fixed by changing it to a `() -> Int` getter; Tasks was unaffected since it reads its `draggingIndex` as a local `var` with no function-parameter boundary in between.
+
 **Import file validation** (`JsonImportValidationTest`, `ImportViewModelErrorTest`, `ExportImportTest`, `ImportErrorUiTest`)
 Wrong-schema JSON (e.g. a random JSON file) throws `ImportWrongSchemaException` before touching the database — critical in Replace mode where silent failure would wipe user data. `ExportImportTest.importReplace_withWrongSchema_doesNotWipeExistingData` proves at integration level that existing DB rows survive a wrong-schema replace attempt (not just that the exception fires). Malformed JSON (invalid syntax even with an EarnIt key present) throws `ImportInvalidJsonException`. Each exception type maps to a specific user-facing string in the ViewModel and is verified against `importResult` StateFlow as well as the `onComplete` callback. UI tests verify the error messages actually appear on the Data & Backup screen.
 
@@ -181,7 +186,7 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
-| Unit (150+ tests) | Every build/push | `./gradlew test` |
+| Unit (165+ tests) | Every build/push | `./gradlew test` |
 | Integration + UI, instrumented (~75 tests) | Every push/PR via CI (two parallel API 34 emulator jobs, Workflow 2 — sharded by layer); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (4) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 
