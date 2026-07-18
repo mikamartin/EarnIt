@@ -177,7 +177,7 @@ fun LogTaskDialog(
                     Spacer(Modifier.height(4.dp))
                     OutlinedTextField(
                         value = detail,
-                        onValueChange = { if (it.length <= NOTE_MAX_CHARS) detail = it },
+                        onValueChange = { detail = acceptWithinLimit(detail, it, NOTE_MAX_CHARS) },
                         label = {
                             Text(
                                 if (notesMandatory) Strings.LOG_NOTE_MANDATORY_LABEL else Strings.LOG_NOTE_LABEL,
@@ -304,6 +304,11 @@ data class TaskEditState(
     val isMandatory: Boolean = false,
     val isRepeatable: Boolean = false,
 )
+
+// Unchecking a task/reward link always resets its mandatory/repeatable flags together —
+// duplicated independently across RewardEditScreen and TaskEditScreen before this extraction.
+fun TaskEditState.withIncludedSetTo(newIncluded: Boolean): TaskEditState =
+    if (newIncluded) copy(included = true) else copy(included = false, isMandatory = false, isRepeatable = false)
 
 @Composable
 fun AddTaskToRewardDialog(

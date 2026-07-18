@@ -57,6 +57,7 @@ import com.earnit.app.data.TaskEntity
 import com.earnit.app.di.ApplicationScope
 import com.earnit.app.ui.NOTE_MAX_CHARS
 import com.earnit.app.ui.Strings
+import com.earnit.app.ui.acceptWithinLimit
 import com.earnit.app.ui.theme.EarnItTheme
 import com.earnit.app.viewmodel.EarnItViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -350,7 +351,7 @@ private fun NoteScreen(
         )
         OutlinedTextField(
             value = note,
-            onValueChange = { if (it.length <= NOTE_MAX_CHARS) note = it },
+            onValueChange = { note = acceptWithinLimit(note, it, NOTE_MAX_CHARS) },
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text(Strings.WIDGET_NOTE_PLACEHOLDER) },
             minLines = 3,
