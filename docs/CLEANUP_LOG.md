@@ -8,43 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 49 — `test/drag-reorder-coverage` branch
-
-Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "Drag-to-reorder gesture on Home has no automated coverage" item. Extracted the hover-target/list-move math shared by Home's and Tasks' drag gestures into `DragReorder` (mirroring `WidgetActionButton`/`PugslyGesture`) — grepping for `detectDragGesturesAfterLongPress` beyond the file the backlog named surfaced an identical inlined copy in `TasksScreen.kt`, so both screens were wired to the shared object, closing real duplication too.
-
-Manual on-device testing (requested before trusting the `add`/`removeAt` → `clear`/`addAll` mutation-pattern change) found Home's drag didn't move cards at all — a pre-existing bug, not something this refactor introduced: `draggingIndex` was passed into `homeRewardListItems` as a plain `Int`, frozen by value inside the `pointerInput` closure, so `onDrag` always read a stale index. Fixed by changing it to a `() -> Int` getter. Also found, contrary to the backlog's own assumption, that Compose's `performTouchInput` (with `advanceEventTime` to clear the long-press threshold before moving) *can* drive the real gesture reliably, so `DragReorderUiTest` now exercises it end-to-end on both screens instead of leaving it manual-only.
-
-#### Duplication ✅ — found and fixed
-Grepped `detectDragGesturesAfterLongPress` across `app/src/main` before and after: found `TasksScreen.kt`'s inlined copy of the reorder math pre-change; confirmed both screens delegate to `DragReorder` post-change (the two remaining call sites are the necessarily screen-specific gesture *wiring*, not the math).
-
-#### Decoupling ✅
-Reorder math moved out of two composables into a plain `ui`-package object — kept out of the ViewModel since it's Compose-layout-derived geometry (`LazyListItemInfo` offsets), matching the `PugslyGesture` precedent.
-
-#### Complexity & Pattern Health ✅
-`DragReorder` is a two-function object with two real call sites (clears the "only one caller" flag). Checked composable length: `homeRewardListItems` unchanged (~105 lines); `TasksScreen` itself is ~272 lines but pre-existing and not grown by this diff — out of scope for a test-coverage pass.
-
-#### Dead Code & Hygiene ✅
-Force-recompiled all three source sets (`compileDebugKotlin compileDebugUnitTestKotlin compileDebugAndroidTestKotlin --rerun`) and grepped for warnings — none from this diff. ktlint clean. `git status` clean apart from the intended files.
-
-#### Naming Consistency ✅
-`DragReorder.kt`/`DragReorderTest.kt` follow the `PugslyGesture`/`PugslyGestureTest` flat-`ui`-package precedent. `DragReorderUiTest.kt`'s package (`com.earnit.app`, flat) and `*UiTest.kt` suffix checked against every other instrumented UI test file — matches. Its literal UI strings ("Reward name", "New Task", etc.) match the *majority* existing convention (`SaveNavigationUiTest` and others use literals too), though the suite is genuinely split — some newer files reference `Strings.kt` constants instead. Pre-existing inconsistency, not introduced here; left as-is rather than doing an unrelated suite-wide pass.
-
-#### Hardcoded Values / Accessibility / Deprecated APIs ✅ — n/a
-No UI or API surface touched beyond delegating existing math and the closure fix.
-
-#### Spec Review ✅
-Grepped `EARNIT_SPEC.md` for drag/reorder/sort-order terms — already describes both screens as drag-reorderable; this pass makes actual behavior match that description rather than changing it.
-
-#### Tests ✅ (3 new files, 1 real regression-tested bug fix)
-- `DragReorderTest` (9): pure hover-math and list-move unit tests.
-- `DragReorderUiTest` (2): drives the real long-press-drag via `performTouchInput` on both screens, asserting actual on-screen order. Verified this test fails against the pre-fix code with the same symptom found manually, and passes with the fix — confirmed by temporarily stashing the fix and re-running.
-- Ran on two connected devices (Pixel 6 API 34 emulator, Pixel 8 API 36) — 2/2 pass on both.
-- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially. No `AppModule`/`TestAppModule`/`@Inject` changes.
-- `TESTING.md`: new `DragReorderTest`/`DragReorderUiTest` rows and a Covered edge-case entry describing the bug; unit count 150+ → 165+ (actual count 164, rounded per `CLEANUP_RULES.md`); instrumented/UI pyramid counts (107/72 actual) still round to the existing ~105/~70 figures, unchanged.
-- `CLEANUP_BACKLOG.md`: this item removed and file deleted per its own disposal note.
-
----
-
 ### Pass 47 — `fix/archived-reward-log-guard` branch
 
 Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "Logging against an archived reward has no repository guard, and no test" item. `EarnItRepository.logCompletion` inserted unconditionally with no check on the reward's archived state. Research during planning confirmed the realistic trigger: a stale UI surface (e.g. a reward claimed from one screen while its LOG button is still visible elsewhere) calling `logCompletion` after the reward is archived, producing an orphaned log with no `historyEntryId`. Confirmed with the user to add a repository-level guard (not just a documentation test): `logCompletion` now fetches the reward and returns early if it's missing or archived, silently skipping the insert rather than surfacing an error — matches the existing precedent in `claimReward` (`EarnItRepository.kt:154`, no-ops when the reward is missing) and needs no signature change since neither call site (`EarnItViewModel.logTask`, `WidgetTaskLogActivity`) inspects a result today.
@@ -126,3 +89,40 @@ Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "Rapid double-tap logging" it
 - `./gradlew ktlintCheck`, `test`, and `assembleDebug` all pass, run sequentially per `CLAUDE.md`.
 - `TESTING.md`: new `ConcurrentLogCompletionTest` row added to the Instrumented Tests table (Repository layer); the "Rapid double-tap logging" entry moved from "Not Covered" (now empty, header removed) to a new "Covered" entry under Edge Cases describing the transaction-scoped guard.
 - `CLEANUP_BACKLOG.md`: this item removed now that it's actioned.
+
+---
+
+### Pass 49 — `test/drag-reorder-coverage` branch
+
+Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "Drag-to-reorder gesture on Home has no automated coverage" item. Extracted the hover-target/list-move math shared by Home's and Tasks' drag gestures into `DragReorder` (mirroring `WidgetActionButton`/`PugslyGesture`) — grepping for `detectDragGesturesAfterLongPress` beyond the file the backlog named surfaced an identical inlined copy in `TasksScreen.kt`, so both screens were wired to the shared object, closing real duplication too.
+
+Manual on-device testing (requested before trusting the `add`/`removeAt` → `clear`/`addAll` mutation-pattern change) found Home's drag didn't move cards at all — a pre-existing bug, not something this refactor introduced: `draggingIndex` was passed into `homeRewardListItems` as a plain `Int`, frozen by value inside the `pointerInput` closure, so `onDrag` always read a stale index. Fixed by changing it to a `() -> Int` getter. Also found, contrary to the backlog's own assumption, that Compose's `performTouchInput` (with `advanceEventTime` to clear the long-press threshold before moving) *can* drive the real gesture reliably, so `DragReorderUiTest` now exercises it end-to-end on both screens instead of leaving it manual-only.
+
+#### Duplication ✅ — found and fixed
+Grepped `detectDragGesturesAfterLongPress` across `app/src/main` before and after: found `TasksScreen.kt`'s inlined copy of the reorder math pre-change; confirmed both screens delegate to `DragReorder` post-change (the two remaining call sites are the necessarily screen-specific gesture *wiring*, not the math).
+
+#### Decoupling ✅
+Reorder math moved out of two composables into a plain `ui`-package object — kept out of the ViewModel since it's Compose-layout-derived geometry (`LazyListItemInfo` offsets), matching the `PugslyGesture` precedent.
+
+#### Complexity & Pattern Health ✅
+`DragReorder` is a two-function object with two real call sites (clears the "only one caller" flag). Checked composable length: `homeRewardListItems` unchanged (~105 lines); `TasksScreen` itself is ~272 lines but pre-existing and not grown by this diff — out of scope for a test-coverage pass.
+
+#### Dead Code & Hygiene ✅
+Force-recompiled all three source sets (`compileDebugKotlin compileDebugUnitTestKotlin compileDebugAndroidTestKotlin --rerun`) and grepped for warnings — none from this diff. ktlint clean. `git status` clean apart from the intended files.
+
+#### Naming Consistency ✅
+`DragReorder.kt`/`DragReorderTest.kt` follow the `PugslyGesture`/`PugslyGestureTest` flat-`ui`-package precedent. `DragReorderUiTest.kt`'s package (`com.earnit.app`, flat) and `*UiTest.kt` suffix checked against every other instrumented UI test file — matches. Its literal UI strings ("Reward name", "New Task", etc.) match the *majority* existing convention (`SaveNavigationUiTest` and others use literals too), though the suite is genuinely split — some newer files reference `Strings.kt` constants instead. Pre-existing inconsistency, not introduced here; left as-is rather than doing an unrelated suite-wide pass.
+
+#### Hardcoded Values / Accessibility / Deprecated APIs ✅ — n/a
+No UI or API surface touched beyond delegating existing math and the closure fix.
+
+#### Spec Review ✅
+Grepped `EARNIT_SPEC.md` for drag/reorder/sort-order terms — already describes both screens as drag-reorderable; this pass makes actual behavior match that description rather than changing it.
+
+#### Tests ✅ (3 new files, 1 real regression-tested bug fix)
+- `DragReorderTest` (9): pure hover-math and list-move unit tests.
+- `DragReorderUiTest` (2): drives the real long-press-drag via `performTouchInput` on both screens, asserting actual on-screen order. Verified this test fails against the pre-fix code with the same symptom found manually, and passes with the fix — confirmed by temporarily stashing the fix and re-running.
+- Ran on two connected devices (API 34 emulator, API 36 physical device) — 2/2 pass on both.
+- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially. No `AppModule`/`TestAppModule`/`@Inject` changes.
+- `TESTING.md`: new `DragReorderTest`/`DragReorderUiTest` rows and a Covered edge-case entry describing the bug; unit count 150+ → 165+ (actual count 164, rounded per `CLEANUP_RULES.md`); instrumented/UI pyramid counts (107/72 actual) still round to the existing ~105/~70 figures, unchanged.
+- `CLEANUP_BACKLOG.md`: this item removed and file deleted per its own disposal note.
