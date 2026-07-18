@@ -12,6 +12,8 @@ import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.SettingsRepository
+import com.earnit.app.tags.Reward
+import com.earnit.app.tags.UiTest
 import com.earnit.app.ui.Strings
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -28,6 +30,8 @@ import javax.inject.Inject
  * bar's number overlay. The boundary cases for that property are unit-tested in
  * RewardProgressTest.kt; this is the rendering-level check that the Composable reads it correctly.
  */
+@UiTest
+@Reward
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class RewardProgressBarUiTest {

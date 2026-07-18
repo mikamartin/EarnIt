@@ -11,6 +11,8 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.earnit.app.tags.ImportExport
+import com.earnit.app.tags.UiTest
 import com.earnit.app.ui.Strings
 import com.earnit.app.viewmodel.EarnItViewModel
 import dagger.hilt.android.testing.HiltAndroidRule
@@ -21,6 +23,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 
+@UiTest
+@ImportExport
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class ImportErrorUiTest {

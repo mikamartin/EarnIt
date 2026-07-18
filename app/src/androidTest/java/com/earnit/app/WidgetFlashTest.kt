@@ -3,6 +3,8 @@ package com.earnit.app
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.earnit.app.tags.UtilityTest
+import com.earnit.app.tags.Widget
 import com.earnit.app.widget.WidgetFlash
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -11,6 +13,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
+@UtilityTest
+@Widget
 @RunWith(AndroidJUnit4::class)
 class WidgetFlashTest {
     private val context: Context = ApplicationProvider.getApplicationContext()

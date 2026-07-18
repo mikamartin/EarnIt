@@ -122,3 +122,63 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
+
+// Scans androidTest source text for the required tags, so it runs as part of `check`
+// alongside unit tests.
+tasks.register("checkInstrumentedTestTags") {
+    group = "verification"
+    description = "Fails if any androidTest class is missing a required layer tag or an optional tag."
+
+    val testDir = layout.projectDirectory.dir("src/androidTest/java")
+    inputs.dir(testDir)
+
+    doLast {
+        val requiredTags = listOf("@RepositoryTest", "@UtilityTest", "@UiTest")
+        val optionalTags =
+            listOf(
+                "@Smoke",
+                "@Task",
+                "@Reward",
+                "@Settings",
+                "@Widget",
+                "@Nudge",
+                "@ImportExport",
+                "@CleanUp",
+            )
+
+        val missingRequired = mutableListOf<String>()
+        val missingOptional = mutableListOf<String>()
+
+        testDir.asFile
+            .walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .forEach { file ->
+                val text = file.readText()
+                if (!Regex("@Test(?![A-Za-z0-9_])").containsMatchIn(text)) return@forEach
+
+                if (requiredTags.none { text.contains(it) }) missingRequired += file.name
+                if (optionalTags.none { text.contains(it) }) missingOptional += file.name
+            }
+
+        if (missingRequired.isNotEmpty() || missingOptional.isNotEmpty()) {
+            val message = StringBuilder("Instrumented test tag check failed.\n")
+            if (missingRequired.isNotEmpty()) {
+                message.append(
+                    "Missing a required layer tag (@RepositoryTest / @UtilityTest / @UiTest): " +
+                        "${missingRequired.joinToString()}\n",
+                )
+            }
+            if (missingOptional.isNotEmpty()) {
+                message.append(
+                    "Missing an optional tag (@Smoke / @Task / @Reward / @Settings / @Widget / " +
+                        "@Nudge / @ImportExport / @CleanUp): ${missingOptional.joinToString()}\n",
+                )
+            }
+            throw GradleException(message.toString())
+        }
+    }
+}
+
+tasks.named("check") {
+    dependsOn("checkInstrumentedTestTags")
+}

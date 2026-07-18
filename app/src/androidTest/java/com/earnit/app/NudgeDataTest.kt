@@ -3,6 +3,8 @@ package com.earnit.app
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.CompletionLogEntity
 import com.earnit.app.data.RewardEntity
+import com.earnit.app.tags.Nudge
+import com.earnit.app.tags.RepositoryTest
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -17,6 +19,8 @@ import org.junit.runner.RunWith
  * verification of NudgeWorker's real wiring — if its SQL were wrong, that manual journey would
  * silently validate against corrupted state instead of catching the bug.
  */
+@RepositoryTest
+@Nudge
 @RunWith(AndroidJUnit4::class)
 class NudgeDataTest : RoomIntegrationBase() {
     private fun log(

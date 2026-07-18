@@ -10,21 +10,21 @@ jobs:
   instrumented-tests:
     runs-on: ubuntu-latest
 
-    # Sharded along the existing Repository/Utility vs. UI layer split documented in
-    # TESTING.md's per-file "Layer" column — not an arbitrary split. Repository/Utility tests
-    # never launch MainActivity or touch Compose; the UI shard is where every MainActivity +
-    # Compose recomposition happens. Each shard gets its own runner VM and freshly-booted
-    # emulator. Class lists must be kept in sync with app/src/androidTest/java/com/earnit/app/
-    # on this branch — a class not present here (e.g. one that only exists on an unmerged
-    # feature branch) fails as a ClassNotFoundException, not a silent no-op.
+    # Sharded along the Repository/Utility vs. UI layer split documented in TESTING.md's
+    # tagging convention. Repository/Utility tests never launch MainActivity or touch Compose;
+    # the UI shard is where every MainActivity + Compose recomposition happens. Each shard
+    # gets its own runner VM and freshly-booted emulator. Filtered by annotation rather than an
+    # explicit class list, so a new test class is picked up automatically as soon as it carries
+    # its required layer tag — checkInstrumentedTestTags (./gradlew check) enforces that every
+    # class has one.
     strategy:
       fail-fast: false
       matrix:
         include:
           - shard: repository-utility
-            classes: com.earnit.app.ClearCascadeTest,com.earnit.app.ExportImportTest,com.earnit.app.HappyPathTest,com.earnit.app.NudgeDataTest,com.earnit.app.StartOverTest,com.earnit.app.WidgetFlashTest
+            annotation: com.earnit.app.tags.RepositoryTest,com.earnit.app.tags.UtilityTest
           - shard: ui
-            classes: com.earnit.app.DuplicateNameUiTest,com.earnit.app.EmptyStateUiTest,com.earnit.app.ImportErrorUiTest,com.earnit.app.MaxLengthUiTest,com.earnit.app.RewardLimitUiTest,com.earnit.app.SaveNavigationUiTest,com.earnit.app.SettingsTipUiTest,com.earnit.app.SettingsUiTest,com.earnit.app.TaskEditScreenUiTest,com.earnit.app.TaskLibraryImportUiTest,com.earnit.app.UiHappyPathTest,com.earnit.app.WidgetNudgeUiTest
+            annotation: com.earnit.app.tags.UiTest
 
     steps:
       - uses: actions/checkout@v4
@@ -94,7 +94,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 4096
           # Disabling animations speeds up Compose UI assertions in instrumented tests.
           disable-animations: true
-          script: ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=${{ matrix.classes }}
+          script: ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.annotation=${{ matrix.annotation }}
 
       # Upload results even on failure so flaky-test failures are diagnosable from CI.
       - name: Upload test results

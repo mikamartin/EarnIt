@@ -7,6 +7,8 @@ import com.earnit.app.data.ImportInvalidJsonException
 import com.earnit.app.data.ImportWrongSchemaException
 import com.earnit.app.data.RewardEntity
 import com.earnit.app.data.TaskEntity
+import com.earnit.app.tags.ImportExport
+import com.earnit.app.tags.RepositoryTest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -19,6 +21,8 @@ import java.io.File
  * Verifies the JSON export / import round-trip.
  * Uses a real in-memory Room database; no mocks.
  */
+@RepositoryTest
+@ImportExport
 @RunWith(AndroidJUnit4::class)
 class ExportImportTest : RoomIntegrationBase() {
     @Test

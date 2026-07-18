@@ -34,14 +34,8 @@ tests, unlike the repository tier (`RoomIntegrationBase`) and ViewModel tier
 
 ## Issues Found
 
-1. **CI matrix omits ~40% of instrumented tests.** `instrumented-tests.yml`'s two shards
-   hardcode 18 of 29 test classes (60 of 107 tests). Missing: `RewardProgressBarUiTest`,
-   `RewardAllTasksLoggedHintUiTest`, `CleanUpScreenUiTest`, `ProcessDeathRestoreTest`,
-   `RewardEditScreenUiTest` (13 tests), `SettingsScreenUiTest` (12 tests),
-   `SharedDialogsCancelUiTest`, `TaskLibraryScreenUiTest`, `LogAgainstArchivedRewardTest`,
-   `ConcurrentLogCompletionTest`, `DragReorderUiTest`. These never run on push/PR, contradicting
-   TESTING.md's "every push/PR" claim. `CLEANUP_RULES.md`'s Tests checklist has no item to keep
-   the CI matrix in sync with new instrumented test files.
+1. **CI matrix omitted ~40% of instrumented tests** (two shards hardcoded 18 of 29 classes;
+   11 classes never ran on push/PR). Fixed on `fix/ci-instrumented-test-matrix`.
 
 2. **The auto-point formula is implemented twice; only one copy is directly tested.**
    `TaskEntity.computeAutoPoints()` (`Entities.kt`) and `EarnItRepository.computeAutoPoints()`
@@ -179,17 +173,14 @@ Steps:
 
 Tests: 3 new unit test files/additions; existing UI tests trimmed, not removed.
 
-### fix/ci-instrumented-test-matrix (follow-up, not started)
+### fix/ci-instrumented-test-matrix (done)
 
-Deliverable: `instrumented-tests.yml` covers all 29 test classes.
-
-Steps:
-1. Add the 11 missing classes to the repository-utility/ui shards, rebalancing for runtime.
-2. Add a CLEANUP_RULES.md Tests checklist item: confirm new instrumented test classes are
-   added to the CI matrix.
-3. Verify a full CI run passes with the expanded matrix.
-
-Tests: no new test files; existing 11 files gain CI execution.
+Replaced the hardcoded per-shard class lists with a tagging convention: every androidTest class
+now carries a required layer annotation (`@RepositoryTest`/`@UtilityTest`/`@UiTest`, in
+`com.earnit.app.tags`) plus at least one optional tag (`@Smoke` or a feature area). CI filters by
+annotation instead of an explicit class list, so a new test class runs automatically once tagged.
+`checkInstrumentedTestTags` (`./gradlew check`) fails the build if a class is missing either tag —
+see TESTING.md's Tagging convention and the CLEANUP_RULES.md Tests checklist item.
 
 ### refactor/ui-test-helpers (follow-up, not started)
 

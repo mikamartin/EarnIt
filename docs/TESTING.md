@@ -39,7 +39,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 ./gradlew connectedDebugAndroidTest
 ```
 
-**CI:** Unit tests run on every build (Workflow 1). Instrumented tests run on every push/PR via two parallel API 34 emulator jobs (Workflow 2) — sharded by layer, Repository/Utility and UI — and manually before each release candidate.
+**CI:** Unit tests run on every build (Workflow 1). Instrumented tests run on every push/PR via two parallel API 34 emulator jobs (Workflow 2) — sharded by layer tag, Repository/Utility and UI (see "Tagging convention" below) — and manually before each release candidate.
 
 ---
 
@@ -79,6 +79,16 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 **State isolation:** Every `@HiltAndroidTest` class using `createAndroidComposeRule<MainActivity>()` calls `resetAppState()` (in `TestStateReset.kt`) as the first line of its `@Before`, immediately after `hiltRule.inject()` and before any test-specific overrides (e.g. `settingsRepository.updateMaxRewardCount(...)`). This gives each test a clean database and default settings to start from, independent of what ran before it in the same instrumentation process. `RoomIntegrationBase`-based repository tests don't need this — each already gets its own fresh in-memory database per test.
 
 **Focused coverage:** Each test verifies one thing and relies on other tests for the rest — don't re-prove logic already covered elsewhere. Assert after each state-changing action instead of chaining several before checking once at the end, so a failure points at exactly which step broke.
+
+**Tagging convention:** Every class in `app/src/androidTest/` carries one required layer tag —
+`@RepositoryTest`, `@UtilityTest`, or `@UiTest` (`com.earnit.app.tags`) — plus at least one
+optional tag describing what it covers: `@Smoke` for the critical golden-path flows, or one or
+more of `@Task`, `@Reward`, `@Settings`, `@Widget`, `@Nudge`, `@ImportExport`, `@CleanUp`. A class
+can carry several optional tags when it spans more than one area. The layer tag drives
+`instrumented-tests.yml`'s CI sharding (`-e annotation=`); any tag can be targeted directly the
+same way, e.g. `./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.annotation=com.earnit.app.tags.Reward`
+to run only reward-related instrumented tests. `checkInstrumentedTestTags` (part of `./gradlew
+check`) fails the build if any class is missing its required layer tag or has no optional tag.
 
 | File | Layer | What it covers |
 |---|---|---|

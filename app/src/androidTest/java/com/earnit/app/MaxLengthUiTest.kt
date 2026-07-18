@@ -8,6 +8,10 @@ import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.SettingsRepository
+import com.earnit.app.tags.Reward
+import com.earnit.app.tags.Settings
+import com.earnit.app.tags.Task
+import com.earnit.app.tags.UiTest
 import com.earnit.app.ui.NICKNAME_MAX_CHARS
 import com.earnit.app.ui.REWARD_DESC_MAX_CHARS
 import com.earnit.app.ui.REWARD_NAME_MAX_CHARS
@@ -28,6 +32,10 @@ import javax.inject.Inject
  * and silently reject growth past it (fix/widget-hint-overflow's sibling gap —
  * see feat/input-validation-limits).
  */
+@UiTest
+@Task
+@Reward
+@Settings
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class MaxLengthUiTest {

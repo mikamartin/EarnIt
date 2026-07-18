@@ -3,6 +3,8 @@ package com.earnit.app
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.RewardEntity
 import com.earnit.app.data.TaskEntity
+import com.earnit.app.tags.RepositoryTest
+import com.earnit.app.tags.Reward
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -17,6 +19,8 @@ import org.junit.runner.RunWith
  *   history entry is created, logs archived, reward stays active, balance resets.
  * Uses a real in-memory Room database; no mocks.
  */
+@RepositoryTest
+@Reward
 @RunWith(AndroidJUnit4::class)
 class StartOverTest : RoomIntegrationBase() {
     @Test

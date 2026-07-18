@@ -15,6 +15,8 @@ import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.AppColorScheme
 import com.earnit.app.data.SettingsRepository
+import com.earnit.app.tags.Settings
+import com.earnit.app.tags.UiTest
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.flow.first
@@ -26,6 +28,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import javax.inject.Inject
 
+@UiTest
+@Settings
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class SettingsUiTest {

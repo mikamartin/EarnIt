@@ -11,6 +11,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.earnit.app.tags.Reward
+import com.earnit.app.tags.Task
+import com.earnit.app.tags.UiTest
 import com.earnit.app.ui.Strings
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -25,6 +28,9 @@ import org.junit.runner.RunWith
  * had a dedicated cancel-path test before this — existing tests exercise their confirm paths
  * only.
  */
+@UiTest
+@Task
+@Reward
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class SharedDialogsCancelUiTest {

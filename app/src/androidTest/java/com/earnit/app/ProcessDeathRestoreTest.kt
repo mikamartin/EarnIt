@@ -10,6 +10,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.EarnItRepository
 import com.earnit.app.data.RewardEntity
 import com.earnit.app.data.TaskEntity
+import com.earnit.app.tags.Reward
+import com.earnit.app.tags.Task
+import com.earnit.app.tags.UiTest
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.runBlocking
@@ -32,6 +35,9 @@ import javax.inject.Inject
  * this does not exercise: an actual OS-level kill of Application/Hilt-singleton state, since the
  * process itself is never terminated.
  */
+@UiTest
+@Task
+@Reward
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class ProcessDeathRestoreTest {

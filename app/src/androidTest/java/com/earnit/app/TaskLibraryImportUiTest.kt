@@ -6,6 +6,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.earnit.app.tags.Task
+import com.earnit.app.tags.UiTest
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import org.junit.Before
@@ -17,6 +19,8 @@ import org.junit.runner.RunWith
  * UI journey: import a task template from the Task Library and confirm the
  * resulting tasks land in the Tasks list.
  */
+@UiTest
+@Task
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class TaskLibraryImportUiTest {

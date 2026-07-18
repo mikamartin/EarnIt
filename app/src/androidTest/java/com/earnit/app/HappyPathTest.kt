@@ -3,6 +3,10 @@ package com.earnit.app
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.RewardEntity
 import com.earnit.app.data.TaskEntity
+import com.earnit.app.tags.RepositoryTest
+import com.earnit.app.tags.Reward
+import com.earnit.app.tags.Smoke
+import com.earnit.app.tags.Task
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -16,6 +20,10 @@ import org.junit.runner.RunWith
  * E2E happy path: create task + reward → log completion → verify claimable → claim → verify history.
  * Uses a real in-memory Room database; no mocks.
  */
+@RepositoryTest
+@Smoke
+@Task
+@Reward
 @RunWith(AndroidJUnit4::class)
 class HappyPathTest : RoomIntegrationBase() {
     @Test
