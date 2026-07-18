@@ -95,6 +95,7 @@ graph LR
 | [`docs/DEV_PLAYBOOK.md`](docs/DEV_PLAYBOOK.md) | Ship checklist, release process, tooling upgrade reference |
 | [`docs/CLEANUP_RULES.md`](docs/CLEANUP_RULES.md) | Post-work cleanup checklist and log retention rule |
 | [`docs/CLEANUP_LOG.md`](docs/CLEANUP_LOG.md) | The 3 most recent cleanup passes and what was found |
+| [`docs/QA_AUDIT_RULES.md`](docs/QA_AUDIT_RULES.md) | Periodic whole-suite QA audit checklist |
 | [`docs/CLOSED_TESTING_GUIDE.md`](docs/CLOSED_TESTING_GUIDE.md) | Plain-language testing guide for Play closed testing recruits |
 
 ---

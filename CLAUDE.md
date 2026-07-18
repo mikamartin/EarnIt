@@ -40,6 +40,8 @@ This repo is also a portfolio piece. It's built with heavy AI assistance, and th
 - [DEV_PLAYBOOK.md](docs/DEV_PLAYBOOK.md) — ship checklist, release process, tooling upgrade reference
 - [CLEANUP_RULES.md](docs/CLEANUP_RULES.md) — post-work cleanup checklist and log retention rule
 - [CLEANUP_LOG.md](docs/CLEANUP_LOG.md) — the 3 most recent cleanup passes
+- [QA_AUDIT_RULES.md](docs/QA_AUDIT_RULES.md) — periodic whole-suite QA audit checklist and cadence
+- [QA_AUDIT_BACKLOG.md](docs/QA_AUDIT_BACKLOG.md) — open findings from the most recent QA audit
 - [CLOSED_TESTING_GUIDE.md](docs/CLOSED_TESTING_GUIDE.md) — plain-language testing guide for Play closed testing recruits
 
 ## Commit and PR titles
