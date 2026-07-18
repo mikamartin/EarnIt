@@ -13,6 +13,8 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.earnit.app.tags.Reward
+import com.earnit.app.tags.UiTest
 import com.earnit.app.ui.Strings
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -32,6 +34,8 @@ import org.junit.runner.RunWith
  * adding two new tasks in a row via "Create your own" on an unsaved reward silently drops the
  * first one's inclusion.
  */
+@UiTest
+@Reward
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class RewardEditScreenUiTest {

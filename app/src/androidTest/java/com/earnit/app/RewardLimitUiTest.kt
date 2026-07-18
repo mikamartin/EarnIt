@@ -10,6 +10,8 @@ import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.SettingsRepository
+import com.earnit.app.tags.Reward
+import com.earnit.app.tags.UiTest
 import com.earnit.app.ui.Strings
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -25,6 +27,8 @@ import javax.inject.Inject
  * Verifies max-reward-count gating: when the active reward list reaches maxRewardCount,
  * tapping the FAB shows the max-limit tooltip instead of navigating to the reward edit screen.
  */
+@UiTest
+@Reward
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class RewardLimitUiTest {

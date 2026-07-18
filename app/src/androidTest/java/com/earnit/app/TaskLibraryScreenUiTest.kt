@@ -10,6 +10,8 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.earnit.app.tags.Task
+import com.earnit.app.tags.UiTest
 import com.earnit.app.ui.Strings
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -24,6 +26,8 @@ import org.junit.runner.RunWith
  * explicit Cancel button (only "OK", which does the same navigate-back) — confirming the import
  * that already landed still lands correctly when the dialog is dismissed rather than confirmed.
  */
+@UiTest
+@Task
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class TaskLibraryScreenUiTest {

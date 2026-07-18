@@ -11,6 +11,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.SettingsRepository
+import com.earnit.app.tags.Reward
+import com.earnit.app.tags.Task
+import com.earnit.app.tags.UiTest
 import com.earnit.app.ui.Strings
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -35,6 +38,9 @@ import javax.inject.Inject
  *   4. The home card's "+ ADD TASKS" shortcut (reward with no tasks) opens the
  *      Add Task dialog directly on Reward Detail, not the Reward Edit screen.
  */
+@UiTest
+@Task
+@Reward
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class SaveNavigationUiTest {

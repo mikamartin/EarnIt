@@ -10,6 +10,10 @@ import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.SettingsRepository
+import com.earnit.app.tags.Nudge
+import com.earnit.app.tags.Reward
+import com.earnit.app.tags.UiTest
+import com.earnit.app.tags.Widget
 import com.earnit.app.ui.Strings
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -27,6 +31,10 @@ import javax.inject.Inject
  * Verifies the widget nudge banner on RewardDetailScreen: hidden while a reward has no
  * tasks, shown once the first task is linked, and permanently dismissible.
  */
+@UiTest
+@Widget
+@Nudge
+@Reward
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class WidgetNudgeUiTest {

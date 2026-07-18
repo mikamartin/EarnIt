@@ -3,6 +3,10 @@ package com.earnit.app
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.RewardEntity
 import com.earnit.app.data.TaskEntity
+import com.earnit.app.tags.CleanUp
+import com.earnit.app.tags.RepositoryTest
+import com.earnit.app.tags.Reward
+import com.earnit.app.tags.Task
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -16,6 +20,10 @@ import org.junit.runner.RunWith
  *   clearAllLogs, clearAllTasks, clearAllRewards, deleteTask, deleteReward.
  * Uses a real in-memory Room database; no mocks.
  */
+@RepositoryTest
+@CleanUp
+@Task
+@Reward
 @RunWith(AndroidJUnit4::class)
 class ClearCascadeTest : RoomIntegrationBase() {
     /** Creates a task + reward linked together, logs the task once. Returns taskId to rewardId. */

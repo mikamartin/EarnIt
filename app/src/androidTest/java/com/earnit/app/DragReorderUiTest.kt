@@ -10,6 +10,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.earnit.app.tags.Reward
+import com.earnit.app.tags.Task
+import com.earnit.app.tags.UiTest
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import org.junit.Assert.assertTrue
@@ -25,6 +28,9 @@ import org.junit.runner.RunWith
  * relative to the dragged node's own top-left, not root, so each target's root-space center
  * is translated into the dragged card's local coordinate space before use.
  */
+@UiTest
+@Task
+@Reward
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class DragReorderUiTest {

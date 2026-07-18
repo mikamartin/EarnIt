@@ -10,6 +10,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.EarnItRepository
 import com.earnit.app.data.RewardEntity
 import com.earnit.app.data.TaskEntity
+import com.earnit.app.tags.CleanUp
+import com.earnit.app.tags.UiTest
 import com.earnit.app.ui.Strings
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -27,6 +29,8 @@ import javax.inject.Inject
  * level before this — each test seeds a task, reward, and log, cancels the dialog, and confirms
  * via the repository directly that nothing was actually cleared.
  */
+@UiTest
+@CleanUp
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class CleanUpScreenUiTest {

@@ -12,6 +12,10 @@ import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.SettingsRepository
+import com.earnit.app.tags.Reward
+import com.earnit.app.tags.Smoke
+import com.earnit.app.tags.Task
+import com.earnit.app.tags.UiTest
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.runBlocking
@@ -34,6 +38,10 @@ import javax.inject.Inject
  * Note: the Point cost field defaults to "10" in the UI — performTextClearance() before input is
  * required to set 4, not 104. assertIsDisplayed() calls elsewhere are synchronous checkpoints.
  */
+@UiTest
+@Smoke
+@Task
+@Reward
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class UiHappyPathTest {

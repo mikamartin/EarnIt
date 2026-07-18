@@ -6,6 +6,9 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.earnit.app.tags.Reward
+import com.earnit.app.tags.Task
+import com.earnit.app.tags.UiTest
 import com.earnit.app.ui.Strings
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -18,6 +21,9 @@ import org.junit.runner.RunWith
  * Verifies the empty-state copy shown across all three tabs on a fresh
  * install (no tasks, no rewards, no history) — covered manually until now.
  */
+@UiTest
+@Task
+@Reward
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class EmptyStateUiTest {

@@ -8,6 +8,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.SettingsRepository
+import com.earnit.app.tags.Settings
+import com.earnit.app.tags.UiTest
 import com.earnit.app.ui.Strings
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -24,6 +26,8 @@ import javax.inject.Inject
  * Verifies the Settings screen discoverability tip: shown on first visit, dismissible,
  * and permanently hidden afterward.
  */
+@UiTest
+@Settings
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class SettingsTipUiTest {

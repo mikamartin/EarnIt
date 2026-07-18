@@ -12,6 +12,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.SettingsRepository
+import com.earnit.app.tags.Reward
+import com.earnit.app.tags.Task
+import com.earnit.app.tags.UiTest
 import com.earnit.app.ui.Strings
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -29,6 +32,9 @@ import javax.inject.Inject
  * card read it correctly: LOG disables and an explanatory hint appears, instead of the button
  * silently doing nothing or opening an empty log dialog.
  */
+@UiTest
+@Reward
+@Task
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class RewardAllTasksLoggedHintUiTest {
