@@ -26,7 +26,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
                  [ Manual — 4 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
             [ UI — ~70 tests ]          ComposeTestRule + Hilt, real DataStore
        [ Integration — ~30 tests ]      Real in-memory Room, no mocks
-     [ Unit — 165+ tests ]              JVM, MockK DAOs, fast
+     [ Unit — 175+ tests ]              JVM, MockK DAOs, fast
 ```
 
 **Run unit tests** (JVM, no device needed)
@@ -43,7 +43,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ---
 
-## Unit Tests — `app/src/test/` (165+ tests)
+## Unit Tests — `app/src/test/` (175+ tests)
 
 | File | What it covers |
 |---|---|
@@ -71,6 +71,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `NudgeDebugToolsTest` (3) | `EarnItViewModel.debugGetLastLogIdleHours` — whole-hour idle time from a real timestamp, null when nothing's ever been logged; `debugBackdateLastLog` writes to the repository and invokes its completion callback exactly once (the ordering the "48H"/"96H" dev buttons rely on to avoid racing `NudgeWorker` against an in-flight write) |
 | `PugslyGestureTest` (10) | `PugslyGesture.nextState`/`isComplete` — the tap-timing state machine behind the secret mascot gesture: group-gap boundary (exact pass, one ms over resets), pause-window boundaries (one ms short/over resets, exact min/max accepted), full 7-tap success path, and mid-pattern resets (extra tap before the pause, a slow tap mid-second-burst) |
 | `DragReorderTest` (9) | `DragReorder.targetIndex`/`reordered` — the hover-target math and list-move step shared by Home's reward-list and Tasks' task-list long-press-drag reorder gestures: no target while still over the dragged item's own slot, correct target over another slot, dragged item excluded even if the center falls back inside its own bounds, leading/trailing edge boundaries (exclusive), moving an item down/up shifts the in-between items correctly, and a multi-step sequence (drag down twice, up once) ends at the correct final order |
+| `FieldValidationTest` (9) | `acceptWithinLimit`/`digitsOnly`/`TaskEditState.withIncludedSetTo` — the character-cap, digit-only, and task-link uncheck-reset transforms shared by every field that caps length, filters to digits, or resets mandatory/repeatable on uncheck: under/at/over the character-cap boundary, a same-length replacement at the cap, digit-filtering of mixed/all-digit/no-digit input, and uncheck resetting both flags regardless of prior state vs. checking leaving them untouched |
 
 ---
 
@@ -173,6 +174,9 @@ The button-state decision (`CLAIM` / `LOG` / `ADD_TASK` / `NONE`) is a plain fun
 **Drag-to-reorder gesture on Home and Tasks** (`DragReorderTest`, `DragReorderUiTest`)
 `DragReorderTest` unit-tests the hover-target/list-move math (`DragReorder`) shared by both screens. `DragReorderUiTest` drives the real long-press-drag via `performTouchInput` and asserts actual on-screen card order against the underlying list state, not just the model. See `CLEANUP_LOG.md` Pass 49 for the regression this coverage catches.
 
+**Character-cap, digit-filter, and task-link uncheck-reset field transforms** (`FieldValidationTest`, `MaxLengthUiTest`, cost/points digit-filter and toggle-reset cases in `RewardEditScreenUiTest`/`TaskEditScreenUiTest`)
+`FieldValidationTest` unit-tests `acceptWithinLimit`, `digitsOnly`, and `TaskEditState.withIncludedSetTo` (`FieldValidation.kt`, `SharedDialogs.kt`) directly, including the character-cap and digit-filter boundary cases that previously only existed implicitly through full `MainActivity` instrumented tests. The existing UI tests continue to verify each field is actually wired to the shared functions.
+
 **Import file validation** (`JsonImportValidationTest`, `ImportViewModelErrorTest`, `ExportImportTest`, `ImportErrorUiTest`)
 Wrong-schema JSON (e.g. a random JSON file) throws `ImportWrongSchemaException` before touching the database — critical in Replace mode where silent failure would wipe user data. `ExportImportTest.importReplace_withWrongSchema_doesNotWipeExistingData` proves at integration level that existing DB rows survive a wrong-schema replace attempt (not just that the exception fires). Malformed JSON (invalid syntax even with an EarnIt key present) throws `ImportInvalidJsonException`. Each exception type maps to a specific user-facing string in the ViewModel and is verified against `importResult` StateFlow as well as the `onComplete` callback. UI tests verify the error messages actually appear on the Data & Backup screen.
 
@@ -196,7 +200,7 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
-| Unit (165+ tests) | Every build/push | `./gradlew test` |
+| Unit (175+ tests) | Every build/push | `./gradlew test` |
 | Integration + UI, instrumented (~105 tests) | Every push/PR via CI (two parallel API 34 emulator jobs, Workflow 2 — sharded by layer); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (4) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 

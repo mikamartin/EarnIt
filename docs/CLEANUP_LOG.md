@@ -8,48 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 47 — `fix/archived-reward-log-guard` branch
-
-Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "Logging against an archived reward has no repository guard, and no test" item. `EarnItRepository.logCompletion` inserted unconditionally with no check on the reward's archived state. Research during planning confirmed the realistic trigger: a stale UI surface (e.g. a reward claimed from one screen while its LOG button is still visible elsewhere) calling `logCompletion` after the reward is archived, producing an orphaned log with no `historyEntryId`. Confirmed with the user to add a repository-level guard (not just a documentation test): `logCompletion` now fetches the reward and returns early if it's missing or archived, silently skipping the insert rather than surfacing an error — matches the existing precedent in `claimReward` (`EarnItRepository.kt:154`, no-ops when the reward is missing) and needs no signature change since neither call site (`EarnItViewModel.logTask`, `WidgetTaskLogActivity`) inspects a result today.
-
-#### Duplication ✅ (checked, none found)
-- The new guard reuses `rewardDao.getReward`, already called identically in `claimReward` — no new DAO query added.
-
-#### Decoupling ✅ (n/a)
-- Change is contained entirely within `EarnItRepository`; no ViewModel or UI changes.
-
-#### Complexity & Pattern Health ✅ (checked)
-- Two-line early-return guard, no new branching structure or abstraction.
-
-#### Dead Code & Hygiene ✅
-- ktlint clean.
-- `git status` clean apart from the intended files: `EarnItRepository.kt`, `LogAttributionTest.kt`, `LogAgainstArchivedRewardTest.kt`, `TESTING.md`, `CLEANUP_BACKLOG.md`, `CLEANUP_LOG.md`.
-
-#### Naming Consistency ✅ (n/a)
-- No new files besides the test, which follows the existing `*Test.kt` convention and sits flat in `app/src/androidTest/java/com/earnit/app`, matching every other repository-tier test's placement.
-
-#### Hardcoded Values ✅ (n/a)
-- None introduced; test literals ("Morning Run", "Coffee Treat") match `HappyPathTest`'s existing fixture values.
-
-#### Accessibility ✅ (n/a)
-- No UI touched.
-
-#### Deprecated APIs ✅
-- None touched.
-
-#### Spec Review ✅ (checked, no changes needed)
-- Grepped `EARNIT_SPEC.md` for `logCompletion`/archived-reward terms — this is an internal robustness guard, not a documented behavior contract, so no drift to reconcile.
-
-#### Tests ✅ (1 new file, 1 existing file updated for a mock-strictness ripple, docs updated)
-- New `LogAgainstArchivedRewardTest.logCompletion_onArchivedReward_isSkipped` run alone on a connected API 34 emulator first: pass. Full instrumented suite re-run on the same emulator: 104/104 pass. One `RewardLimitUiTest` failure (unrelated to this change) plus a process crash occurred on the first full run; re-run alone it passed cleanly, and a second full run completed 104/104 clean — confirming emulator flakiness under a long continuous run, not a regression, consistent with the pattern noted in Pass 46.
-- Fixing the repository guard broke 5 pre-existing `LogAttributionTest` unit tests: `RepositoryTestBase`'s `rewardDao` mock is strict (not relaxed), and those tests called `logCompletion` without stubbing the new `rewardDao.getReward` call, so MockK threw. Fixed by adding `coEvery { rewardDao.getReward(any()) } returns RewardEntity(...)` to each, following the same explicit-per-test stubbing convention already used in `RepositoryBehaviourTest`/`ClaimRewardStartOverTest` rather than changing the shared base.
-- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required on its own — covered anyway by the full `connectedDebugAndroidTest` run.
-- `./gradlew ktlintCheck`, `test`, and `assembleDebug` all pass, run sequentially per `CLAUDE.md`.
-- `TESTING.md`: new `LogAgainstArchivedRewardTest` row added to the Instrumented Tests table (Repository layer); the "Logging against an archived reward" entry moved from "Not Covered" to a new "Covered" entry under Edge Cases describing the guard and why it's a silent skip rather than a surfaced error.
-- `CLEANUP_BACKLOG.md`: this item removed now that it's actioned.
-
----
-
 ### Pass 48 — `test/double-tap-logging` branch
 
 Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "Rapid double-tap logging" item. The backlog entry's premise was that `TESTING.md`'s existing framing (DAO writes serialized, button re-evaluates after each Flow emission) didn't actually rule out two `logCompletion` calls for the same non-repeatable task both succeeding. Confirmed with the user: write the concurrent repository test first and let its result decide whether a guard is warranted, rather than assuming either way. It confirmed the gap — `logCompletion` had no loggability check at all, only an archived-reward check, so two concurrent calls each inserted a log. Confirmed with the user to add a repository-level guard, mirroring `claimReward`'s and `logCompletion`'s existing archived-reward pattern (`fix/archived-reward-log-guard`, Pass 47).
@@ -126,3 +84,44 @@ Grepped `EARNIT_SPEC.md` for drag/reorder/sort-order terms — already describes
 - `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially. No `AppModule`/`TestAppModule`/`@Inject` changes.
 - `TESTING.md`: new `DragReorderTest`/`DragReorderUiTest` rows and a Covered edge-case entry describing the bug; unit count 150+ → 165+ (actual count 164, rounded per `CLEANUP_RULES.md`); instrumented/UI pyramid counts (107/72 actual) still round to the existing ~105/~70 figures, unchanged.
 - `CLEANUP_BACKLOG.md`: this item removed and file deleted per its own disposal note.
+
+---
+
+### Pass 50 — `refactor/extract-field-validation-helpers` branch
+
+Actions [QA_AUDIT_BACKLOG.md](QA_AUDIT_BACKLOG.md)'s Issue 9. Character-cap truncation, digit-only filtering, and the task-link uncheck-reset transform were each duplicated inline across `onValueChange`/`onClick` blocks in multiple composables, so they could only be exercised through full `MainActivity` + Hilt + Compose instrumented tests. Extracted `acceptWithinLimit`/`digitsOnly` (`FieldValidation.kt`, mirroring the `DragReorder`/`WidgetActionButton` precedent) and `TaskEditState.withIncludedSetTo` (`SharedDialogs.kt`, next to the data class it operates on), then wired every call site to them. The audit named 8 character-cap sites; reading the current code found a 9th (`WidgetTaskLogActivity.kt`'s note field, same inline shape) it had missed — confirmed with the user to include it rather than leave one duplicate standing.
+
+#### Duplication ✅ — found and fixed
+Grepped every `it.length <=`/`filter { c -> c.isDigit() }` site across `app/src/main` before and after: 9 character-cap and 2 digit-filter sites now all call the shared functions; the 3 task-link uncheck-reset `.copy(...)` blocks (`RewardEditScreen.kt`, two in `TaskEditScreen.kt`) now all call `withIncludedSetTo`.
+
+#### Decoupling ✅ (n/a)
+All three extractions stayed in the `ui` package — `acceptWithinLimit`/`digitsOnly` are plain `String` transforms with no Compose or business-logic coupling, and `withIncludedSetTo` operates on `TaskEditState`, a UI-layer state class already living in `SharedDialogs.kt`. Nothing here belongs in the ViewModel or Repository.
+
+#### Complexity & Pattern Health ✅ (checked)
+None of the three extractions are single-caller: `acceptWithinLimit` has 9 call sites, `digitsOnly` has 2, `withIncludedSetTo` has 3 — the "only one caller" flag doesn't apply.
+
+#### Dead Code & Hygiene ✅
+`./gradlew ktlintCheck` clean. `git status` clean apart from the intended files: `FieldValidation.kt` (new), `FieldValidationTest.kt` (new), `RewardEditScreen.kt`, `TaskEditScreen.kt`, `SettingsScreen.kt`, `SharedDialogs.kt`, `TasksScreen.kt`, `WidgetConfigActivity.kt`, `WidgetTaskLogActivity.kt`, `QA_AUDIT_BACKLOG.md`, `TESTING.md`, `CLEANUP_LOG.md`.
+
+#### Naming Consistency ✅
+`FieldValidation.kt`/`FieldValidationTest.kt` follow the `DragReorder`/`DragReorderTest` flat-`ui`-package precedent.
+
+#### Hardcoded Values ✅ (n/a)
+No new magic numbers — all call sites reuse the existing `*_MAX_CHARS` constants (`AppHelpers.kt`).
+
+#### Accessibility ✅ (n/a)
+No UI touched — same fields, same behavior, different implementation underneath.
+
+#### Deprecated APIs ✅
+None touched.
+
+#### Spec Review ✅ (checked, no changes needed)
+Grepped `EARNIT_SPEC.md` for character-limit/validation terms — it doesn't document these implementation details (field caps, digit filtering), so there's no contract to reconcile.
+
+#### Tests ✅ (1 new file, docs updated)
+- `FieldValidationTest` (9): `acceptWithinLimit` under/at/over the boundary plus a same-length replacement at the cap; `digitsOnly` on mixed/all-digit/no-digit input; `withIncludedSetTo` resetting both flags on uncheck regardless of prior state vs. leaving them untouched on check.
+- Reviewed `MaxLengthUiTest` and the digit-filter/toggle-reset cases in `RewardEditScreenUiTest`/`TaskEditScreenUiTest` against the backlog's "trim to wiring-only" step — each already asserted exactly one happy path + one boundary per field with no full matrix, so nothing was trimmed; left them as regression coverage for the wiring.
+- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required.
+- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`. Manual on-device spot check deferred to the PR description per the user's request, not run this pass.
+- `TESTING.md`: new `FieldValidationTest` row and a Covered edge-case entry; unit count 165+ → 175+ (actual count 173, rounded per `CLEANUP_RULES.md`).
+- `QA_AUDIT_BACKLOG.md`: Issue 9 condensed to one sentence; this branch's Work Item replaced with a dry `(done)` summary, including the 8→9 site-count correction.

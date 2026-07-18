@@ -391,7 +391,7 @@ fun LogForRewardDialog(
                 }
                 OutlinedTextField(
                     value = detail,
-                    onValueChange = { if (it.length <= NOTE_MAX_CHARS) detail = it },
+                    onValueChange = { detail = acceptWithinLimit(detail, it, NOTE_MAX_CHARS) },
                     label = { Text(Strings.TASKS_LOG_NOTE_LABEL) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),

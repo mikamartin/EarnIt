@@ -8,7 +8,7 @@ what was actually done, marked `(done)`.
 
 ## Current State
 
-164 unit tests (`app/src/test/`), 107 instrumented tests (`app/src/androidTest/`), grown
+173 unit tests (`app/src/test/`), 107 instrumented tests (`app/src/androidTest/`), grown
 incrementally across ~50 cleanup passes. No shared flow-helper library exists for Compose UI
 tests, unlike the repository tier (`RoomIntegrationBase`) and ViewModel tier
 (`ViewModelTestBase`), which do have shared base classes.
@@ -72,31 +72,8 @@ tests, unlike the repository tier (`RoomIntegrationBase`) and ViewModel tier
    Its sibling `TaskEditScreenUiTest.editExistingTask_updatesFieldsAndPersists` asserts all four
    of its edited fields (name, icon, group, points) correctly; the reward version should match.
 
-9. **Field-validation logic is inline in composables, not pure functions, so it can only be
-   tested through full instrumented UI tests.** Verified by reading every call site:
-   - **Character-cap truncation** — `{ if (it.length <= MAX) onChange(it) }` — is inlined at 8
-     `onValueChange` sites (`RewardEditScreen.kt` name/description, `TaskEditScreen.kt`
-     name/group, `SettingsScreen.kt` nickname, `SharedDialogs.kt` and `TasksScreen.kt` note,
-     `WidgetConfigActivity.kt` label). `MaxLengthUiTest` exercises 5 of these fields, each via a
-     full `MainActivity` + Hilt + Compose launch, to verify a one-line boundary check.
-   - **Digit-only filtering** — `{ onChange(it.filter { c -> c.isDigit() }) }` — is inlined at 2
-     sites (`RewardEditScreen.kt:472` cost field, `TaskEditScreen.kt:642` manual points field),
-     each with its own full-UI test (`costField_digitFilterStripsNonDigits`,
-     `manualPoints_digitFilterStripsNonDigits`).
-   - **Task-link uncheck resets `included`/`isMandatory`/`isRepeatable` together** — implemented
-     as the same-shaped inline `.copy(...)` transformation independently in both
-     `RewardEditScreen.kt:530` and `TaskEditScreen.kt:709-714` — duplicated, not shared, the same
-     class of drift the project's own Pass 49 (`CLEANUP_LOG.md`) already fixed once for
-     drag-gesture math via `DragReorder`. Covered today only through
-     `RewardEditScreenUiTest.taskRow_mandatoryRepeatableTogglesAndUncheckRemoves` and
-     `TaskEditScreenUiTest.rewardLinks_checkboxAndMandatoryRepeatableToggles`, two independent
-     multi-step UI tests instead of one shared unit test.
-
-   None of this logic needs Compose or Hilt to verify — it's straightforward input
-   transformation. Testing it only through `MainActivity` launches means these checks pay the
-   full instrumented-test cost (emulator, ~30-60s per class) for what a JVM unit test would
-   verify in milliseconds, and — per Issue 1 — over a third of these classes currently don't even
-   run in CI.
+9. **Field-validation logic was inline in composables, not pure functions.** Fixed on
+   `refactor/extract-field-validation-helpers`.
 
 ## Mutation Check Results
 
@@ -155,23 +132,19 @@ Steps:
 Tests: `PointFormulaTest` extended or retargeted so the formula actually used at log time has
 direct boundary coverage.
 
-### refactor/extract-field-validation-helpers (follow-up, not started)
+### refactor/extract-field-validation-helpers (done)
 
-Deliverable: character-cap, digit-only, and task-link-uncheck logic (Issue 9) as pure functions
-with direct unit tests, matching the existing `DragReorder`/`PugslyGesture`/`WidgetActionButton`
-precedent of extracting Compose-adjacent logic out of composables.
+Extracted `acceptWithinLimit`/`digitsOnly` (`FieldValidation.kt`) and
+`TaskEditState.withIncludedSetTo` (`SharedDialogs.kt`), matching the existing
+`DragReorder`/`PugslyGesture`/`WidgetActionButton` precedent, and wired all 9 character-cap
+sites, 2 digit-filter sites, and 3 uncheck-reset sites to them. The audit had named 8
+character-cap sites; a 9th (`WidgetTaskLogActivity.kt`'s note field) turned out to use the
+identical pattern and was included after confirming with the user. Added `FieldValidationTest`
+(9 unit tests) covering the boundary cases directly. `MaxLengthUiTest` and the digit-filter/
+toggle-reset UI tests were left as-is on review — each already asserted one happy path + one
+boundary per field with no "full matrix," so there was nothing to trim.
 
-Steps:
-1. Extract a shared `acceptWithinLimit(current: String, incoming: String, max: Int): String`
-   (or equivalent) and wire it into the 8 character-cap call sites.
-2. Extract a shared `String.digitsOnly(): String` and wire it into the 2 digit-filter call sites.
-3. Extract the task-link uncheck-reset transformation into one shared function used by both
-   `RewardEditScreen.kt` and `TaskEditScreen.kt` instead of two independent inline copies.
-4. Add direct unit tests for all three; trim `MaxLengthUiTest` and the digit-filter/toggle-reset
-   UI tests to a smaller set that verifies wiring only (one happy path, one boundary case per
-   field), not the full matrix — the boundary matrix moves to the new unit tests.
-
-Tests: 3 new unit test files/additions; existing UI tests trimmed, not removed.
+Tests: `FieldValidationTest` (new, 9 cases); existing UI tests unchanged.
 
 ### fix/ci-instrumented-test-matrix (done)
 

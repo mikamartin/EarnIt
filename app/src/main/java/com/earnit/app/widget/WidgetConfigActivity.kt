@@ -47,6 +47,7 @@ import com.earnit.app.data.RewardProgress
 import com.earnit.app.ui.EarnItPrimaryButton
 import com.earnit.app.ui.REWARD_NAME_MAX_CHARS
 import com.earnit.app.ui.Strings
+import com.earnit.app.ui.acceptWithinLimit
 import com.earnit.app.ui.theme.EarnItTheme
 import com.earnit.app.viewmodel.EarnItViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -237,7 +238,7 @@ private fun LabelEditScreen(
 
         OutlinedTextField(
             value = label,
-            onValueChange = { if (it.length <= REWARD_NAME_MAX_CHARS) label = it },
+            onValueChange = { label = acceptWithinLimit(label, it, REWARD_NAME_MAX_CHARS) },
             label = { Text(Strings.WIDGET_LABEL_TITLE) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),

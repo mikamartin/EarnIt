@@ -405,7 +405,7 @@ private fun TaskIconAndNameField(
         }
         OutlinedTextField(
             value = name,
-            onValueChange = { if (it.length <= TASK_NAME_MAX_CHARS) onNameChange(it) },
+            onValueChange = { onNameChange(acceptWithinLimit(name, it, TASK_NAME_MAX_CHARS)) },
             label = { Text(Strings.TASK_NAME_LABEL) },
             placeholder = { Text(Strings.TASK_NAME_PLACEHOLDER) },
             modifier = Modifier.weight(1f),
@@ -517,10 +517,9 @@ private fun TaskGroupPicker(
                     BasicTextField(
                         value = newGroupText,
                         onValueChange = {
-                            if (it.length <= TASK_GROUP_MAX_CHARS) {
-                                onNewGroupTextChange(it)
-                                if (it.isNotBlank()) onGroupChange("")
-                            }
+                            val next = acceptWithinLimit(newGroupText, it, TASK_GROUP_MAX_CHARS)
+                            onNewGroupTextChange(next)
+                            if (next.isNotBlank()) onGroupChange("")
                         },
                         modifier =
                             Modifier
@@ -639,7 +638,7 @@ private fun TaskPointsSection(
     } else {
         OutlinedTextField(
             value = points,
-            onValueChange = { onPointsChange(it.filter { c -> c.isDigit() }) },
+            onValueChange = { onPointsChange(it.digitsOnly()) },
             label = { Text(Strings.TASK_POINTS_LABEL) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -706,24 +705,14 @@ private fun TaskRewardLinksSection(
                         Modifier
                             .fillMaxWidth()
                             .clickable {
-                                rewardLinkState[rp.reward.id] =
-                                    state.copy(
-                                        included = !state.included,
-                                        isMandatory = if (state.included) false else state.isMandatory,
-                                        isRepeatable = if (state.included) false else state.isRepeatable,
-                                    )
+                                rewardLinkState[rp.reward.id] = state.withIncludedSetTo(!state.included)
                             }.padding(start = 4.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Checkbox(
                         checked = state.included,
                         onCheckedChange = {
-                            rewardLinkState[rp.reward.id] =
-                                state.copy(
-                                    included = it,
-                                    isMandatory = if (!it) false else state.isMandatory,
-                                    isRepeatable = if (!it) false else state.isRepeatable,
-                                )
+                            rewardLinkState[rp.reward.id] = state.withIncludedSetTo(it)
                         },
                         colors =
                             CheckboxDefaults.colors(

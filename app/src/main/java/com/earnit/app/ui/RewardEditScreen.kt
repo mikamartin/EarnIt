@@ -433,7 +433,7 @@ private fun RewardIconAndNameField(
         }
         OutlinedTextField(
             value = name,
-            onValueChange = { if (it.length <= REWARD_NAME_MAX_CHARS) onNameChange(it) },
+            onValueChange = { onNameChange(acceptWithinLimit(name, it, REWARD_NAME_MAX_CHARS)) },
             label = { Text(Strings.REWARD_NAME_LABEL) },
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(12.dp),
@@ -469,7 +469,7 @@ private fun RewardCostAndDescriptionFields(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
             value = cost,
-            onValueChange = { onCostChange(it.filter { c -> c.isDigit() }) },
+            onValueChange = { onCostChange(it.digitsOnly()) },
             label = { Text(Strings.REWARD_COST_LABEL) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -489,7 +489,7 @@ private fun RewardCostAndDescriptionFields(
         )
         OutlinedTextField(
             value = description,
-            onValueChange = { if (it.length <= REWARD_DESC_MAX_CHARS) onDescriptionChange(it) },
+            onValueChange = { onDescriptionChange(acceptWithinLimit(description, it, REWARD_DESC_MAX_CHARS)) },
             label = { Text(Strings.REWARD_DESC_LABEL) },
             placeholder = { Text(Strings.REWARD_DESC_PLACEHOLDER) },
             modifier = Modifier.fillMaxWidth(),
@@ -527,7 +527,7 @@ private fun LazyListScope.rewardEditTasksSection(
                 task = task,
                 state = state,
                 onUncheck = {
-                    taskState[task.id] = state.copy(included = false, isMandatory = false, isRepeatable = false)
+                    taskState[task.id] = state.withIncludedSetTo(false)
                 },
                 onToggleMandatory = { taskState[task.id] = state.copy(isMandatory = !state.isMandatory) },
                 onToggleRepeatable = { taskState[task.id] = state.copy(isRepeatable = !state.isRepeatable) },
