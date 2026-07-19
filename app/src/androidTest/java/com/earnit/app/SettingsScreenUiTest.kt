@@ -9,7 +9,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
-import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -134,12 +133,7 @@ class SettingsScreenUiTest {
             .performScrollTo()
             .performClick()
 
-        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
-        composeTestRule.onNodeWithContentDescription("New Reward").performClick()
-        composeTestRule.onNodeWithText("Reward name").performTextInput("Solo Reward")
-        composeTestRule.onNodeWithText("Point cost").performTextClearance()
-        composeTestRule.onNodeWithText("Point cost").performTextInput("5")
-        composeTestRule.onNodeWithText("SAVE").performClick()
+        composeTestRule.createReward("Solo Reward", cost = "5")
 
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithContentDescription("New Reward").performClick()

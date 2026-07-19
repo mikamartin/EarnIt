@@ -7,7 +7,6 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.tags.Reward
@@ -47,20 +46,14 @@ class DragReorderUiTest {
     }
 
     private fun addReward(name: String) {
-        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
-        composeTestRule.onNodeWithContentDescription("New Reward").performClick()
-        composeTestRule.onNodeWithText("Reward name").performTextInput(name)
-        composeTestRule.onNodeWithText("SAVE").performClick()
+        composeTestRule.createReward(name)
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
             composeTestRule.onAllNodesWithText(name).fetchSemanticsNodes().isNotEmpty()
         }
     }
 
     private fun addTask(name: String) {
-        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
-        composeTestRule.onNodeWithContentDescription("New Task").performClick()
-        composeTestRule.onNodeWithText("Task name").performTextInput(name)
-        composeTestRule.onNodeWithText("SAVE").performClick()
+        composeTestRule.createTask(name)
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
             composeTestRule.onAllNodesWithText(name).fetchSemanticsNodes().isNotEmpty()
         }

@@ -79,6 +79,8 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 **State isolation:** Every `@HiltAndroidTest` class using `createAndroidComposeRule<MainActivity>()` calls `resetAppState()` (in `TestStateReset.kt`) as the first line of its `@Before`, immediately after `hiltRule.inject()` and before any test-specific overrides (e.g. `settingsRepository.updateMaxRewardCount(...)`). This gives each test a clean database and default settings to start from, independent of what ran before it in the same instrumentation process. `RoomIntegrationBase`-based repository tests don't need this — each already gets its own fresh in-memory database per test.
 
+**Shared flow helpers:** `UiTestActions.kt` provides `createTask(name)`, `createReward(name, cost)`, `waitForTaskDetail()`, and `waitForRewardDetail()` as `ComposeTestRule` extensions for the base-case create-and-save flows repeated across the suite. Tests that need additional fields (group, reward links, mandatory/repeatable toggles) or reach the form via a different entry point (e.g. a reward form's own "Create your own" task dialog) build those steps inline instead — the helpers cover the common path, not every variant.
+
 **Focused coverage:** Each test verifies one thing and relies on other tests for the rest — don't re-prove logic already covered elsewhere. Assert after each state-changing action instead of chaining several before checking once at the end, so a failure points at exactly which step broke.
 
 **Tagging convention:** Every class in `app/src/androidTest/` carries one required layer tag —

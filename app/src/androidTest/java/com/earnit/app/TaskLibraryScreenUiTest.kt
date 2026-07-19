@@ -7,7 +7,6 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performTextInput
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.tags.Task
@@ -47,13 +46,8 @@ class TaskLibraryScreenUiTest {
     fun skippedDialog_backPressDismiss_stillNavigatesBackWithImportApplied() {
         // Pre-existing task with the same name as a template task, so the import skips it —
         // the trigger for the skipped-tasks dialog.
-        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
-        composeTestRule.onNodeWithContentDescription("New Task").performClick()
-        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Morning Run")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.onAllNodesWithText(Strings.TASK_DETAIL_POINTS_LABEL).fetchSemanticsNodes().isNotEmpty()
-        }
+        composeTestRule.createTask("Morning Run")
+        composeTestRule.waitForTaskDetail()
 
         composeTestRule.onNodeWithContentDescription("Tasks").performClick()
         composeTestRule.onNodeWithText("Library").performClick()

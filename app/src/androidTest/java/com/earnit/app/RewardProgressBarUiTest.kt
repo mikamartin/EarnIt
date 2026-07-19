@@ -8,7 +8,6 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.SettingsRepository
@@ -50,24 +49,11 @@ class RewardProgressBarUiTest {
         runBlocking { settingsRepository.updateNotesMandatory(false) }
     }
 
-    private fun waitForTaskDetail() {
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.onAllNodesWithText("Points:").fetchSemanticsNodes().isNotEmpty()
-        }
-    }
-
     @Test
     fun pointsMeetCostButMandatoryTaskUnlogged_hidesProgressBarNumbers() {
         // Reward cost matches the default 4-point task so a single log reaches full progress.
-        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
-        composeTestRule.onNodeWithContentDescription("New Reward").performClick()
-        composeTestRule.onNodeWithText("Reward name").performTextInput("Study Time")
-        composeTestRule.onNodeWithText("Point cost").performTextClearance()
-        composeTestRule.onNodeWithText("Point cost").performTextInput("4")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.onAllNodesWithText(Strings.REWARD_DETAIL_NO_TASKS).fetchSemanticsNodes().isNotEmpty()
-        }
+        composeTestRule.createReward("Study Time", cost = "4")
+        composeTestRule.waitForRewardDetail()
 
         // A mandatory task linked to the reward, deliberately left unlogged.
         composeTestRule.onNodeWithContentDescription("Tasks").performClick()
@@ -76,7 +62,7 @@ class RewardProgressBarUiTest {
         composeTestRule.onNodeWithText("Study Time").performClick()
         composeTestRule.onNodeWithContentDescription(Strings.TASK_OPTIONAL_DESC).performClick()
         composeTestRule.onNodeWithText("SAVE").performClick()
-        waitForTaskDetail()
+        composeTestRule.waitForTaskDetail()
 
         // A second, optional task worth the same 4 points — logging it alone meets the cost.
         composeTestRule.onNodeWithContentDescription("Tasks").performClick()
@@ -84,7 +70,7 @@ class RewardProgressBarUiTest {
         composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Do Homework")
         composeTestRule.onNodeWithText("Study Time").performClick()
         composeTestRule.onNodeWithText("SAVE").performClick()
-        waitForTaskDetail()
+        composeTestRule.waitForTaskDetail()
 
         // Checkpoint: both tasks linked to the reward before logging either.
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()

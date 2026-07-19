@@ -6,7 +6,6 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.SettingsRepository
@@ -56,16 +55,8 @@ class WidgetNudgeUiTest {
     @Test
     fun nudge_hiddenUntilFirstTaskLinked_thenDismissiblePersistently() {
         // Create a reward with no tasks — nudge must not appear yet.
-        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
-        composeTestRule.onNodeWithContentDescription("New Reward").performClick()
-        composeTestRule.onNodeWithText("Reward name").performTextInput("Movie Night")
-        composeTestRule.onNodeWithText("Point cost").performTextClearance()
-        composeTestRule.onNodeWithText("Point cost").performTextInput("5")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.onAllNodesWithText(Strings.REWARD_DETAIL_NO_TASKS).fetchSemanticsNodes().isNotEmpty()
-        }
+        composeTestRule.createReward("Movie Night", cost = "5")
+        composeTestRule.waitForRewardDetail()
         assertTrue(
             "Widget nudge must not show before any task is linked",
             composeTestRule.onAllNodesWithText(Strings.WIDGET_NUDGE_BODY).fetchSemanticsNodes().isEmpty(),

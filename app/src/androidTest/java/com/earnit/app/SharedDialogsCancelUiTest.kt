@@ -46,19 +46,10 @@ class SharedDialogsCancelUiTest {
         resetAppState()
     }
 
-    private fun waitForTaskDetail() {
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.onAllNodesWithText(Strings.TASK_DETAIL_POINTS_LABEL).fetchSemanticsNodes().isNotEmpty()
-        }
-    }
-
     @Test
     fun logTaskDialog_cancel_noLogRecorded() {
-        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
-        composeTestRule.onNodeWithContentDescription(Strings.NEW_TASK_DESC).performClick()
-        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Morning Run")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-        waitForTaskDetail()
+        composeTestRule.createTask("Morning Run")
+        composeTestRule.waitForTaskDetail()
 
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithContentDescription(Strings.NEW_REWARD_DESC).performClick()
@@ -87,11 +78,8 @@ class SharedDialogsCancelUiTest {
 
     @Test
     fun claimDialog_cancel_rewardStaysActive() {
-        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
-        composeTestRule.onNodeWithContentDescription(Strings.NEW_TASK_DESC).performClick()
-        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Morning Run")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-        waitForTaskDetail()
+        composeTestRule.createTask("Morning Run")
+        composeTestRule.waitForTaskDetail()
 
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithContentDescription(Strings.NEW_REWARD_DESC).performClick()
@@ -128,11 +116,8 @@ class SharedDialogsCancelUiTest {
 
     @Test
     fun addTaskDialog_cancel_taskNotIncluded() {
-        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
-        composeTestRule.onNodeWithContentDescription(Strings.NEW_TASK_DESC).performClick()
-        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Walk Dog")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-        waitForTaskDetail()
+        composeTestRule.createTask("Walk Dog")
+        composeTestRule.waitForTaskDetail()
 
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithContentDescription(Strings.NEW_REWARD_DESC).performClick()
@@ -148,11 +133,8 @@ class SharedDialogsCancelUiTest {
 
     @Test
     fun logForRewardDialog_cancel_noLogRecorded() {
-        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
-        composeTestRule.onNodeWithContentDescription(Strings.NEW_TASK_DESC).performClick()
-        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Read")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-        waitForTaskDetail()
+        composeTestRule.createTask("Read")
+        composeTestRule.waitForTaskDetail()
 
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithContentDescription(Strings.NEW_REWARD_DESC).performClick()

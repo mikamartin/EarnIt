@@ -62,9 +62,7 @@ tests, unlike the repository tier (`RoomIntegrationBase`) and ViewModel tier
 6. **DEV_PLAYBOOK.md referenced retired cleanup passes** ("Pass 36", "Pass 5") not in the
    retained (3-most-recent) CLEANUP_LOG.md. Fixed on `chore/qa-audit`.
 
-7. **No shared UI test flow-helper library.** "Create a task," "create a reward," and "wait for
-   task/reward detail screen" are duplicated inline across roughly 14-18 of ~28 Compose UI test
-   files. `DragReorderUiTest` reimplements private copies rather than sharing.
+7. **No shared UI test flow-helper library.** Fixed on `refactor/ui-test-helpers`.
 
 8. **`RewardEditScreenUiTest.editExistingReward_updatesFieldsAndPersists` under-asserts its own
    name.** It edits four fields (name, cost, description, icon) but only asserts two survived
@@ -155,19 +153,14 @@ annotation instead of an explicit class list, so a new test class runs automatic
 `checkInstrumentedTestTags` (`./gradlew check`) fails the build if a class is missing either tag —
 see TESTING.md's Tagging convention and the CLEANUP_RULES.md Tests checklist item.
 
-### refactor/ui-test-helpers (follow-up, not started)
+### refactor/ui-test-helpers (done)
 
-Deliverable: shared Compose UI test flow-helper module, matching the existing
-`CancelDismissAssertions.kt` precedent.
-
-Steps:
-1. Extract `createTask(name)`, `createReward(name)`, `waitForTaskDetail()`,
-   `waitForRewardDetail()` into a new `UiTestActions.kt`.
-2. Migrate the ~14-18 files with inline duplicates, including `DragReorderUiTest`'s private
-   copies.
-3. Confirm no behavior change — same assertions, same coverage, less duplicated setup code.
-
-Tests: no new test cases; existing tests refactored to share helpers.
+Added `UiTestActions.kt` (`createTask(name)`, `createReward(name, cost)`, `waitForTaskDetail()`,
+`waitForRewardDetail()`) matching the `CancelDismissAssertions.kt` precedent, and migrated the 12
+files whose create/wait blocks matched the base-case signatures (including `DragReorderUiTest`'s
+private `addTask`/`addReward`, which now call the shared helpers internally). Call sites needing
+extra fields, a different entry point, or no SAVE/wait at all were left inline rather than
+bloating the helpers' signatures for a single caller. No behavior change; no new test cases.
 
 ### fix/reward-edit-persistence-assertion (follow-up, not started)
 
