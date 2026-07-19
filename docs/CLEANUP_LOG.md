@@ -8,48 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 48 — `test/double-tap-logging` branch
-
-Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "Rapid double-tap logging" item. The backlog entry's premise was that `TESTING.md`'s existing framing (DAO writes serialized, button re-evaluates after each Flow emission) didn't actually rule out two `logCompletion` calls for the same non-repeatable task both succeeding. Confirmed with the user: write the concurrent repository test first and let its result decide whether a guard is warranted, rather than assuming either way. It confirmed the gap — `logCompletion` had no loggability check at all, only an archived-reward check, so two concurrent calls each inserted a log. Confirmed with the user to add a repository-level guard, mirroring `claimReward`'s and `logCompletion`'s existing archived-reward pattern (`fix/archived-reward-log-guard`, Pass 47).
-
-#### Duplication ✅ (checked, none found)
-- New DAO query (`getActiveLogCount`) is the only new query added; no existing query already answered "is there an active log for this task+reward."
-
-#### Decoupling ✅ (n/a)
-- Change is contained entirely within `EarnItRepository` and `Daos.kt`; no ViewModel or UI changes.
-
-#### Complexity & Pattern Health ✅ (checked)
-- Guard is a single early-return inside the existing `logCompletion`, now wrapped in `database.withTransaction { }` (same pattern as `claimReward`) so the check-then-insert is atomic across concurrent callers rather than just narrowing the race window.
-
-#### Dead Code & Hygiene ✅
-- ktlint clean.
-- `git status` clean apart from the intended files: `EarnItRepository.kt`, `Daos.kt`, `RepositoryTestBase.kt`, `ConcurrentLogCompletionTest.kt`, `TESTING.md`, `CLEANUP_BACKLOG.md`, `CLEANUP_LOG.md`.
-
-#### Naming Consistency ✅ (n/a)
-- `ConcurrentLogCompletionTest` follows the existing `*Test.kt` convention and sits flat in `app/src/androidTest/java/com/earnit/app`, matching every other repository-tier test's placement.
-
-#### Hardcoded Values ✅ (n/a)
-- None introduced; test literals ("Morning Run", "Coffee Treat") match `HappyPathTest`'s existing fixture values.
-
-#### Accessibility ✅ (n/a)
-- No UI touched.
-
-#### Deprecated APIs ✅
-- None touched.
-
-#### Spec Review ✅ (checked, no changes needed)
-- `EARNIT_SPEC.md`'s task field table already documents `Repeatable` as "If true, can be logged multiple times" — this pass makes actual behavior match that contract more robustly; no spec text was inaccurate.
-
-#### Tests ✅ (1 new file, 1 existing file updated for a mock-strictness ripple, docs updated)
-- New `ConcurrentLogCompletionTest` run alone first with the guard absent to confirm the race was real (2 logs written), then again after adding the guard (1 log written) — both runs on a connected emulator. Targeted subset (`HappyPathTest`, `LogAgainstArchivedRewardTest`, `StartOverTest`, `ExportImportTest`, `ClearCascadeTest`, `ConcurrentLogCompletionTest`) run together: 21/21 pass. Full instrumented suite: 105/105 pass, no regressions.
-- Adding the `rewardTaskDao.getTaskRefsForReward` call inside `logCompletion` broke 5 pre-existing `LogAttributionTest` unit tests (strict mock, unstubbed call). Fixed by adding a default `coEvery { rewardTaskDao.getTaskRefsForReward(any()) } returns emptyList()` to `RepositoryTestBase`'s init block, alongside the existing `withTransaction` stub, since this call is now on the path of every `logCompletion` invocation across the suite rather than specific to one test class.
-- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required on its own — covered anyway by the full `connectedDebugAndroidTest` run.
-- `./gradlew ktlintCheck`, `test`, and `assembleDebug` all pass, run sequentially per `CLAUDE.md`.
-- `TESTING.md`: new `ConcurrentLogCompletionTest` row added to the Instrumented Tests table (Repository layer); the "Rapid double-tap logging" entry moved from "Not Covered" (now empty, header removed) to a new "Covered" entry under Edge Cases describing the transaction-scoped guard.
-- `CLEANUP_BACKLOG.md`: this item removed now that it's actioned.
-
----
-
 ### Pass 49 — `test/drag-reorder-coverage` branch
 
 Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "Drag-to-reorder gesture on Home has no automated coverage" item. Extracted the hover-target/list-move math shared by Home's and Tasks' drag gestures into `DragReorder` (mirroring `WidgetActionButton`/`PugslyGesture`) — grepping for `detectDragGesturesAfterLongPress` beyond the file the backlog named surfaced an identical inlined copy in `TasksScreen.kt`, so both screens were wired to the shared object, closing real duplication too.
@@ -125,3 +83,45 @@ Grepped `EARNIT_SPEC.md` for character-limit/validation terms — it doesn't doc
 - `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`. Manual on-device spot check deferred to the PR description per the user's request, not run this pass.
 - `TESTING.md`: new `FieldValidationTest` row and a Covered edge-case entry; unit count 165+ → 175+ (actual count 173, rounded per `CLEANUP_RULES.md`).
 - `QA_AUDIT_BACKLOG.md`: Issue 9 condensed to one sentence; this branch's Work Item replaced with a dry `(done)` summary, including the 8→9 site-count correction.
+
+---
+
+### Pass 51 — `refactor/ui-test-helpers` branch
+
+Actions [QA_AUDIT_BACKLOG.md](QA_AUDIT_BACKLOG.md)'s Issue 7. "Create a task," "create a reward," and "wait for Task/Reward Detail" were each duplicated inline across roughly a third of the Compose UI test files, including two private per-file copies (`TaskEditScreenUiTest`, `SharedDialogsCancelUiTest`, `RewardProgressBarUiTest`, `RewardEditScreenUiTest` each reimplemented their own `waitForTaskDetail()`/`waitForRewardDetail()`; `DragReorderUiTest` reimplemented `addTask`/`addReward` outright). Extracted `createTask(name)`, `createReward(name, cost)`, `waitForTaskDetail()`, `waitForRewardDetail()` into `UiTestActions.kt` (mirroring the `CancelDismissAssertions.kt` precedent) and migrated the 12 files whose blocks matched those base-case signatures. Call sites needing extra fields, a different entry point (e.g. a reward form's own "Create your own" task dialog), or no SAVE/wait at all were left inline rather than growing the helpers' signatures for a single caller — confirmed by re-grepping every remaining `"New Task"`/`"New Reward"` site after migration and checking each one actually diverges from the base case (a prior click-before-type field-focus click, a form never saved, or a second form reopened mid-test).
+
+#### Duplication ✅ — found and fixed
+Re-grepped `onNodeWithContentDescription("New Task"/"New Reward"/Strings.NEW_TASK_DESC/Strings.NEW_REWARD_DESC)` post-migration: every remaining inline hit is a genuine variant (second form reopened to check a duplicate-name error, click-before-type sequence in `RewardAllTasksLoggedHintUiTest`/`UiHappyPathTest`, no-SAVE cap tests, task/reward linked before its own SAVE), not a missed absorption opportunity.
+
+#### Decoupling ✅ (n/a)
+Test-only change — no ViewModel, Repository, or Dao touched.
+
+#### Complexity & Pattern Health ✅ (checked)
+None of the four new helpers are single-caller: `createTask`/`createReward` each have 16 call sites, `waitForTaskDetail` 18, `waitForRewardDetail` 12 (counted post-migration) — the "only one caller" flag doesn't apply.
+
+#### Dead Code & Hygiene ✅
+Removed the now-unused import (`onAllNodesWithText`, `performTextClearance`, and/or `performTextInput`, per file) from each of the 12 migrated files as its inline block was replaced; `ktlintCheck` (which fails on unused imports) passed clean. `git status` clean apart from the intended files.
+
+#### Naming Consistency ✅
+`UiTestActions.kt` sits flat in `app/src/androidTest/java/com/earnit/app`, matching `CancelDismissAssertions.kt`'s placement and extension-function style (`ComposeTestRule` receiver). Grepped for existing `createTask`/`createReward`/`waitForTaskDetail`/`waitForRewardDetail` function definitions before adding these — only pre-existing test method names containing those words as substrings, no actual shadowing.
+
+#### Hardcoded Values ✅ (n/a)
+`waitUntil(timeoutMillis = 5_000)` matches the exact value already used at every call site being replaced — not a new magic number.
+
+#### Accessibility ✅ (n/a)
+No UI touched.
+
+#### Deprecated APIs ✅
+None touched.
+
+#### Spec Review ✅ (checked, no changes needed)
+Grepped `EARNIT_SPEC.md` for `UiTestActions`/`createTask`/`createReward` — no hits; the spec doesn't document test infrastructure, so there's no contract to reconcile.
+
+#### Tests ✅ (0 new test cases, 12 files refactored, docs updated)
+- No test method signatures were added, removed, or renamed — `git diff` on `app/src/androidTest` shows no changed `fun ...()` test-declaration line, only bodies. Total `@Test` count unchanged at 107, matching `TESTING.md`'s existing figure.
+- Ran the full 55-test subset covering all 12 migrated files (`./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=...`) on a connected emulator: 55/55 pass, no regressions from the refactor.
+- `checkInstrumentedTestTags` passed — `UiTestActions.kt` needs no layer/optional tag, same as the untagged `CancelDismissAssertions.kt`/`TestStateReset.kt` precedent (neither is a `@RunWith` test class).
+- No `AppModule`/`TestAppModule`/`@Inject` changes; ran `assembleDebugAndroidTest` anyway since the change touches androidTest broadly — passed, full Hilt graph compiles.
+- `./gradlew ktlintCheck`, `test`, `assembleDebugAndroidTest` all pass sequentially per `CLAUDE.md`.
+- `TESTING.md`: new "Shared flow helpers" paragraph describing `UiTestActions.kt`'s scope and what stays inline; no count changes needed (test count unchanged).
+- `QA_AUDIT_BACKLOG.md`: Issue 7 condensed to one sentence; this branch's Work Item replaced with a dry `(done)` summary.

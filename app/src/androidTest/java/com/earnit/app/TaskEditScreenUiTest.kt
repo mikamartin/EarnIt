@@ -46,19 +46,10 @@ class TaskEditScreenUiTest {
         resetAppState()
     }
 
-    private fun waitForTaskDetail() {
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.onAllNodesWithText("Points:").fetchSemanticsNodes().isNotEmpty()
-        }
-    }
-
     @Test
     fun deleteTask_confirmRemovesTaskAndNavigatesToList() {
-        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
-        composeTestRule.onNodeWithContentDescription("New Task").performClick()
-        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Delete Me")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-        waitForTaskDetail()
+        composeTestRule.createTask("Delete Me")
+        composeTestRule.waitForTaskDetail()
 
         composeTestRule.onNodeWithContentDescription(Strings.EDIT_TASK_DESC).performClick()
         composeTestRule.onNodeWithText(Strings.TASK_EDIT_EXISTING).assertIsDisplayed()
@@ -88,11 +79,8 @@ class TaskEditScreenUiTest {
 
     @Test
     fun deleteDialog_cancelKeepsTask() {
-        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
-        composeTestRule.onNodeWithContentDescription("New Task").performClick()
-        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Keep Me Task")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-        waitForTaskDetail()
+        composeTestRule.createTask("Keep Me Task")
+        composeTestRule.waitForTaskDetail()
 
         composeTestRule.onNodeWithContentDescription(Strings.EDIT_TASK_DESC).performClick()
         composeTestRule.onNodeWithContentDescription(Strings.DELETE_TASK_DESC).performClick()
@@ -127,7 +115,7 @@ class TaskEditScreenUiTest {
         composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Vacuum")
         composeTestRule.onNodeWithText(Strings.TASK_GROUP_PLACEHOLDER).performTextInput("Chores")
         composeTestRule.onNodeWithText("SAVE").performClick()
-        waitForTaskDetail()
+        composeTestRule.waitForTaskDetail()
 
         composeTestRule.onNodeWithContentDescription("Tasks").performClick()
         composeTestRule.onNodeWithContentDescription("New Task").performClick()
@@ -187,18 +175,8 @@ class TaskEditScreenUiTest {
     @Test
     fun rewardLinks_checkboxAndMandatoryRepeatableToggles() {
         // Seed a reward so the "Use to get:" section renders on the New Task form.
-        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
-        composeTestRule.onNodeWithContentDescription("New Reward").performClick()
-        composeTestRule.onNodeWithText("Reward name").performTextInput("Bike Ride")
-        composeTestRule.onNodeWithText("Point cost").performTextClearance()
-        composeTestRule.onNodeWithText("Point cost").performTextInput("5")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule
-                .onAllNodesWithText(Strings.REWARD_DETAIL_NO_TASKS)
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        }
+        composeTestRule.createReward("Bike Ride", cost = "5")
+        composeTestRule.waitForRewardDetail()
 
         composeTestRule.onNodeWithContentDescription("Tasks").performClick()
         composeTestRule.onNodeWithContentDescription("New Task").performClick()
@@ -230,11 +208,8 @@ class TaskEditScreenUiTest {
 
     @Test
     fun editExistingTask_updatesFieldsAndPersists() {
-        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
-        composeTestRule.onNodeWithContentDescription("New Task").performClick()
-        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Original Name")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-        waitForTaskDetail()
+        composeTestRule.createTask("Original Name")
+        composeTestRule.waitForTaskDetail()
 
         composeTestRule.onNodeWithContentDescription(Strings.EDIT_TASK_DESC).performClick()
         composeTestRule.onNodeWithText(Strings.TASK_EDIT_EXISTING).assertIsDisplayed()
@@ -264,18 +239,8 @@ class TaskEditScreenUiTest {
 
     @Test
     fun editExistingTask_rewardLinksPrepopulateFromExistingLinks() {
-        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
-        composeTestRule.onNodeWithContentDescription("New Reward").performClick()
-        composeTestRule.onNodeWithText("Reward name").performTextInput("Study Time")
-        composeTestRule.onNodeWithText("Point cost").performTextClearance()
-        composeTestRule.onNodeWithText("Point cost").performTextInput("5")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule
-                .onAllNodesWithText(Strings.REWARD_DETAIL_NO_TASKS)
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        }
+        composeTestRule.createReward("Study Time", cost = "5")
+        composeTestRule.waitForRewardDetail()
 
         // Create a task linked to that reward as mandatory.
         composeTestRule.onNodeWithContentDescription("Tasks").performClick()
@@ -284,7 +249,7 @@ class TaskEditScreenUiTest {
         composeTestRule.onNodeWithText("Study Time").performClick()
         composeTestRule.onNodeWithContentDescription(Strings.TASK_OPTIONAL_DESC).performClick()
         composeTestRule.onNodeWithText("SAVE").performClick()
-        waitForTaskDetail()
+        composeTestRule.waitForTaskDetail()
 
         // Reopening the task must pre-populate the reward link as included + mandatory.
         composeTestRule.onNodeWithContentDescription(Strings.EDIT_TASK_DESC).performClick()
@@ -297,18 +262,8 @@ class TaskEditScreenUiTest {
     @Test
     fun addTaskFromExistingRewardDetail_showsUsedInAndLinksOnSave() {
         // Create and save a reward first so its Reward Detail screen is reachable with a real id.
-        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
-        composeTestRule.onNodeWithContentDescription("New Reward").performClick()
-        composeTestRule.onNodeWithText("Reward name").performTextInput("Piano Practice")
-        composeTestRule.onNodeWithText("Point cost").performTextClearance()
-        composeTestRule.onNodeWithText("Point cost").performTextInput("5")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule
-                .onAllNodesWithText(Strings.REWARD_DETAIL_NO_TASKS)
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        }
+        composeTestRule.createReward("Piano Practice", cost = "5")
+        composeTestRule.waitForRewardDetail()
 
         // From the existing reward's own Detail screen — not a new, unsaved reward form.
         composeTestRule.onNodeWithText(Strings.REWARD_ADD_TASK_BTN).performClick()

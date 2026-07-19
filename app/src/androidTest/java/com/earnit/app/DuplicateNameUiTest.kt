@@ -3,11 +3,9 @@ package com.earnit.app
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.tags.Reward
@@ -46,15 +44,8 @@ class DuplicateNameUiTest {
     @Test
     fun duplicateTaskName_showsErrorAndDisablesSave() {
         // ── Create a task named "Morning Run" ──────────────────────────────────
-        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
-        composeTestRule.onNodeWithContentDescription("New Task").performClick()
-        composeTestRule.onNodeWithText("Task name").performTextInput("Morning Run")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-
-        // Wait for navigation away from the edit screen
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.onAllNodesWithText("Points:").fetchSemanticsNodes().isNotEmpty()
-        }
+        composeTestRule.createTask("Morning Run")
+        composeTestRule.waitForTaskDetail()
 
         // ── Open a second new-task form ────────────────────────────────────────
         composeTestRule.onNodeWithContentDescription("Tasks").performClick()
@@ -75,20 +66,8 @@ class DuplicateNameUiTest {
     @Test
     fun duplicateRewardName_showsErrorAndDisablesSave() {
         // ── Create a reward named "Movie Night" ────────────────────────────────
-        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
-        composeTestRule.onNodeWithContentDescription("New Reward").performClick()
-        composeTestRule.onNodeWithText("Reward name").performTextInput("Movie Night")
-        composeTestRule.onNodeWithText("Point cost").performTextClearance()
-        composeTestRule.onNodeWithText("Point cost").performTextInput("5")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-
-        // Wait for navigation away from the edit screen
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule
-                .onAllNodesWithText(Strings.REWARD_DETAIL_NO_TASKS)
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        }
+        composeTestRule.createReward("Movie Night", cost = "5")
+        composeTestRule.waitForRewardDetail()
 
         // ── Open a second new-reward form ──────────────────────────────────────
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()

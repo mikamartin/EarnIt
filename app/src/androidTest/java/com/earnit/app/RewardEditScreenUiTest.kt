@@ -51,19 +51,10 @@ class RewardEditScreenUiTest {
         resetAppState()
     }
 
-    private fun waitForRewardDetail() {
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.onAllNodesWithText(Strings.REWARD_DETAIL_NO_TASKS).fetchSemanticsNodes().isNotEmpty()
-        }
-    }
-
     @Test
     fun deleteReward_confirmRemovesRewardAndNavigatesBack() {
-        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
-        composeTestRule.onNodeWithContentDescription(Strings.NEW_REWARD_DESC).performClick()
-        composeTestRule.onNodeWithText(Strings.REWARD_NAME_LABEL).performTextInput("Delete Me Reward")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-        waitForRewardDetail()
+        composeTestRule.createReward("Delete Me Reward")
+        composeTestRule.waitForRewardDetail()
 
         composeTestRule.onNodeWithContentDescription(Strings.EDIT_REWARD_DESC).performClick()
         composeTestRule.onNodeWithText(Strings.REWARD_EDIT_EXISTING).assertIsDisplayed()
@@ -137,11 +128,8 @@ class RewardEditScreenUiTest {
 
     @Test
     fun editExistingReward_updatesFieldsAndPersists() {
-        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
-        composeTestRule.onNodeWithContentDescription(Strings.NEW_REWARD_DESC).performClick()
-        composeTestRule.onNodeWithText(Strings.REWARD_NAME_LABEL).performTextInput("Original Reward")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-        waitForRewardDetail()
+        composeTestRule.createReward("Original Reward")
+        composeTestRule.waitForRewardDetail()
 
         composeTestRule.onNodeWithContentDescription(Strings.EDIT_REWARD_DESC).performClick()
         composeTestRule.onNodeWithText(Strings.REWARD_EDIT_EXISTING).assertIsDisplayed()
@@ -203,21 +191,11 @@ class RewardEditScreenUiTest {
         // inclusion when the second one lands (see sequentialCreateNewTasks_... below and
         // CLEANUP_BACKLOG.md) — an unrelated, pre-existing bug this test intentionally avoids so
         // it can isolate what it's actually testing: per-row toggle independence.
-        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
-        composeTestRule.onNodeWithContentDescription(Strings.NEW_TASK_DESC).performClick()
-        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Vacuum")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.onAllNodesWithText(Strings.TASK_DETAIL_POINTS_LABEL).fetchSemanticsNodes().isNotEmpty()
-        }
+        composeTestRule.createTask("Vacuum")
+        composeTestRule.waitForTaskDetail()
 
-        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
-        composeTestRule.onNodeWithContentDescription(Strings.NEW_TASK_DESC).performClick()
-        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Dishes")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.onAllNodesWithText(Strings.TASK_DETAIL_POINTS_LABEL).fetchSemanticsNodes().isNotEmpty()
-        }
+        composeTestRule.createTask("Dishes")
+        composeTestRule.waitForTaskDetail()
 
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithContentDescription(Strings.NEW_REWARD_DESC).performClick()
@@ -296,13 +274,8 @@ class RewardEditScreenUiTest {
     @Test
     fun existingTaskSelection_viaDialogCarriesMandatoryFlagThroughToIncludedList() {
         // Create a standalone task first — not linked to any reward yet.
-        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
-        composeTestRule.onNodeWithContentDescription(Strings.NEW_TASK_DESC).performClick()
-        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Walk Dog")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.onAllNodesWithText(Strings.TASK_DETAIL_POINTS_LABEL).fetchSemanticsNodes().isNotEmpty()
-        }
+        composeTestRule.createTask("Walk Dog")
+        composeTestRule.waitForTaskDetail()
 
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()
         composeTestRule.onNodeWithContentDescription(Strings.NEW_REWARD_DESC).performClick()
@@ -348,11 +321,8 @@ class RewardEditScreenUiTest {
 
     @Test
     fun deleteDialog_cancelKeepsReward() {
-        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
-        composeTestRule.onNodeWithContentDescription(Strings.NEW_REWARD_DESC).performClick()
-        composeTestRule.onNodeWithText(Strings.REWARD_NAME_LABEL).performTextInput("Keep Me Reward")
-        composeTestRule.onNodeWithText("SAVE").performClick()
-        waitForRewardDetail()
+        composeTestRule.createReward("Keep Me Reward")
+        composeTestRule.waitForRewardDetail()
 
         composeTestRule.onNodeWithContentDescription(Strings.EDIT_REWARD_DESC).performClick()
         composeTestRule.onNodeWithContentDescription(Strings.DELETE_REWARD_DESC).performClick()

@@ -6,8 +6,6 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextClearance
-import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.data.SettingsRepository
 import com.earnit.app.tags.Reward
@@ -54,13 +52,7 @@ class RewardLimitUiTest {
     @Test
     fun atMaxRewardCount_fabShowsTooltipInsteadOfNavigating() {
         // ── Create one reward (reaches the cap of 1) ───────────────────────────
-        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
-        composeTestRule.onNodeWithContentDescription("New Reward").performClick()
-
-        composeTestRule.onNodeWithText("Reward name").performTextInput("Solo Reward")
-        composeTestRule.onNodeWithText("Point cost").performTextClearance()
-        composeTestRule.onNodeWithText("Point cost").performTextInput("5")
-        composeTestRule.onNodeWithText("SAVE").performClick()
+        composeTestRule.createReward("Solo Reward", cost = "5")
 
         // Navigate back to the Prizes home screen
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()

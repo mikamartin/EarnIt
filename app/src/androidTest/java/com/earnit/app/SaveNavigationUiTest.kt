@@ -61,34 +61,19 @@ class SaveNavigationUiTest {
 
     @Test
     fun saveNewTask_navigatesToTaskDetail() {
-        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
-        composeTestRule.onNodeWithContentDescription("New Task").performClick()
-
-        composeTestRule.onNodeWithText("Task name").performTextInput("Morning Jog")
-        composeTestRule.onNodeWithText("SAVE").performClick()
+        composeTestRule.createTask("Morning Jog")
 
         // TaskDetailScreen is uniquely identified by "Points:" — wait for it.
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.onAllNodesWithText("Points:").fetchSemanticsNodes().isNotEmpty()
-        }
+        composeTestRule.waitForTaskDetail()
         composeTestRule.onNodeWithText("Morning Jog").assertIsDisplayed()
     }
 
     @Test
     fun saveNewReward_navigatesToRewardDetail() {
-        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
-        composeTestRule.onNodeWithContentDescription("New Reward").performClick()
-
-        composeTestRule.onNodeWithText("Reward name").performTextInput("Game Night")
-        composeTestRule.onNodeWithText("SAVE").performClick()
+        composeTestRule.createReward("Game Night")
 
         // RewardDetailScreen with no tasks shows "No tasks added yet." — wait for it.
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule
-                .onAllNodesWithText(Strings.REWARD_DETAIL_NO_TASKS)
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        }
+        composeTestRule.waitForRewardDetail()
         composeTestRule.onNodeWithText("Game Night").assertIsDisplayed()
     }
 
@@ -144,15 +129,10 @@ class SaveNavigationUiTest {
     @Test
     fun homeCardAddTasksButton_opensAddTaskDialogDirectly() {
         // Create a reward with no tasks yet.
-        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
-        composeTestRule.onNodeWithContentDescription("New Reward").performClick()
-        composeTestRule.onNodeWithText("Reward name").performTextInput("Movie Night")
-        composeTestRule.onNodeWithText("SAVE").performClick()
+        composeTestRule.createReward("Movie Night")
 
         // Wait for RewardDetailScreen, then navigate back to Home.
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.onAllNodesWithText(Strings.REWARD_DETAIL_NO_TASKS).fetchSemanticsNodes().isNotEmpty()
-        }
+        composeTestRule.waitForRewardDetail()
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()
 
         // Tap the home card's "+ ADD TASKS" pill.
