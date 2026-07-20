@@ -8,47 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 50 — `refactor/extract-field-validation-helpers` branch
-
-Actions [QA_AUDIT_BACKLOG.md](QA_AUDIT_BACKLOG.md)'s Issue 9. Character-cap truncation, digit-only filtering, and the task-link uncheck-reset transform were each duplicated inline across `onValueChange`/`onClick` blocks in multiple composables, so they could only be exercised through full `MainActivity` + Hilt + Compose instrumented tests. Extracted `acceptWithinLimit`/`digitsOnly` (`FieldValidation.kt`, mirroring the `DragReorder`/`WidgetActionButton` precedent) and `TaskEditState.withIncludedSetTo` (`SharedDialogs.kt`, next to the data class it operates on), then wired every call site to them. The audit named 8 character-cap sites; reading the current code found a 9th (`WidgetTaskLogActivity.kt`'s note field, same inline shape) it had missed — confirmed with the user to include it rather than leave one duplicate standing.
-
-#### Duplication ✅ — found and fixed
-Grepped every `it.length <=`/`filter { c -> c.isDigit() }` site across `app/src/main` before and after: 9 character-cap and 2 digit-filter sites now all call the shared functions; the 3 task-link uncheck-reset `.copy(...)` blocks (`RewardEditScreen.kt`, two in `TaskEditScreen.kt`) now all call `withIncludedSetTo`.
-
-#### Decoupling ✅ (n/a)
-All three extractions stayed in the `ui` package — `acceptWithinLimit`/`digitsOnly` are plain `String` transforms with no Compose or business-logic coupling, and `withIncludedSetTo` operates on `TaskEditState`, a UI-layer state class already living in `SharedDialogs.kt`. Nothing here belongs in the ViewModel or Repository.
-
-#### Complexity & Pattern Health ✅ (checked)
-None of the three extractions are single-caller: `acceptWithinLimit` has 9 call sites, `digitsOnly` has 2, `withIncludedSetTo` has 3 — the "only one caller" flag doesn't apply.
-
-#### Dead Code & Hygiene ✅
-`./gradlew ktlintCheck` clean. `git status` clean apart from the intended files: `FieldValidation.kt` (new), `FieldValidationTest.kt` (new), `RewardEditScreen.kt`, `TaskEditScreen.kt`, `SettingsScreen.kt`, `SharedDialogs.kt`, `TasksScreen.kt`, `WidgetConfigActivity.kt`, `WidgetTaskLogActivity.kt`, `QA_AUDIT_BACKLOG.md`, `TESTING.md`, `CLEANUP_LOG.md`.
-
-#### Naming Consistency ✅
-`FieldValidation.kt`/`FieldValidationTest.kt` follow the `DragReorder`/`DragReorderTest` flat-`ui`-package precedent.
-
-#### Hardcoded Values ✅ (n/a)
-No new magic numbers — all call sites reuse the existing `*_MAX_CHARS` constants (`AppHelpers.kt`).
-
-#### Accessibility ✅ (n/a)
-No UI touched — same fields, same behavior, different implementation underneath.
-
-#### Deprecated APIs ✅
-None touched.
-
-#### Spec Review ✅ (checked, no changes needed)
-Grepped `EARNIT_SPEC.md` for character-limit/validation terms — it doesn't document these implementation details (field caps, digit filtering), so there's no contract to reconcile.
-
-#### Tests ✅ (1 new file, docs updated)
-- `FieldValidationTest` (9): `acceptWithinLimit` under/at/over the boundary plus a same-length replacement at the cap; `digitsOnly` on mixed/all-digit/no-digit input; `withIncludedSetTo` resetting both flags on uncheck regardless of prior state vs. leaving them untouched on check.
-- Reviewed `MaxLengthUiTest` and the digit-filter/toggle-reset cases in `RewardEditScreenUiTest`/`TaskEditScreenUiTest` against the backlog's "trim to wiring-only" step — each already asserted exactly one happy path + one boundary per field with no full matrix, so nothing was trimmed; left them as regression coverage for the wiring.
-- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required.
-- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`. Manual on-device spot check deferred to the PR description per the user's request, not run this pass.
-- `TESTING.md`: new `FieldValidationTest` row and a Covered edge-case entry; unit count 165+ → 175+ (actual count 173, rounded per `CLEANUP_RULES.md`).
-- `QA_AUDIT_BACKLOG.md`: Issue 9 condensed to one sentence; this branch's Work Item replaced with a dry `(done)` summary, including the 8→9 site-count correction.
-
----
-
 ### Pass 51 — `refactor/ui-test-helpers` branch
 
 Actions [QA_AUDIT_BACKLOG.md](QA_AUDIT_BACKLOG.md)'s Issue 7. "Create a task," "create a reward," and "wait for Task/Reward Detail" were each duplicated inline across roughly a third of the Compose UI test files, including two private per-file copies (`TaskEditScreenUiTest`, `SharedDialogsCancelUiTest`, `RewardProgressBarUiTest`, `RewardEditScreenUiTest` each reimplemented their own `waitForTaskDetail()`/`waitForRewardDetail()`; `DragReorderUiTest` reimplemented `addTask`/`addReward` outright). Extracted `createTask(name)`, `createReward(name, cost)`, `waitForTaskDetail()`, `waitForRewardDetail()` into `UiTestActions.kt` (mirroring the `CancelDismissAssertions.kt` precedent) and migrated the 12 files whose blocks matched those base-case signatures. Call sites needing extra fields, a different entry point (e.g. a reward form's own "Create your own" task dialog), or no SAVE/wait at all were left inline rather than growing the helpers' signatures for a single caller — confirmed by re-grepping every remaining `"New Task"`/`"New Reward"` site after migration and checking each one actually diverges from the base case (a prior click-before-type field-focus click, a form never saved, or a second form reopened mid-test).
@@ -122,3 +81,44 @@ No UI or magic numbers touched; formula constants unchanged.
 - `./gradlew ktlintCheck`, `test`, `assembleDebugAndroidTest` (run since `EarnItRepository` changed, to validate the Hilt graph), `assembleDebug` all pass sequentially per `CLAUDE.md`.
 - `TESTING.md`: `PointFormulaTest` row count 9 → 10 (exact, per-file); aggregate unit count unchanged (174 actual still rounds to the existing 175+ figure).
 - `QA_AUDIT_BACKLOG.md`: every item was resolved or already fixed on its own branch, so the backlog was cleared back to just the intro convention, ready for the next audit pass.
+
+---
+
+### Pass 53 — `fix/task-edit-group-picker-style` branch
+
+Started from a design-review request: Task Edit's group-field radio list used a bordered, transparent-fill box (`border(1.dp, primary @ 40%)`) with `bodyMedium` text and no horizontal inset, visually inconsistent with the filled `surfaceVariant` "Use to get:" and auto-points sections directly below it on the same screen. Fixed the group picker's Card treatment, padding, and font size to match, then audited whether the fix itself introduced new duplication — it had: the same filled-`Card`-plus-`surfaceVariant` recipe was already copy-pasted across 6 call sites app-wide, and the group picker's radio-row markup reimplemented an existing shared component (`RadioRow`) inline instead of using it.
+
+#### Duplication ✅ — found and fixed
+Extracted `EarnItSectionCard` (`EarnItButtons.kt`) — fixed `surfaceVariant` fill, overridable `shape`/`elevation` — and migrated all 6 pre-existing inline `Card(... surfaceVariant ...)` sites onto it: the group picker, auto-points block, and "Use to get:" reward rows in `TaskEditScreen.kt`; the task row in `RewardEditScreen.kt`; both cards in `HistoryScreen.kt`; the template card in `TaskLibraryScreen.kt` (kept its own `elevation = 2.dp` override). Separately, the group picker's existing-group row reimplemented `RadioRow` (already used once, in `TasksScreen.kt`'s multi-reward log dialog) rather than calling it — extended `RadioRow` with optional `textStyle`/`contentPadding`/`labelSpacing` params, all defaulting to its exact prior behavior (verified `TasksScreen.kt`'s call site needed no changes), and migrated the group picker's existing-group row onto it.
+
+#### Decoupling ✅ (n/a)
+Pure UI/styling change — no ViewModel, Repository, or Dao touched.
+
+#### Complexity & Pattern Health ✅ (checked)
+Neither extraction is single-caller: `EarnItSectionCard` has 6 call sites, `RadioRow` has 2 (`TasksScreen.kt`, `TaskEditScreen.kt`). The group picker's "+ New group" row (radio + editable text field + clear button) was left as raw `RadioButton` rather than forced into `RadioRow`'s label-only shape — a genuine variant, not a missed absorption.
+
+#### Dead Code & Hygiene ✅
+Removed now-unused `Card`/`CardDefaults` imports from `TaskEditScreen.kt`, `RewardEditScreen.kt`, `HistoryScreen.kt` (`CardDefaults` still needed in `TaskLibraryScreen.kt` for its elevation override, so only `Card` was dropped there). `./gradlew ktlintCheck` clean. `git status` clean apart from the intended files.
+
+#### Naming Consistency ✅
+`EarnItSectionCard` follows the `EarnItPrimaryButton`/`EarnItOutlinedButton` naming precedent already in `EarnItButtons.kt`.
+
+#### Hardcoded Values ✅ (n/a)
+No new hardcoded colors — `EarnItSectionCard` centralizes the `surfaceVariant` fill itself. Shape radii (12dp/16dp) are passed per call site matching each one's prior value, consistent with the app's existing convention of inlining `RoundedCornerShape(...)` rather than naming shape constants.
+
+#### Accessibility ✅ (checked)
+`RadioButton` touch targets unchanged (component enforces its own 48dp minimum regardless of surrounding padding); all `IconButton` content descriptions unchanged.
+
+#### Deprecated APIs ✅
+None touched.
+
+#### Spec Review ✅
+`EARNIT_SPEC.md`'s Task Edit line described the group picker as "a bordered radio-button list of existing groups" — stale after this fix. Updated to describe the filled-card styling, matching the auto-points and "Use to get:" sections.
+
+#### Tests ✅ (0 new files, full suite re-verified)
+- No new test files — pure styling/extraction change with no new logic paths.
+- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`.
+- Ran the full `connectedDebugAndroidTest` suite (107 tests) on a connected emulator to confirm the `EarnItSectionCard`/`RadioRow` migration didn't regress any of the 4 touched screens, including `TasksScreen.kt`'s pre-existing `RadioRow` call site. One failure surfaced (`SettingsScreenUiTest.nickname_clearedField_greetingShowsNoAddress`, `ComposeNotIdleException` global-idle-timeout) in a file this branch never touched; re-ran that class alone and all 12 passed — confirmed emulator flake, not a regression.
+- Found but deferred: `LogForRewardDialog`'s multi-reward branch (`RadioRow`'s other call site) has no instrumented coverage — the only existing test touching that dialog (`SharedDialogsCancelUiTest.logForRewardDialog_cancel_noLogRecorded`) links its task to a single reward, which takes the `else` branch and never renders `RadioRow`. Pre-existing gap, not introduced by this branch; left as a candidate for a future QA audit pass rather than expanding this pass's scope.
+- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required.
+- `TESTING.md`: no changes needed — no test added, removed, or renamed, so no counts drifted.

@@ -39,8 +39,6 @@ import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -465,37 +463,23 @@ private fun TaskGroupPicker(
             onToggle = onToggleExpanded,
         )
         if (isGroupExpanded) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            ) {
+            EarnItSectionCard {
                 Column(
                     modifier = Modifier.padding(vertical = 4.dp),
                 ) {
                     existingGroups.forEach { g ->
                         val selected = group == g && newGroupText.isBlank()
-                        Row(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        onGroupChange(if (selected) "" else g)
-                                        onNewGroupTextChange("")
-                                    }.padding(horizontal = 16.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = selected,
-                                onClick = null,
-                                colors =
-                                    RadioButtonDefaults.colors(
-                                        selectedColor = MaterialTheme.colorScheme.primary,
-                                    ),
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(g, style = MaterialTheme.typography.bodyLarge)
-                        }
+                        RadioRow(
+                            label = g,
+                            selected = selected,
+                            onClick = {
+                                onGroupChange(if (selected) "" else g)
+                                onNewGroupTextChange("")
+                            },
+                            textStyle = MaterialTheme.typography.bodyLarge,
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                            labelSpacing = 8.dp,
+                        )
                     }
                     Row(
                         modifier =
@@ -591,11 +575,7 @@ private fun TaskPointsSection(
     }
 
     if (useAuto) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        ) {
+        EarnItSectionCard {
             Column(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -695,11 +675,7 @@ private fun TaskRewardLinksSection(
         )
         rewardProgressList.forEach { rp ->
             val state = rewardLinkState[rp.reward.id] ?: TaskEditState()
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            ) {
+            EarnItSectionCard(shape = RoundedCornerShape(12.dp)) {
                 Row(
                     modifier =
                         Modifier

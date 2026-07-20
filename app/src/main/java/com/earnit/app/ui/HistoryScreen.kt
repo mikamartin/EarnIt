@@ -28,8 +28,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -114,11 +112,7 @@ private fun CompletedTasksTab(uiState: EarnItUiState) {
         items(sortedLogs) { log ->
             val taskName = log.taskName.ifEmpty { taskMap[log.taskId] ?: "Unknown task" }
             val rewardName = rewardNameMap[log.rewardId]
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            ) {
+            EarnItSectionCard(shape = RoundedCornerShape(12.dp)) {
                 Column(
                     modifier = Modifier.padding(12.dp).fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -200,11 +194,7 @@ private fun ClaimedRewardsTab(
         }
         itemsIndexed(uiState.historyEntries) { index, entry ->
             val accent = hofPalette[index % hofPalette.size]
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            ) {
+            EarnItSectionCard {
                 Row(modifier = Modifier.height(IntrinsicSize.Min)) {
                     Box(modifier = Modifier.width(5.dp).fillMaxHeight().background(accent))
                     Column(
