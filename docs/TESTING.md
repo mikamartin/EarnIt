@@ -47,7 +47,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 | File | What it covers |
 |---|---|
-| `PointFormulaTest` (9) | `computeAutoPoints` — min, max, mixed, medium, max single-dimension bonus (time, difficulty, preparation); `effectivePoints()` auto vs manual override |
+| `PointFormulaTest` (10) | `computeAutoPoints` — min, max, mixed, medium, max single-dimension bonus (time, difficulty, preparation), dimension-5 bonus boundary on `TaskEntity`'s own instance method; `effectivePoints()` auto vs manual override |
 | `GatekeeperTest` (7) | `RewardProgress.canClaim` — points boundary (exact / one-below / zero-cost), multiple mandatory tasks (all done / one missing / logged twice), zero-cost with unlogged mandatory |
 | `LogAttributionTest` (5) | `logCompletion` — auto-points formula applied, manual points respected, task name snapshotted at log time, `rewardId` + detail recorded, `historyEntryId` null on new log |
 | `RepositoryBehaviourTest` (12) | `claimReward` (archives / no-archive / not-found), `saveRewardTasks` (correct flags, clears existing before insert), `copyRewardFromEntry` (flags and icon preserved, appended to end of list), `importTemplate` (append / clean-slate / sortOrder / group assignment), `updateTaskRewards` (removes delinked / inserts with correct flags) |

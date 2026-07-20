@@ -8,43 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 49 — `test/drag-reorder-coverage` branch
-
-Actions [CLEANUP_BACKLOG.md](CLEANUP_BACKLOG.md)'s "Drag-to-reorder gesture on Home has no automated coverage" item. Extracted the hover-target/list-move math shared by Home's and Tasks' drag gestures into `DragReorder` (mirroring `WidgetActionButton`/`PugslyGesture`) — grepping for `detectDragGesturesAfterLongPress` beyond the file the backlog named surfaced an identical inlined copy in `TasksScreen.kt`, so both screens were wired to the shared object, closing real duplication too.
-
-Manual on-device testing (requested before trusting the `add`/`removeAt` → `clear`/`addAll` mutation-pattern change) found Home's drag didn't move cards at all — a pre-existing bug, not something this refactor introduced: `draggingIndex` was passed into `homeRewardListItems` as a plain `Int`, frozen by value inside the `pointerInput` closure, so `onDrag` always read a stale index. Fixed by changing it to a `() -> Int` getter. Also found, contrary to the backlog's own assumption, that Compose's `performTouchInput` (with `advanceEventTime` to clear the long-press threshold before moving) *can* drive the real gesture reliably, so `DragReorderUiTest` now exercises it end-to-end on both screens instead of leaving it manual-only.
-
-#### Duplication ✅ — found and fixed
-Grepped `detectDragGesturesAfterLongPress` across `app/src/main` before and after: found `TasksScreen.kt`'s inlined copy of the reorder math pre-change; confirmed both screens delegate to `DragReorder` post-change (the two remaining call sites are the necessarily screen-specific gesture *wiring*, not the math).
-
-#### Decoupling ✅
-Reorder math moved out of two composables into a plain `ui`-package object — kept out of the ViewModel since it's Compose-layout-derived geometry (`LazyListItemInfo` offsets), matching the `PugslyGesture` precedent.
-
-#### Complexity & Pattern Health ✅
-`DragReorder` is a two-function object with two real call sites (clears the "only one caller" flag). Checked composable length: `homeRewardListItems` unchanged (~105 lines); `TasksScreen` itself is ~272 lines but pre-existing and not grown by this diff — out of scope for a test-coverage pass.
-
-#### Dead Code & Hygiene ✅
-Force-recompiled all three source sets (`compileDebugKotlin compileDebugUnitTestKotlin compileDebugAndroidTestKotlin --rerun`) and grepped for warnings — none from this diff. ktlint clean. `git status` clean apart from the intended files.
-
-#### Naming Consistency ✅
-`DragReorder.kt`/`DragReorderTest.kt` follow the `PugslyGesture`/`PugslyGestureTest` flat-`ui`-package precedent. `DragReorderUiTest.kt`'s package (`com.earnit.app`, flat) and `*UiTest.kt` suffix checked against every other instrumented UI test file — matches. Its literal UI strings ("Reward name", "New Task", etc.) match the *majority* existing convention (`SaveNavigationUiTest` and others use literals too), though the suite is genuinely split — some newer files reference `Strings.kt` constants instead. Pre-existing inconsistency, not introduced here; left as-is rather than doing an unrelated suite-wide pass.
-
-#### Hardcoded Values / Accessibility / Deprecated APIs ✅ — n/a
-No UI or API surface touched beyond delegating existing math and the closure fix.
-
-#### Spec Review ✅
-Grepped `EARNIT_SPEC.md` for drag/reorder/sort-order terms — already describes both screens as drag-reorderable; this pass makes actual behavior match that description rather than changing it.
-
-#### Tests ✅ (3 new files, 1 real regression-tested bug fix)
-- `DragReorderTest` (9): pure hover-math and list-move unit tests.
-- `DragReorderUiTest` (2): drives the real long-press-drag via `performTouchInput` on both screens, asserting actual on-screen order. Verified this test fails against the pre-fix code with the same symptom found manually, and passes with the fix — confirmed by temporarily stashing the fix and re-running.
-- Ran on two connected devices (API 34 emulator, API 36 physical device) — 2/2 pass on both.
-- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially. No `AppModule`/`TestAppModule`/`@Inject` changes.
-- `TESTING.md`: new `DragReorderTest`/`DragReorderUiTest` rows and a Covered edge-case entry describing the bug; unit count 150+ → 165+ (actual count 164, rounded per `CLEANUP_RULES.md`); instrumented/UI pyramid counts (107/72 actual) still round to the existing ~105/~70 figures, unchanged.
-- `CLEANUP_BACKLOG.md`: this item removed and file deleted per its own disposal note.
-
----
-
 ### Pass 50 — `refactor/extract-field-validation-helpers` branch
 
 Actions [QA_AUDIT_BACKLOG.md](QA_AUDIT_BACKLOG.md)'s Issue 9. Character-cap truncation, digit-only filtering, and the task-link uncheck-reset transform were each duplicated inline across `onValueChange`/`onClick` blocks in multiple composables, so they could only be exercised through full `MainActivity` + Hilt + Compose instrumented tests. Extracted `acceptWithinLimit`/`digitsOnly` (`FieldValidation.kt`, mirroring the `DragReorder`/`WidgetActionButton` precedent) and `TaskEditState.withIncludedSetTo` (`SharedDialogs.kt`, next to the data class it operates on), then wired every call site to them. The audit named 8 character-cap sites; reading the current code found a 9th (`WidgetTaskLogActivity.kt`'s note field, same inline shape) it had missed — confirmed with the user to include it rather than leave one duplicate standing.
@@ -125,3 +88,37 @@ Grepped `EARNIT_SPEC.md` for `UiTestActions`/`createTask`/`createReward` — no 
 - `./gradlew ktlintCheck`, `test`, `assembleDebugAndroidTest` all pass sequentially per `CLAUDE.md`.
 - `TESTING.md`: new "Shared flow helpers" paragraph describing `UiTestActions.kt`'s scope and what stays inline; no count changes needed (test count unchanged).
 - `QA_AUDIT_BACKLOG.md`: Issue 7 condensed to one sentence; this branch's Work Item replaced with a dry `(done)` summary.
+
+---
+
+### Pass 52 — `fix/duplicate-point-formula` branch
+
+The auto-point formula was implemented twice: `TaskEntity.computeAutoPoints()` (the copy actually used to award points, via `effectivePoints()`) and `EarnItRepository.computeAutoPoints(time, difficulty, preparation)` (used only for the live slider preview in `TaskEditScreen`). `PointFormulaTest`'s boundary assertions all exercised the repository copy, so the formula that actually awards points had no direct boundary coverage — confirmed by a prior QA mutation check (mutating the `== 5` bonus condition on the entity's copy left the suite green). Made `TaskEntity`'s companion object the single source of truth: added a pure `TaskEntity.computeAutoPoints(time, difficulty, preparation)`, with the entity's zero-arg instance method delegating to it. Removed `EarnItRepository`'s copy; `EarnItViewModel.computeAutoPoints()` now calls `TaskEntity`'s companion function directly.
+
+#### Duplication ✅ — found and fixed
+This pass's entire purpose: eliminated the second implementation rather than keeping both in sync by convention. Grepped `computeAutoPoints` across `app/src/main` post-change: exactly one formula body remains (`TaskEntity`'s companion function); every other call site delegates to it.
+
+#### Decoupling ✅ (checked)
+The canonical formula lives in `TaskEntity`'s companion object (data/entity layer, no dependency on `EarnItRepository`) rather than the reverse — a repository owning a pure math formula, or an entity depending on the repository layer, would have been backwards.
+
+#### Complexity & Pattern Health ✅ (checked)
+The companion function has two callers (the instance method, `EarnItViewModel`) — not single-caller, so the extraction earns its keep.
+
+#### Dead Code & Hygiene ✅
+`./gradlew ktlintCheck` clean (fails on unused imports; confirmed no stale `mockk`/`EarnItRepository` imports left in `PointFormulaTest.kt`). `git status` clean apart from the intended files.
+
+#### Naming Consistency ✅ (n/a)
+No new files.
+
+#### Hardcoded Values / Accessibility / Deprecated APIs ✅ (n/a)
+No UI or magic numbers touched; formula constants unchanged.
+
+#### Spec Review ✅
+`EARNIT_SPEC.md`'s Auto-Point Formula section now names `TaskEntity.computeAutoPoints(...)` as the single source of truth, closing a gap where the spec didn't note the formula previously existed in two places.
+
+#### Tests ✅ (7 retargeted, 1 new case)
+- `PointFormulaTest`'s 7 boundary assertions now call `TaskEntity.computeAutoPoints(...)` directly — no more mocked `EarnItRepository`, and the copy under test is now the one that actually awards points.
+- Added a new case exercising the entity's zero-arg instance method (the exact path `logCompletion` and every points-display site use) at the dimension-5 bonus boundary.
+- `./gradlew ktlintCheck`, `test`, `assembleDebugAndroidTest` (run since `EarnItRepository` changed, to validate the Hilt graph), `assembleDebug` all pass sequentially per `CLAUDE.md`.
+- `TESTING.md`: `PointFormulaTest` row count 9 → 10 (exact, per-file); aggregate unit count unchanged (174 actual still rounds to the existing 175+ figure).
+- `QA_AUDIT_BACKLOG.md`: every item was resolved or already fixed on its own branch, so the backlog was cleared back to just the intro convention, ready for the next audit pass.

@@ -308,7 +308,7 @@ class EarnItViewModel
             time: Int,
             difficulty: Int,
             preparation: Int,
-        ): Int = repository.computeAutoPoints(time, difficulty, preparation)
+        ): Int = TaskEntity.computeAutoPoints(time, difficulty, preparation)
 
         // ── Settings ──────────────────────────────────────────────────────────────
 

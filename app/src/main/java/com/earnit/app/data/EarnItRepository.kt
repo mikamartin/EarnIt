@@ -282,16 +282,6 @@ class EarnItRepository
             private const val MAX_IMPORT_BYTES = 10L * 1024 * 1024
         }
 
-        fun computeAutoPoints(
-            time: Int,
-            difficulty: Int,
-            preparation: Int,
-        ): Int {
-            val base = ((time + 1) * (difficulty + 1) * (preparation + 1) + 7) / 8
-            val bonus = if (maxOf(time, difficulty, preparation) == 5) 3 else 0
-            return base + bonus
-        }
-
         // ── Cleanup ───────────────────────────────────────────────────────────────
 
         suspend fun clearAllLogs() =
