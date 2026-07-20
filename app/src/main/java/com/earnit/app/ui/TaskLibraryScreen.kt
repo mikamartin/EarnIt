@@ -28,7 +28,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -115,11 +114,9 @@ fun TaskLibraryScreen(
                 val expanded = expandedMap[tmpl.name] ?: false
                 val selectedTasks = tmpl.tasks.filter { t -> checkedMap["${tmpl.name}_${t.name}"] != false }
 
-                Card(
+                EarnItSectionCard(
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
                         // ── Template header ───────────────────────────────────
