@@ -64,11 +64,8 @@ tests, unlike the repository tier (`RoomIntegrationBase`) and ViewModel tier
 
 7. **No shared UI test flow-helper library.** Fixed on `refactor/ui-test-helpers`.
 
-8. **`RewardEditScreenUiTest.editExistingReward_updatesFieldsAndPersists` under-asserts its own
-   name.** It edits four fields (name, cost, description, icon) but only asserts two survived
-   (name, icon) — a regression in cost or description persistence would pass this test silently.
-   Its sibling `TaskEditScreenUiTest.editExistingTask_updatesFieldsAndPersists` asserts all four
-   of its edited fields (name, icon, group, points) correctly; the reward version should match.
+8. **`RewardEditScreenUiTest.editExistingReward_updatesFieldsAndPersists` under-asserted its own
+   name.** Fixed on `fix/reward-edit-persistence-assertion`.
 
 9. **Field-validation logic was inline in composables, not pure functions.** Fixed on
    `refactor/extract-field-validation-helpers`.
@@ -162,13 +159,10 @@ private `addTask`/`addReward`, which now call the shared helpers internally). Ca
 extra fields, a different entry point, or no SAVE/wait at all were left inline rather than
 bloating the helpers' signatures for a single caller. No behavior change; no new test cases.
 
-### fix/reward-edit-persistence-assertion (follow-up, not started)
+### fix/reward-edit-persistence-assertion (done)
 
-Deliverable: `RewardEditScreenUiTest.editExistingReward_updatesFieldsAndPersists` asserts all
-four fields it edits (Issue 8).
-
-Steps:
-1. Add assertions for the updated cost ("25") and description ("A well-earned break") to match
-   `TaskEditScreenUiTest.editExistingTask_updatesFieldsAndPersists`'s pattern.
+Added assertions for the updated cost ("25") and description ("A well-earned break") to
+`editExistingReward_updatesFieldsAndPersists`, matching
+`TaskEditScreenUiTest.editExistingTask_updatesFieldsAndPersists`'s pattern (Issue 8).
 
 Tests: one existing test strengthened, no new test files.

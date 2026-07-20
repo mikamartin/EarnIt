@@ -152,6 +152,8 @@ class RewardEditScreenUiTest {
             composeTestRule.onAllNodesWithText("Updated Reward").fetchSemanticsNodes().isNotEmpty()
         }
         composeTestRule.onNodeWithText("🏆").assertIsDisplayed()
+        composeTestRule.onNodeWithText("25").assertIsDisplayed()
+        composeTestRule.onNodeWithText("A well-earned break").assertIsDisplayed()
         composeTestRule.onNodeWithText("Original Reward").assertDoesNotExist()
     }
 
