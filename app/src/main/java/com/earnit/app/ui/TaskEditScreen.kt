@@ -465,95 +465,95 @@ private fun TaskGroupPicker(
             onToggle = onToggleExpanded,
         )
         if (isGroupExpanded) {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .border(
-                            1.dp,
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
-                            RoundedCornerShape(12.dp),
-                        ),
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             ) {
-                existingGroups.forEach { g ->
-                    val selected = group == g && newGroupText.isBlank()
+                Column(
+                    modifier = Modifier.padding(vertical = 4.dp),
+                ) {
+                    existingGroups.forEach { g ->
+                        val selected = group == g && newGroupText.isBlank()
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onGroupChange(if (selected) "" else g)
+                                        onNewGroupTextChange("")
+                                    }.padding(horizontal = 16.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = selected,
+                                onClick = null,
+                                colors =
+                                    RadioButtonDefaults.colors(
+                                        selectedColor = MaterialTheme.colorScheme.primary,
+                                    ),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(g, style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
                     Row(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    onGroupChange(if (selected) "" else g)
-                                    onNewGroupTextChange("")
-                                }.padding(end = 16.dp),
+                                    onGroupChange("")
+                                    newGroupFocusRequester.requestFocus()
+                                }.padding(horizontal = 16.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(
-                            selected = selected,
+                            selected = newGroupText.isNotBlank(),
                             onClick = null,
-                            colors =
-                                RadioButtonDefaults.colors(
-                                    selectedColor = MaterialTheme.colorScheme.primary,
-                                ),
+                            colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary),
                         )
-                        Text(g, style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                onGroupChange("")
-                                newGroupFocusRequester.requestFocus()
-                            }.padding(end = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RadioButton(
-                        selected = newGroupText.isNotBlank(),
-                        onClick = null,
-                        colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary),
-                    )
-                    BasicTextField(
-                        value = newGroupText,
-                        onValueChange = {
-                            val next = acceptWithinLimit(newGroupText, it, TASK_GROUP_MAX_CHARS)
-                            onNewGroupTextChange(next)
-                            if (next.isNotBlank()) onGroupChange("")
-                        },
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .focusRequester(newGroupFocusRequester),
-                        singleLine = true,
-                        textStyle =
-                            MaterialTheme.typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurface,
-                            ),
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        decorationBox = { innerTextField ->
-                            Box {
-                                if (newGroupText.isEmpty()) {
-                                    Text(
-                                        Strings.TASK_GROUP_PLACEHOLDER,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                    )
+                        Spacer(Modifier.width(8.dp))
+                        BasicTextField(
+                            value = newGroupText,
+                            onValueChange = {
+                                val next = acceptWithinLimit(newGroupText, it, TASK_GROUP_MAX_CHARS)
+                                onNewGroupTextChange(next)
+                                if (next.isNotBlank()) onGroupChange("")
+                            },
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .focusRequester(newGroupFocusRequester),
+                            singleLine = true,
+                            textStyle =
+                                MaterialTheme.typography.bodyLarge.copy(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                ),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            decorationBox = { innerTextField ->
+                                Box {
+                                    if (newGroupText.isEmpty()) {
+                                        Text(
+                                            Strings.TASK_GROUP_PLACEHOLDER,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        )
+                                    }
+                                    innerTextField()
                                 }
-                                innerTextField()
+                            },
+                        )
+                        if (newGroupText.isNotEmpty()) {
+                            IconButton(
+                                onClick = { onNewGroupTextChange("") },
+                                modifier = Modifier.size(32.dp),
+                            ) {
+                                Icon(
+                                    Icons.Default.Clear,
+                                    contentDescription = Strings.CLEAR_DESC,
+                                    modifier = Modifier.size(16.dp),
+                                )
                             }
-                        },
-                    )
-                    if (newGroupText.isNotEmpty()) {
-                        IconButton(
-                            onClick = { onNewGroupTextChange("") },
-                            modifier = Modifier.size(32.dp),
-                        ) {
-                            Icon(
-                                Icons.Default.Clear,
-                                contentDescription = Strings.CLEAR_DESC,
-                                modifier = Modifier.size(16.dp),
-                            )
                         }
                     }
                 }
