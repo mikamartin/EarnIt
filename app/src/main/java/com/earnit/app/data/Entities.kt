@@ -21,13 +21,21 @@ data class TaskEntity(
     val sortOrder: Int = 0,
     val group: String? = null,
 ) {
-    fun computeAutoPoints(): Int {
-        val base = ((time + 1) * (difficulty + 1) * (preparation + 1) + 7) / 8
-        val bonus = if (maxOf(time, difficulty, preparation) == 5) 3 else 0
-        return base + bonus
-    }
+    fun computeAutoPoints(): Int = computeAutoPoints(time, difficulty, preparation)
 
     fun effectivePoints(): Int = if (useAutoPoints) computeAutoPoints() else points
+
+    companion object {
+        fun computeAutoPoints(
+            time: Int,
+            difficulty: Int,
+            preparation: Int,
+        ): Int {
+            val base = ((time + 1) * (difficulty + 1) * (preparation + 1) + 7) / 8
+            val bonus = if (maxOf(time, difficulty, preparation) == 5) 3 else 0
+            return base + bonus
+        }
+    }
 }
 
 @Entity(tableName = "completion_logs")

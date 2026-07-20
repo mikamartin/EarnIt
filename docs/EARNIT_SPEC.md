@@ -64,6 +64,9 @@ All three dimensions interact multiplicatively — a task that is long, hard, *a
 
 Implemented as integer ceiling division:
 `((time + 1) * (difficulty + 1) * (preparation + 1) + 7) / 8 + if (maxOf(time, difficulty, preparation) == 5) 3 else 0`.
+Single source of truth: `TaskEntity.computeAutoPoints(time, difficulty, preparation)` — the
+entity's own `computeAutoPoints()` and `EarnItViewModel.computeAutoPoints()` (used for the live
+slider preview) both delegate to it.
 
 ### Completion Log
 
