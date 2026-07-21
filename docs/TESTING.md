@@ -39,7 +39,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 ./gradlew connectedDebugAndroidTest
 ```
 
-**CI:** Unit tests run on every build (Workflow 1). Instrumented tests run on every push/PR via two parallel API 34 emulator jobs (Workflow 2) — sharded by layer tag, Repository/Utility and UI (see "Tagging convention" below) — and manually before each release candidate.
+**CI:** Unit tests run on every build (Workflow 1). Instrumented tests run on every push/PR via two parallel API 36 emulator jobs (Workflow 2) — sharded by layer tag, Repository/Utility and UI (see "Tagging convention" below) — and manually before each release candidate.
 
 ---
 
@@ -203,7 +203,7 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
 | Unit (175+ tests) | Every build/push | `./gradlew test` |
-| Integration + UI, instrumented (~105 tests) | Every push/PR via CI (two parallel API 34 emulator jobs, Workflow 2 — sharded by layer); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
+| Integration + UI, instrumented (~105 tests) | Every push/PR via CI (two parallel API 36 emulator jobs, Workflow 2 — sharded by layer); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (4) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 
 See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the journeys that are deliberately never automated (not just deferred) — each crosses a system-process boundary (system file picker, Play Core API, widget activity chain, background `WorkManager` execution) that instrumented UI tests cannot drive reliably.
@@ -211,9 +211,6 @@ See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the journeys that are deliber
 ---
 
 ## Deferrals
-
-**Live instrumented-test verification on Android 16 (API 36) devices**
-`ComposeTestRule` reports `IllegalStateException: No compose hierarchies found in the app` on at least one physical Android 16 device, even though `MainActivity` launches and displays successfully. Reproduces on the pre-existing `UiHappyPathTest`, not just new tests, so it's an environment/library gap rather than a test-writing bug. Ruled out as causes: espresso-core version (3.6.1 and 3.7.0 both affected), a compose-bom patch bump, and timing (an explicit 2s sleep + `waitForIdle()` before the first assertion made no difference). All instrumented tests in this suite are believed correct based on compile checks and code review; live verification is blocked until tests run against a stable, pinned API level (34 or 35) via an emulator — which CI/CD Workflow 2 will need anyway. See `DEV_PLAYBOOK.md` Known Limitations.
 
 **Widget task logging**
 Covered by manual testing, not automation — see [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for rationale and steps.

@@ -62,22 +62,23 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          # Bumped from avd-api34-* to force a fresh snapshot capturing the new -memory 4096
-          # boot config below — reusing an old snapshot risks silently keeping the smaller
-          # baked-in RAM size or hitting a snapshot/config mismatch.
-          key: avd-api34-mem4096-${{ matrix.shard }}
+          # Keyed to the API level, device profile, and RAM config so a version bump to any of
+          # them forces a fresh snapshot rather than silently reusing one baked for the old config.
+          key: avd-api36-pixel6-mem4096-${{ matrix.shard }}
 
       # Only runs on a cache miss to generate the snapshot for future runs.
       - name: Create AVD snapshot
         if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
-          # API 34 pinned: ComposeTestRule throws IllegalStateException on API 36 physical
-          # devices and emulators — environment gap, not a test bug. See TESTING.md Deferrals.
+          api-level: 36
+          # API 36 — matches Play's minimum target requirement.
           target: default
           # default target (no Play Services) is sufficient and faster than google_apis.
           arch: x86_64
+          # Without an explicit profile the action falls back to a 320x640 generic skin, too
+          # small to reliably fit dialog/list content — pin a realistic device size instead.
+          profile: pixel_6
           force-avd-creation: false
           # -memory 4096: default AVD guest RAM (~2.4GB) measurably declined over the course of
           # a UI test run (tracked via /proc/meminfo during the ci-shard-instrumented-tests
@@ -92,9 +93,10 @@ jobs:
       - name: Run instrumented tests (${{ matrix.shard }})
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: 36
           target: default
           arch: x86_64
+          profile: pixel_6
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 4096
           # Disabling animations speeds up Compose UI assertions in instrumented tests.
