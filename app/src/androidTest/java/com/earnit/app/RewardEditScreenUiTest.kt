@@ -253,9 +253,6 @@ class RewardEditScreenUiTest {
         composeTestRule.onNodeWithText(Strings.REWARD_NAME_LABEL).performTextInput("Cleanup Weekend")
 
         composeTestRule.onNodeWithText(Strings.REWARD_ADD_TASK_BTN).performClick()
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.onAllNodesWithText(Strings.ADD_TASK_CREATE).fetchSemanticsNodes().isNotEmpty()
-        }
         composeTestRule.onNodeWithText(Strings.ADD_TASK_CREATE).performClick()
         composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Vacuum")
         composeTestRule.onNodeWithText("SAVE").performClick()
@@ -264,9 +261,6 @@ class RewardEditScreenUiTest {
         }
 
         composeTestRule.onNodeWithText(Strings.REWARD_ADD_TASK_BTN).performClick()
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.onAllNodesWithText(Strings.ADD_TASK_CREATE).fetchSemanticsNodes().isNotEmpty()
-        }
         composeTestRule.onNodeWithText(Strings.ADD_TASK_CREATE).performClick()
         composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Dishes")
         composeTestRule.onNodeWithText("SAVE").performClick()

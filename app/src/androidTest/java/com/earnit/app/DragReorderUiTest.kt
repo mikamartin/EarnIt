@@ -89,8 +89,7 @@ class DragReorderUiTest {
         addReward("Card C")
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()
 
-        // Animated reward cards (animateItem(), drag scale/elevation) need more render budget on API 36 CI than API 34.
-        composeTestRule.waitUntil(timeoutMillis = 10_000) {
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
             composeTestRule.onAllNodesWithText("Card A").fetchSemanticsNodes().isNotEmpty() &&
                 composeTestRule.onAllNodesWithText("Card C").fetchSemanticsNodes().isNotEmpty()
         }
