@@ -18,7 +18,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.earnit.app"
+        applicationId = "com.secondmonday.earnit"
         minSdk = 31
         targetSdk = 36
         versionCode = 1
