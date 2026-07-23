@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 jobs:
   build-lint-test:
     runs-on: ubuntu-latest
@@ -28,6 +33,15 @@ jobs:
 
       - name: Unit tests
         run: ./gradlew test
+
+      - name: Test report
+        if: always()
+        uses: mikepenz/action-junit-report@v4
+        with:
+          check_name: "Results: Unit tests"
+          report_paths: "**/test-results/test*/**/*.xml"
+          job_summary: true
+          detailed_summary: true
 
       - name: Build debug APK
         run: ./gradlew assembleDebug

@@ -6,8 +6,14 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 jobs:
   instrumented-tests:
+    name: Instrumented tests (${{ matrix.shard }})
     runs-on: ubuntu-latest
 
     # Sharded along the Repository/Utility vs. UI layer split documented in TESTING.md's
@@ -16,7 +22,7 @@ jobs:
     # gets its own runner VM and freshly-booted emulator. Filtered by annotation rather than an
     # explicit class list, so a new test class is picked up automatically as soon as it carries
     # its required layer tag — checkInstrumentedTestTags (./gradlew check) enforces that every
-    # class has one. The repository-utility shard uses notAnnotation (everything that isn't
+    # class has one. The repo-utility shard uses notAnnotation (everything that isn't
     # @UiTest) rather than OR-ing @RepositoryTest,@UtilityTest — AndroidJUnitRunner doesn't
     # treat a comma-separated annotation value as an OR filter, so that combination silently
     # matched zero tests instead of failing loudly.
@@ -24,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - shard: repository-utility
+          - shard: repo-utility
             filterKey: notAnnotation
             filterValue: com.earnit.app.tags.UiTest
           - shard: ui
@@ -110,3 +116,12 @@ jobs:
         with:
           name: instrumented-test-results-${{ matrix.shard }}
           path: app/build/outputs/androidTest-results/
+
+      - name: Test report (${{ matrix.shard }})
+        if: always()
+        uses: mikepenz/action-junit-report@v4
+        with:
+          check_name: "Results: Instrumented tests (${{ matrix.shard }})"
+          report_paths: "**/outputs/androidTest-results/connected/**/*.xml"
+          job_summary: true
+          detailed_summary: true
