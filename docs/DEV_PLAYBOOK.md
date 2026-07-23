@@ -20,7 +20,7 @@ Items are independent — work them in any order. Strip completed items as they 
 ### Post-launch
 
 - [ ] CI badge + Play Store link in README (once CI and store listing are live)
-- [ ] Test result artifacts published; badge(s) in README
+- [ ] Test-count badge(s) in README
 - [ ] Stretch: auto-upload AAB to Play internal testing track (r0adkll/upload-google-play or Fastlane)
 
 ---

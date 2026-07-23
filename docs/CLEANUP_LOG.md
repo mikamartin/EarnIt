@@ -8,48 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 51 — `refactor/ui-test-helpers` branch
-
-Actions [QA_AUDIT_BACKLOG.md](QA_AUDIT_BACKLOG.md)'s Issue 7. "Create a task," "create a reward," and "wait for Task/Reward Detail" were each duplicated inline across roughly a third of the Compose UI test files, including two private per-file copies (`TaskEditScreenUiTest`, `SharedDialogsCancelUiTest`, `RewardProgressBarUiTest`, `RewardEditScreenUiTest` each reimplemented their own `waitForTaskDetail()`/`waitForRewardDetail()`; `DragReorderUiTest` reimplemented `addTask`/`addReward` outright). Extracted `createTask(name)`, `createReward(name, cost)`, `waitForTaskDetail()`, `waitForRewardDetail()` into `UiTestActions.kt` (mirroring the `CancelDismissAssertions.kt` precedent) and migrated the 12 files whose blocks matched those base-case signatures. Call sites needing extra fields, a different entry point (e.g. a reward form's own "Create your own" task dialog), or no SAVE/wait at all were left inline rather than growing the helpers' signatures for a single caller — confirmed by re-grepping every remaining `"New Task"`/`"New Reward"` site after migration and checking each one actually diverges from the base case (a prior click-before-type field-focus click, a form never saved, or a second form reopened mid-test).
-
-#### Duplication ✅ — found and fixed
-Re-grepped `onNodeWithContentDescription("New Task"/"New Reward"/Strings.NEW_TASK_DESC/Strings.NEW_REWARD_DESC)` post-migration: every remaining inline hit is a genuine variant (second form reopened to check a duplicate-name error, click-before-type sequence in `RewardAllTasksLoggedHintUiTest`/`UiHappyPathTest`, no-SAVE cap tests, task/reward linked before its own SAVE), not a missed absorption opportunity.
-
-#### Decoupling ✅ (n/a)
-Test-only change — no ViewModel, Repository, or Dao touched.
-
-#### Complexity & Pattern Health ✅ (checked)
-None of the four new helpers are single-caller: `createTask`/`createReward` each have 16 call sites, `waitForTaskDetail` 18, `waitForRewardDetail` 12 (counted post-migration) — the "only one caller" flag doesn't apply.
-
-#### Dead Code & Hygiene ✅
-Removed the now-unused import (`onAllNodesWithText`, `performTextClearance`, and/or `performTextInput`, per file) from each of the 12 migrated files as its inline block was replaced; `ktlintCheck` (which fails on unused imports) passed clean. `git status` clean apart from the intended files.
-
-#### Naming Consistency ✅
-`UiTestActions.kt` sits flat in `app/src/androidTest/java/com/earnit/app`, matching `CancelDismissAssertions.kt`'s placement and extension-function style (`ComposeTestRule` receiver). Grepped for existing `createTask`/`createReward`/`waitForTaskDetail`/`waitForRewardDetail` function definitions before adding these — only pre-existing test method names containing those words as substrings, no actual shadowing.
-
-#### Hardcoded Values ✅ (n/a)
-`waitUntil(timeoutMillis = 5_000)` matches the exact value already used at every call site being replaced — not a new magic number.
-
-#### Accessibility ✅ (n/a)
-No UI touched.
-
-#### Deprecated APIs ✅
-None touched.
-
-#### Spec Review ✅ (checked, no changes needed)
-Grepped `EARNIT_SPEC.md` for `UiTestActions`/`createTask`/`createReward` — no hits; the spec doesn't document test infrastructure, so there's no contract to reconcile.
-
-#### Tests ✅ (0 new test cases, 12 files refactored, docs updated)
-- No test method signatures were added, removed, or renamed — `git diff` on `app/src/androidTest` shows no changed `fun ...()` test-declaration line, only bodies. Total `@Test` count unchanged at 107, matching `TESTING.md`'s existing figure.
-- Ran the full 55-test subset covering all 12 migrated files (`./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=...`) on a connected emulator: 55/55 pass, no regressions from the refactor.
-- `checkInstrumentedTestTags` passed — `UiTestActions.kt` needs no layer/optional tag, same as the untagged `CancelDismissAssertions.kt`/`TestStateReset.kt` precedent (neither is a `@RunWith` test class).
-- No `AppModule`/`TestAppModule`/`@Inject` changes; ran `assembleDebugAndroidTest` anyway since the change touches androidTest broadly — passed, full Hilt graph compiles.
-- `./gradlew ktlintCheck`, `test`, `assembleDebugAndroidTest` all pass sequentially per `CLAUDE.md`.
-- `TESTING.md`: new "Shared flow helpers" paragraph describing `UiTestActions.kt`'s scope and what stays inline; no count changes needed (test count unchanged).
-- `QA_AUDIT_BACKLOG.md`: Issue 7 condensed to one sentence; this branch's Work Item replaced with a dry `(done)` summary.
-
----
-
 ### Pass 52 — `fix/duplicate-point-formula` branch
 
 The auto-point formula was implemented twice: `TaskEntity.computeAutoPoints()` (the copy actually used to award points, via `effectivePoints()`) and `EarnItRepository.computeAutoPoints(time, difficulty, preparation)` (used only for the live slider preview in `TaskEditScreen`). `PointFormulaTest`'s boundary assertions all exercised the repository copy, so the formula that actually awards points had no direct boundary coverage — confirmed by a prior QA mutation check (mutating the `== 5` bonus condition on the entity's copy left the suite green). Made `TaskEntity`'s companion object the single source of truth: added a pure `TaskEntity.computeAutoPoints(time, difficulty, preparation)`, with the entity's zero-arg instance method delegating to it. Removed `EarnItRepository`'s copy; `EarnItViewModel.computeAutoPoints()` now calls `TaskEntity`'s companion function directly.
@@ -122,3 +80,31 @@ None touched.
 - Found but deferred: `LogForRewardDialog`'s multi-reward branch (`RadioRow`'s other call site) has no instrumented coverage — the only existing test touching that dialog (`SharedDialogsCancelUiTest.logForRewardDialog_cancel_noLogRecorded`) links its task to a single reward, which takes the `else` branch and never renders `RadioRow`. Pre-existing gap, not introduced by this branch; left as a candidate for a future QA audit pass rather than expanding this pass's scope.
 - No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required.
 - `TESTING.md`: no changes needed — no test added, removed, or renamed, so no counts drifted.
+
+---
+
+### Pass 54 — `chore/ci-test-report` branch
+
+CI had no visibility into test counts — a PR's Checks tab showed only a single green/red step for `./gradlew test` or `connectedDebugAndroidTest`, with pass/fail/skip counts buried in logs. Mirrored `hodit`'s reference setup: added a `mikepenz/action-junit-report@v4` step, `if: always()`, right after each existing test-execution step in `ci.yml` (unit tests) and `instrumented-tests.yml` (per shard), each publishing a named Check Run and job summary from the JUnit XML already being produced. Added the required `permissions: checks: write` / `pull-requests: write` block to both workflows. Config-only change — no Kotlin, Compose, or app code touched.
+
+#### Duplication ✅ (checked)
+The two `action-junit-report` steps are near-identical (differ only in `check_name`/`report_paths`). Checked whether to extract a shared composite action: hodit's own reference doesn't extract it either (inlined in both its workflows), and `instrumented-tests.yml` already inlines its `android-emulator-runner` config twice in the same file — inlining two call sites matches existing project convention, not a missed extraction.
+
+#### Decoupling / Complexity & Pattern Health / Naming Consistency / Hardcoded Values / Accessibility ✅ (n/a)
+No Kotlin, Compose, ViewModel, Repository, or Dao touched; no new files added.
+
+#### Dead Code & Hygiene ✅
+`git status`/`git diff --stat` confirm exactly the 4 intended files changed (30 insertions, 2 deletions), nothing stray.
+
+#### Deprecated APIs ✅ (checked)
+`mikepenz/action-junit-report@v4` matches the version hodit currently pins in both of its workflows — not stale relative to the reference being mirrored.
+
+#### Spec Review ✅ (checked, no changes needed)
+Grepped `EARNIT_SPEC.md` for `CI|Workflow|GitHub Actions|test-results|action-junit` — no hits. The spec doesn't document CI/test infrastructure, so there's no contract to reconcile (same precedent as former Pass 51).
+
+#### Tests ✅ (0 new test cases, docs updated)
+- No test files added, removed, or renamed — this pass only adds reporting visibility around existing test execution.
+- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required.
+- `./gradlew ktlintCheck` passes (doesn't lint YAML, but is the project's standard pre-commit check).
+- `TESTING.md`: checked the Cadence table and Deferrals section directly, not just the one line touched — the Cadence table already reflected both workflows running on every push/PR (unchanged by this pass, which adds visibility, not a trigger change); Deferrals' five entries are all unrelated coverage gaps, none tied to CI reporting. Only the CI-behavior sentence needed updating, now done.
+- `DEV_PLAYBOOK.md`: Post-launch checklist item split — the artifacts/Check-Run portion this pass closes was struck out entirely (not left checked) per the "checklist should only ever contain open work" rule; the README test-count badge portion stays open, deferred (needs a dynamic-badge/gist mechanism, out of scope here).

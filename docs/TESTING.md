@@ -39,7 +39,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 ./gradlew connectedDebugAndroidTest
 ```
 
-**CI:** Unit tests run on every build (Workflow 1). Instrumented tests run on every push/PR via two parallel API 36 emulator jobs (Workflow 2) — sharded by layer tag, Repository/Utility and UI (see "Tagging convention" below) — and manually before each release candidate.
+**CI:** Unit tests run on every build (Workflow 1). Instrumented tests run on every push/PR via two parallel API 36 emulator jobs (Workflow 2) — sharded by layer tag, Repository/Utility and UI (see "Tagging convention" below) — and manually before each release candidate. Each job publishes a named Check Run and job summary with pass/fail/skip counts (`mikepenz/action-junit-report`).
 
 ---
 
