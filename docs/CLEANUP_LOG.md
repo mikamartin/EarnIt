@@ -8,36 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 55 — `test/log-for-reward-dialog-multi-reward` branch
-
-Closes the gap Pass 53 found and deferred: `LogForRewardDialog`'s multi-reward branch (`RadioRow`'s other call site, in `TasksScreen.kt`) had no instrumented coverage — every existing test touching that dialog links its task to a single reward, which takes the `else` branch and never renders the reward picker. Added a new instrumented test that links one task to two rewards and drives the picker directly: both reward names render, LOG stays disabled until one is selected, and logging credits only the chosen reward. Test-only change — no production code touched.
-
-#### Duplication ✅ — found and fixed
-Two separate things checked here, not one: (1) The two reward-creation-and-link blocks are inlined in a loop rather than extracted into a new `UiTestActions.kt` helper — verified against the file directly (only `createTask`, `createReward` with no task-link, `waitForTaskDetail`, `waitForRewardDetail` exist there) and against `TESTING.md`'s documented convention that shared helpers cover the common create-and-save path only, flows needing an inline reward-task link build the steps inline, matching `SharedDialogsCancelUiTest.kt`'s existing precedent for the same block. (2) The first draft of this test repeated `hasAnyAncestor(isDialog()) and hasText(...)` verbatim three times within the one test method — missed on the first pass through this checklist, caught on a second, more literal read of the diff. Extracted a private `ComposeTestRule.dialogNodeWithText(text)` local to the file (3 call sites, so it earns its keep) rather than adding it to `CancelDismissAssertions.kt`, since nothing outside this file needs it yet.
-
-#### Decoupling / Naming Consistency / Hardcoded Values / Accessibility / Deprecated APIs ✅ (n/a)
-Test-only change — no ViewModel, Repository, Dao, or Compose UI code touched. New file follows the existing `*UiTest.kt` naming and package-root placement.
-
-#### Complexity & Pattern Health ✅ (checked)
-`dialogNodeWithText` (added during the Duplication fix above) has 3 call sites in this file, not 1 — not a premature single-caller extraction.
-
-#### Dead Code & Hygiene ✅
-`./gradlew ktlintCheck` clean. `git status` clean apart from the intended files.
-
-#### Spec Review ✅ (checked, no changes needed)
-Grepped `EARNIT_SPEC.md` for `LogForRewardDialog|multi-reward|RadioRow` — no hits. No behavior changed, only test coverage added, so there's no contract to reconcile.
-
-#### Tests ✅ (1 new file, 1 new test)
-- New file `LogForRewardDialogUiTest` (1 test), tagged `@UiTest @Task @Reward`. Kept as its own file rather than folded into `SharedDialogsCancelUiTest.kt` despite being under `CLEANUP_RULES.md`'s 3-test new-file guideline: that class's doc comment and `TESTING.md` entry specifically scope it to cancel/dismiss paths, and this is a confirm-path test covering a genuinely distinct behavior.
-- Ran on the connected emulator before committing, per the checklist — caught a real bug on the first run: asserting on reward names by plain text matched twice, because `TaskDetailScreen`'s background "Used in Rewards" list repeats the same reward names behind the dialog. Fixed by scoping the picker's node lookups to the dialog's own window (`hasAnyAncestor(isDialog()) and hasText(...)`), mirroring the existing pattern in `CancelDismissAssertions.kt`. Passed after the fix.
-- Re-ran on the emulator a second time after the Duplication-fix refactor above (extracting `dialogNodeWithText`) — an unrelated import (`onNode`) briefly broke the build (`onNode` is a `SemanticsNodeInteractionsProvider` member, not a top-level import, same as `CancelDismissAssertions.kt` already relies on); fixed and passed.
-- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required.
-- `./gradlew ktlintCheck` and `test` both pass.
-- `TESTING.md`: added a table row for `LogForRewardDialogUiTest`; extended the existing "Task attached to two rewards simultaneously" edge-case entry to reference the new UI-level coverage. Aggregate counts unchanged (one test doesn't move the rounded figures).
-- `QA_AUDIT_BACKLOG.md`: checked — this gap was never logged there (it lived only in Pass 53's log entry), so nothing to remove.
-
----
-
 ### Pass 56 — `fix/edge-to-edge-deprecated-apis` branch
 
 Play Console flagged two edge-to-edge warnings on upload: a generic "may not display for all users" notice, and a deprecated-API list (`Window.setStatusBarColor`, `Window.setNavigationBarColor`, `LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES`) attributed to obfuscated call sites (`se0.a`, `re0.b`). `enableEdgeToEdge()` was already called correctly in `MainActivity.onCreate()` and `Scaffold` already threads system-bar insets through as content padding, so the app's own Compose insets handling wasn't the problem. Root-caused to two things instead: `themes.xml` still set `android:statusBarColor`/`android:navigationBarColor` explicitly (redundant now, and one of the deprecated items Google's own edge-to-edge migration guide says to delete), and `androidx.activity:activity-compose` (1.9.0), `androidx.core:core-ktx` (1.12.0), and `com.google.android.material:material` (1.13.0) were multiple minor versions behind the rest of the stack — all three are named in public GitHub issues as sources of these exact deprecated calls inside their own `enableEdgeToEdge()`/`EdgeToEdgeUtils` internals. Removed the two theme attrs and bumped all three dependencies to current stable (1.13.0 / 1.18.0 / 1.14.0 respectively — `core-ktx` capped at 1.18.0 rather than 1.19.0 because 1.19.0's AAR metadata requires `compileSdk 37`, and bumping `compileSdk`/`targetSdk` was explicitly out of scope for this pass).
@@ -89,3 +59,35 @@ Grepped `EARNIT_SPEC.md` for `WidgetTaskLogActivity|WidgetConfigActivity` — bo
 - No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required.
 - `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`.
 - `TESTING.md`: no changes needed — no test added, removed, or renamed.
+
+---
+
+### Pass 58 — `fix/widget-all-tasks-done-state` branch
+
+Bug report: on the Rewards screen, a reward with all one-time tasks done and no repeatable tasks shows a disabled `+ LOG` pill plus an explanatory hint (`REWARD_ALL_TASKS_LOGGED_HINT`); the equivalent widget state showed nothing at all — no button, no text. Root cause: `widgetActionButtonFor`'s (`WidgetActionButton.kt`) 4-way `when` had an `else -> NONE` branch that, given the other three branches' conditions, could only ever be reached by this exact state (all tasks done, nothing repeatable) — and `EarnItWidget.kt` rendered `NONE` as `{}`. Fixed by renaming `NONE` to `LOG_DISABLED`, rendering it as a muted, non-clickable version of the `+ LOG` button, and adding a matching one-line hint (`WIDGET_ALL_TASKS_LOGGED_HINT`, "All tasks done — add more") below the reward name — mirroring the existing `showMandatoryHint`/`WIDGET_MANDATORY_HINT` pattern, and confirmed mutually exclusive with it (both hints can never be true for the same render, so they never contend for the same line).
+
+#### Duplication ✅ — found and fixed
+`widgetActionButtonFor` reimplemented `RewardProgress.loggableTasks`' exact filter inline (`completedIds`/`taskRefsMap`/`hasTasks` local vars duplicating `Entities.kt`'s `loggableTasks` getter). Since this pass was already rewriting that function, simplified it to call `progress.loggableTasks.isNotEmpty()` and `progress.allTasks.isEmpty()` directly — removes the duplicate logic and shortens the function to a single `when` expression. Re-ran `ktlintCheck` and `test` after this refactor to confirm behavior didn't shift.
+
+#### Decoupling / Complexity & Pattern Health / Naming Consistency ✅ (checked)
+No ViewModel/Repository/Dao touched. `LOG_DISABLED`'s render branch reuses the existing `LOG` button's shape/sizing (32dp circle) rather than introducing a new layout pattern; only the color source and click-wiring differ.
+
+#### Hardcoded Values ✅ (checked)
+New muted-button colors resolve from `WidgetColors.track`/`onSurfaceVar` (existing theme-aware `ColorProvider`s), not literal hex values — consistent with every other widget button state.
+
+#### Accessibility ✅ (checked)
+`LOG_DISABLED`'s icon `Image` carries a non-empty `contentDescription` (reusing the hint string), unlike being decorative/`null`, since the box has no visible label text of its own the way `CLAIM`/`ADD_TASK` do.
+
+#### Deprecated APIs ✅ (n/a)
+No new API surface touched beyond existing Glance `Image`/`ColorFilter.tint`, both current.
+
+#### Spec Review ✅ — found and fixed
+`EARNIT_SPEC.md`'s Widget Display States table documented the *buggy* behavior as intentional ("All tasks done, points still short: reward name and progress bar only; no button shown"). Corrected to describe the disabled button + hint.
+
+#### Tests ✅ (0 new files; 2 existing tests corrected, both previously asserting the bug)
+- `WidgetActionButtonTest`'s `` `non-repeatable task already logged and points below cost returns NONE` `` renamed and updated to assert `LOG_DISABLED` — this test was passing *because* it encoded the bug, not despite it.
+- `WidgetContentTest`'s `standardContent_allTasksDoneBelowCost_showsNoActionButton` renamed to `standardContent_allTasksDoneBelowCost_showsDisabledLogButtonAndHint`, extended to assert the disabled button exists with `assertHasNoClickAction()` and the hint text renders.
+- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required.
+- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`.
+- `TESTING.md`: updated the `WidgetActionButtonTest`/`WidgetContentTest` table rows and the "Widget action-button selection" prose section to say `LOG_DISABLED` instead of `NONE` and describe the new disabled-button-plus-hint assertion. Counts unchanged (both are renamed/extended existing tests, not new files).
+- `MANUAL_TEST_PLAN.md`: step 9 (all-tasks-done widget state) updated to describe the disabled button and hint instead of "no button is shown"; step 14 (narrow-width/minimal-footprint overflow check) extended to also cover this new hint, since it shares the exact clipping risk `fix/widget-hint-overflow` already found for the mandatory-task hint.

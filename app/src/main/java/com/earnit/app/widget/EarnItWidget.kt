@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
@@ -342,6 +343,7 @@ internal fun StandardContent(
 
     val actionButton = widgetActionButtonFor(progress)
     val showMandatoryHint = !progress.canClaim && progress.totalPoints >= progress.reward.cost
+    val showAllTasksLoggedHint = actionButton == WidgetActionButton.LOG_DISABLED
 
     val logIntent =
         Intent(context, WidgetTaskLogActivity::class.java).apply {
@@ -388,6 +390,14 @@ internal fun StandardContent(
                             maxLines = 1,
                             style = TextStyle(color = colors.onSurfaceVar, fontSize = 11.sp),
                             modifier = GlanceModifier.semantics { testTag = WidgetTestTags.MANDATORY_HINT },
+                        )
+                    } else if (showAllTasksLoggedHint) {
+                        Spacer(GlanceModifier.height(2.dp))
+                        Text(
+                            Strings.WIDGET_ALL_TASKS_LOGGED_HINT,
+                            maxLines = 1,
+                            style = TextStyle(color = colors.onSurfaceVar, fontSize = 11.sp),
+                            modifier = GlanceModifier.semantics { testTag = WidgetTestTags.ALL_TASKS_LOGGED_HINT },
                         )
                     }
                 }
@@ -436,7 +446,23 @@ internal fun StandardContent(
                         ) {
                             Text("ADD TASK", style = TextStyle(color = colors.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold))
                         }
-                    WidgetActionButton.NONE -> {}
+                    WidgetActionButton.LOG_DISABLED ->
+                        Box(
+                            modifier =
+                                GlanceModifier
+                                    .size(32.dp)
+                                    .background(colors.track)
+                                    .cornerRadius(16.dp)
+                                    .semantics { testTag = WidgetTestTags.LOG_BUTTON_DISABLED },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Image(
+                                provider = ImageProvider(R.drawable.ic_add),
+                                contentDescription = Strings.WIDGET_ALL_TASKS_LOGGED_HINT,
+                                colorFilter = ColorFilter.tint(colors.onSurfaceVar),
+                                modifier = GlanceModifier.size(20.dp),
+                            )
+                        }
                 }
             }
 

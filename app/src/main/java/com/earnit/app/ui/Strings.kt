@@ -320,4 +320,5 @@ object Strings {
     // on narrow (e.g. 3-column) layouts a wrapped second line overflows the box and
     // clips the progress bar beneath it (see fix/widget-hint-overflow).
     const val WIDGET_MANDATORY_HINT = "Finish mandatory tasks to claim"
+    const val WIDGET_ALL_TASKS_LOGGED_HINT = "All tasks done — add more"
 }
