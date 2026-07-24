@@ -8,34 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 54 — `chore/ci-test-report` branch
-
-CI had no visibility into test counts — a PR's Checks tab showed only a single green/red step for `./gradlew test` or `connectedDebugAndroidTest`, with pass/fail/skip counts buried in logs. Mirrored `hodit`'s reference setup: added a `mikepenz/action-junit-report@v4` step, `if: always()`, right after each existing test-execution step in `ci.yml` (unit tests) and `instrumented-tests.yml` (per shard), each publishing a named Check Run and job summary from the JUnit XML already being produced. Added the required `permissions: checks: write` / `pull-requests: write` block to both workflows. Config-only change — no Kotlin, Compose, or app code touched.
-
-#### Duplication ✅ (checked)
-The two `action-junit-report` steps are near-identical (differ only in `check_name`/`report_paths`). Checked whether to extract a shared composite action: hodit's own reference doesn't extract it either (inlined in both its workflows), and `instrumented-tests.yml` already inlines its `android-emulator-runner` config twice in the same file — inlining two call sites matches existing project convention, not a missed extraction.
-
-#### Decoupling / Complexity & Pattern Health / Naming Consistency / Hardcoded Values / Accessibility ✅ (n/a)
-No Kotlin, Compose, ViewModel, Repository, or Dao touched; no new files added.
-
-#### Dead Code & Hygiene ✅
-`git status`/`git diff --stat` confirm exactly the 4 intended files changed (30 insertions, 2 deletions), nothing stray.
-
-#### Deprecated APIs ✅ (checked)
-`mikepenz/action-junit-report@v4` matches the version hodit currently pins in both of its workflows — not stale relative to the reference being mirrored.
-
-#### Spec Review ✅ (checked, no changes needed)
-Grepped `EARNIT_SPEC.md` for `CI|Workflow|GitHub Actions|test-results|action-junit` — no hits. The spec doesn't document CI/test infrastructure, so there's no contract to reconcile (same precedent as former Pass 51).
-
-#### Tests ✅ (0 new test cases, docs updated)
-- No test files added, removed, or renamed — this pass only adds reporting visibility around existing test execution.
-- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required.
-- `./gradlew ktlintCheck` passes (doesn't lint YAML, but is the project's standard pre-commit check).
-- `TESTING.md`: checked the Cadence table and Deferrals section directly, not just the one line touched — the Cadence table already reflected both workflows running on every push/PR (unchanged by this pass, which adds visibility, not a trigger change); Deferrals' five entries are all unrelated coverage gaps, none tied to CI reporting. Only the CI-behavior sentence needed updating, now done.
-- `DEV_PLAYBOOK.md`: Post-launch checklist item split — the artifacts/Check-Run portion this pass closes was struck out entirely (not left checked) per the "checklist should only ever contain open work" rule; the README test-count badge portion stays open, deferred (needs a dynamic-badge/gist mechanism, out of scope here).
-
----
-
 ### Pass 55 — `test/log-for-reward-dialog-multi-reward` branch
 
 Closes the gap Pass 53 found and deferred: `LogForRewardDialog`'s multi-reward branch (`RadioRow`'s other call site, in `TasksScreen.kt`) had no instrumented coverage — every existing test touching that dialog links its task to a single reward, which takes the `else` branch and never renders the reward picker. Added a new instrumented test that links one task to two rewards and drives the picker directly: both reward names render, LOG stays disabled until one is selected, and logging credits only the chosen reward. Test-only change — no production code touched.
@@ -86,4 +58,34 @@ Grepped `EARNIT_SPEC.md` for `edge-to-edge|status bar|statusBar|navigationBar|co
 - No unit-testable logic changed; this is a theme resource + dependency-version change with no JVM-reachable code path.
 - `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`. Also ran `./gradlew assembleDebugAndroidTest` even though `AppModule`/`TestAppModule`/`@Inject` weren't touched, as extra insurance given the dependency bumps sit underneath Activity/Hilt integration — passed clean.
 - Checked `MANUAL_TEST_PLAN.md`'s scope against this change: its entries are all cross-process-boundary *flows* (file picker, widget activity chain, background worker) that instrumented tests structurally can't drive. Status/nav-bar rendering across OS versions and themes is a visual/system-rendering check, not a flow of that kind, so a permanent entry doesn't fit — handled instead as a one-time manual visual check on this branch before merge (light/dark, Ocean Blue/Forest themes).
+- `TESTING.md`: no changes needed — no test added, removed, or renamed.
+
+---
+
+### Pass 57 — `fix/widget-screens-cutout-inset-overlap` branch
+
+Bug report: opening the log picker from the home-screen widget put the reward title under the phone's front-camera cutout. Root cause: `WidgetTaskLogActivity` and `WidgetConfigActivity` each set content on a bare `Surface` with no inset handling at all — no `enableEdgeToEdge()`, no `Scaffold`, no `windowInsetsPadding` — unlike `MainActivity`, which calls `enableEdgeToEdge()` and routes all its screens through `Scaffold` (insets arrive as content padding automatically). Since `compileSdk`/`targetSdk` is 36, edge-to-edge is enforced for every activity regardless of opt-in, so both widget activities were always drawing behind the status bar/cutout — only became visible once content reached the top of the screen. Fixed by adding `.windowInsetsPadding(WindowInsets.safeDrawing)` to the root `Surface` in both `ThemedTaskPicker` (`WidgetTaskLogActivity.kt`) and `ThemedWidgetConfig` (`WidgetConfigActivity.kt`).
+
+#### Duplication ✅ (checked, left inline)
+The same two-line modifier chain (`fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)`) now appears in both files. Considered extracting a shared wrapper composable/modifier for it: rejected — it's a standard Compose insets idiom, not a design-system value (color/spacing/shape) with an existing home to live in, and the two `Surface` blocks otherwise wrap unrelated content in files with no existing shared UI file between them. Two lines duplicated twice is clearer than a one-off abstraction for this.
+
+#### Decoupling / Complexity & Pattern Health / Naming Consistency / Accessibility ✅ (n/a)
+No ViewModel, Repository, or Dao touched; no new files, composables, or symbols added; no new tappable targets.
+
+#### Dead Code & Hygiene ✅
+`git status`/`git diff --stat` confirm exactly the 2 intended Kotlin files changed, plus the two doc files below — nothing stray.
+
+#### Hardcoded Values ✅ — the point of this fix
+Deliberately used `WindowInsets.safeDrawing` (status bar + nav bar + display cutout, all sides) rather than a fixed `Modifier.padding(top = Xdp)` — a hardcoded value would be wrong on any device with a differently sized cutout or none at all.
+
+#### Deprecated APIs ✅ (checked)
+`windowInsetsPadding`/`WindowInsets.safeDrawing` are current, non-deprecated Compose Foundation APIs — no overlap with the deprecated `Window.setStatusBarColor`-family calls Pass 56 addressed.
+
+#### Spec Review ✅ (checked, no changes needed)
+Grepped `EARNIT_SPEC.md` for `WidgetTaskLogActivity|WidgetConfigActivity` — both are described in terms of user-visible flow (reward/task selection, theming, confirmation), not layout/inset detail. This is a rendering-correctness fix, not a behavior change, so nothing to reconcile.
+
+#### Tests ✅ (0 new automated tests — added to MANUAL_TEST_PLAN.md instead)
+- Display-cutout overlap only reproduces on a real device with a physical cutout; Compose UI tests (Robolectric or emulator without a cutout) can't observe it, matching the existing widget-activity-chain rationale in `MANUAL_TEST_PLAN.md`. Added a step to the existing "Widget full flow" section instead of a new entry, since it exercises the same two activities already covered there.
+- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required.
+- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`.
 - `TESTING.md`: no changes needed — no test added, removed, or renamed.
