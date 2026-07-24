@@ -8,40 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 52 — `fix/duplicate-point-formula` branch
-
-The auto-point formula was implemented twice: `TaskEntity.computeAutoPoints()` (the copy actually used to award points, via `effectivePoints()`) and `EarnItRepository.computeAutoPoints(time, difficulty, preparation)` (used only for the live slider preview in `TaskEditScreen`). `PointFormulaTest`'s boundary assertions all exercised the repository copy, so the formula that actually awards points had no direct boundary coverage — confirmed by a prior QA mutation check (mutating the `== 5` bonus condition on the entity's copy left the suite green). Made `TaskEntity`'s companion object the single source of truth: added a pure `TaskEntity.computeAutoPoints(time, difficulty, preparation)`, with the entity's zero-arg instance method delegating to it. Removed `EarnItRepository`'s copy; `EarnItViewModel.computeAutoPoints()` now calls `TaskEntity`'s companion function directly.
-
-#### Duplication ✅ — found and fixed
-This pass's entire purpose: eliminated the second implementation rather than keeping both in sync by convention. Grepped `computeAutoPoints` across `app/src/main` post-change: exactly one formula body remains (`TaskEntity`'s companion function); every other call site delegates to it.
-
-#### Decoupling ✅ (checked)
-The canonical formula lives in `TaskEntity`'s companion object (data/entity layer, no dependency on `EarnItRepository`) rather than the reverse — a repository owning a pure math formula, or an entity depending on the repository layer, would have been backwards.
-
-#### Complexity & Pattern Health ✅ (checked)
-The companion function has two callers (the instance method, `EarnItViewModel`) — not single-caller, so the extraction earns its keep.
-
-#### Dead Code & Hygiene ✅
-`./gradlew ktlintCheck` clean (fails on unused imports; confirmed no stale `mockk`/`EarnItRepository` imports left in `PointFormulaTest.kt`). `git status` clean apart from the intended files.
-
-#### Naming Consistency ✅ (n/a)
-No new files.
-
-#### Hardcoded Values / Accessibility / Deprecated APIs ✅ (n/a)
-No UI or magic numbers touched; formula constants unchanged.
-
-#### Spec Review ✅
-`EARNIT_SPEC.md`'s Auto-Point Formula section now names `TaskEntity.computeAutoPoints(...)` as the single source of truth, closing a gap where the spec didn't note the formula previously existed in two places.
-
-#### Tests ✅ (7 retargeted, 1 new case)
-- `PointFormulaTest`'s 7 boundary assertions now call `TaskEntity.computeAutoPoints(...)` directly — no more mocked `EarnItRepository`, and the copy under test is now the one that actually awards points.
-- Added a new case exercising the entity's zero-arg instance method (the exact path `logCompletion` and every points-display site use) at the dimension-5 bonus boundary.
-- `./gradlew ktlintCheck`, `test`, `assembleDebugAndroidTest` (run since `EarnItRepository` changed, to validate the Hilt graph), `assembleDebug` all pass sequentially per `CLAUDE.md`.
-- `TESTING.md`: `PointFormulaTest` row count 9 → 10 (exact, per-file); aggregate unit count unchanged (174 actual still rounds to the existing 175+ figure).
-- `QA_AUDIT_BACKLOG.md`: every item was resolved or already fixed on its own branch, so the backlog was cleared back to just the intro convention, ready for the next audit pass.
-
----
-
 ### Pass 53 — `fix/task-edit-group-picker-style` branch
 
 Started from a design-review request: Task Edit's group-field radio list used a bordered, transparent-fill box (`border(1.dp, primary @ 40%)`) with `bodyMedium` text and no horizontal inset, visually inconsistent with the filled `surfaceVariant` "Use to get:" and auto-points sections directly below it on the same screen. Fixed the group picker's Card treatment, padding, and font size to match, then audited whether the fix itself introduced new duplication — it had: the same filled-`Card`-plus-`surfaceVariant` recipe was already copy-pasted across 6 call sites app-wide, and the group picker's radio-row markup reimplemented an existing shared component (`RadioRow`) inline instead of using it.
@@ -108,3 +74,33 @@ Grepped `EARNIT_SPEC.md` for `CI|Workflow|GitHub Actions|test-results|action-jun
 - `./gradlew ktlintCheck` passes (doesn't lint YAML, but is the project's standard pre-commit check).
 - `TESTING.md`: checked the Cadence table and Deferrals section directly, not just the one line touched — the Cadence table already reflected both workflows running on every push/PR (unchanged by this pass, which adds visibility, not a trigger change); Deferrals' five entries are all unrelated coverage gaps, none tied to CI reporting. Only the CI-behavior sentence needed updating, now done.
 - `DEV_PLAYBOOK.md`: Post-launch checklist item split — the artifacts/Check-Run portion this pass closes was struck out entirely (not left checked) per the "checklist should only ever contain open work" rule; the README test-count badge portion stays open, deferred (needs a dynamic-badge/gist mechanism, out of scope here).
+
+---
+
+### Pass 55 — `test/log-for-reward-dialog-multi-reward` branch
+
+Closes the gap Pass 53 found and deferred: `LogForRewardDialog`'s multi-reward branch (`RadioRow`'s other call site, in `TasksScreen.kt`) had no instrumented coverage — every existing test touching that dialog links its task to a single reward, which takes the `else` branch and never renders the reward picker. Added a new instrumented test that links one task to two rewards and drives the picker directly: both reward names render, LOG stays disabled until one is selected, and logging credits only the chosen reward. Test-only change — no production code touched.
+
+#### Duplication ✅ — found and fixed
+Two separate things checked here, not one: (1) The two reward-creation-and-link blocks are inlined in a loop rather than extracted into a new `UiTestActions.kt` helper — verified against the file directly (only `createTask`, `createReward` with no task-link, `waitForTaskDetail`, `waitForRewardDetail` exist there) and against `TESTING.md`'s documented convention that shared helpers cover the common create-and-save path only, flows needing an inline reward-task link build the steps inline, matching `SharedDialogsCancelUiTest.kt`'s existing precedent for the same block. (2) The first draft of this test repeated `hasAnyAncestor(isDialog()) and hasText(...)` verbatim three times within the one test method — missed on the first pass through this checklist, caught on a second, more literal read of the diff. Extracted a private `ComposeTestRule.dialogNodeWithText(text)` local to the file (3 call sites, so it earns its keep) rather than adding it to `CancelDismissAssertions.kt`, since nothing outside this file needs it yet.
+
+#### Decoupling / Naming Consistency / Hardcoded Values / Accessibility / Deprecated APIs ✅ (n/a)
+Test-only change — no ViewModel, Repository, Dao, or Compose UI code touched. New file follows the existing `*UiTest.kt` naming and package-root placement.
+
+#### Complexity & Pattern Health ✅ (checked)
+`dialogNodeWithText` (added during the Duplication fix above) has 3 call sites in this file, not 1 — not a premature single-caller extraction.
+
+#### Dead Code & Hygiene ✅
+`./gradlew ktlintCheck` clean. `git status` clean apart from the intended files.
+
+#### Spec Review ✅ (checked, no changes needed)
+Grepped `EARNIT_SPEC.md` for `LogForRewardDialog|multi-reward|RadioRow` — no hits. No behavior changed, only test coverage added, so there's no contract to reconcile.
+
+#### Tests ✅ (1 new file, 1 new test)
+- New file `LogForRewardDialogUiTest` (1 test), tagged `@UiTest @Task @Reward`. Kept as its own file rather than folded into `SharedDialogsCancelUiTest.kt` despite being under `CLEANUP_RULES.md`'s 3-test new-file guideline: that class's doc comment and `TESTING.md` entry specifically scope it to cancel/dismiss paths, and this is a confirm-path test covering a genuinely distinct behavior.
+- Ran on the connected emulator before committing, per the checklist — caught a real bug on the first run: asserting on reward names by plain text matched twice, because `TaskDetailScreen`'s background "Used in Rewards" list repeats the same reward names behind the dialog. Fixed by scoping the picker's node lookups to the dialog's own window (`hasAnyAncestor(isDialog()) and hasText(...)`), mirroring the existing pattern in `CancelDismissAssertions.kt`. Passed after the fix.
+- Re-ran on the emulator a second time after the Duplication-fix refactor above (extracting `dialogNodeWithText`) — an unrelated import (`onNode`) briefly broke the build (`onNode` is a `SemanticsNodeInteractionsProvider` member, not a top-level import, same as `CancelDismissAssertions.kt` already relies on); fixed and passed.
+- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required.
+- `./gradlew ktlintCheck` and `test` both pass.
+- `TESTING.md`: added a table row for `LogForRewardDialogUiTest`; extended the existing "Task attached to two rewards simultaneously" edge-case entry to reference the new UI-level coverage. Aggregate counts unchanged (one test doesn't move the rounded figures).
+- `QA_AUDIT_BACKLOG.md`: checked — this gap was never logged there (it lived only in Pass 53's log entry), so nothing to remove.

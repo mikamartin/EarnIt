@@ -123,6 +123,7 @@ check`) fails the build if any class is missing its required layer tag or has no
 | `CleanUpScreenUiTest` (4) | UI | Each of the four destructive-action dialogs (Clear Logs / Clear Tasks / Clear Rewards / Wipe Everything) — Cancel dismisses the dialog and clears nothing, confirmed directly against the repository rather than just the UI |
 | `TaskLibraryScreenUiTest` (1) | UI | The skipped-tasks dialog's only dismiss path (backdrop/back-press — no explicit Cancel button, only "OK" which does the same navigate-back) still applies the already-completed import correctly |
 | `SharedDialogsCancelUiTest` (4) | UI | Cancel path for each dialog shared across screens: `LogTaskDialog` (no log recorded), `ClaimDialog` (reward stays active, not archived), `AddTaskToRewardDialog` (task not included), `LogForRewardDialog` (no log recorded) — none had a dedicated cancel-path test before, only confirm-path coverage |
+| `LogForRewardDialogUiTest` (1) | UI | `LogForRewardDialog`'s multi-reward branch (a task linked to more than one reward): the reward picker renders both reward names, LOG stays disabled until one is selected, and logging credits only the chosen reward — the other's progress is untouched |
 | `DragReorderUiTest` (2) | UI | Drives the real long-press-then-drag gesture via `performTouchInput` (down, an explicit stationary `advanceEventTime` past the long-press threshold, then `moveTo`) on both Home's reward cards and Tasks' task cards: dragging the first card past the other two lands it below both, asserted against actual on-screen position, not the underlying list state |
 
 ---
@@ -134,8 +135,8 @@ check`) fails the build if any class is missing its required layer tag or has no
 **Zero-cost reward with unlogged mandatory task** (`GatekeeperTest`)
 `canClaim = false` when the point threshold is met but a mandatory task has not been logged. Guards against users bypassing mandatory requirements on a free reward.
 
-**Task attached to two rewards simultaneously** (`RewardProgressTest`, `RepositoryBehaviourTest`)
-Log attribution is scoped to `(taskId, rewardId)`. Logging task T against reward R1 writes a log with `rewardId = R1`. `loggableTasks` for R2 queries `completionLogs WHERE rewardId = R2`, so T remains loggable for R2. Verified implicitly through the `loggableTasks` unit tests; the two-reward fixture is not set up explicitly at integration level — acceptable given the query isolation is straightforward Room SQL.
+**Task attached to two rewards simultaneously** (`RewardProgressTest`, `RepositoryBehaviourTest`, `LogForRewardDialogUiTest`)
+Log attribution is scoped to `(taskId, rewardId)`. Logging task T against reward R1 writes a log with `rewardId = R1`. `loggableTasks` for R2 queries `completionLogs WHERE rewardId = R2`, so T remains loggable for R2. Verified implicitly through the `loggableTasks` unit tests; the two-reward fixture is not set up explicitly at integration level — acceptable given the query isolation is straightforward Room SQL. `LogForRewardDialogUiTest` covers the UI side of the same scenario: `LogForRewardDialog`'s reward picker (shown only when a task has more than one reward) requires an explicit selection before LOG is enabled, and the resulting log is attributed to the chosen reward only.
 
 **Deleting a reward with in-progress logs** (`DeleteCascadeTest`, `ClearCascadeTest`)
 `deleteReward` removes cross-refs and all active logs before deleting the entity. `clearAllRewards` does the same across all rewards but deliberately preserves history entries from completed cycles.
