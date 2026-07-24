@@ -84,6 +84,9 @@ Update this section each upgrade cycle. The version matrix and gotchas below ref
 | foojay-resolver-convention | 1.0.0 | Pre-1.0 versions reference Gradle 9-removed internals |
 | Compose BOM | 2026.05.00 | |
 | ktlint (org.jlleitschuh.gradle.ktlint) | 14.2.0 | Default style enforced; see `.editorconfig` for the two narrow exceptions (`@Composable` naming, test naming) |
+| androidx.core:core-ktx | 1.18.0 | 1.19.0+ requires `compileSdk 37`; stay on 1.18.x until `compileSdk` is bumped |
+| androidx.activity:activity-compose | 1.13.0 | |
+| com.google.android.material:material | 1.14.0 | Backs the `Theme.Material3.DayNight.NoActionBar` XML theme parent even though the app has no direct View-based Material usage |
 
 ### Gotchas
 

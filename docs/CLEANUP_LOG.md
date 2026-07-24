@@ -8,47 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 53 — `fix/task-edit-group-picker-style` branch
-
-Started from a design-review request: Task Edit's group-field radio list used a bordered, transparent-fill box (`border(1.dp, primary @ 40%)`) with `bodyMedium` text and no horizontal inset, visually inconsistent with the filled `surfaceVariant` "Use to get:" and auto-points sections directly below it on the same screen. Fixed the group picker's Card treatment, padding, and font size to match, then audited whether the fix itself introduced new duplication — it had: the same filled-`Card`-plus-`surfaceVariant` recipe was already copy-pasted across 6 call sites app-wide, and the group picker's radio-row markup reimplemented an existing shared component (`RadioRow`) inline instead of using it.
-
-#### Duplication ✅ — found and fixed
-Extracted `EarnItSectionCard` (`EarnItButtons.kt`) — fixed `surfaceVariant` fill, overridable `shape`/`elevation` — and migrated all 6 pre-existing inline `Card(... surfaceVariant ...)` sites onto it: the group picker, auto-points block, and "Use to get:" reward rows in `TaskEditScreen.kt`; the task row in `RewardEditScreen.kt`; both cards in `HistoryScreen.kt`; the template card in `TaskLibraryScreen.kt` (kept its own `elevation = 2.dp` override). Separately, the group picker's existing-group row reimplemented `RadioRow` (already used once, in `TasksScreen.kt`'s multi-reward log dialog) rather than calling it — extended `RadioRow` with optional `textStyle`/`contentPadding`/`labelSpacing` params, all defaulting to its exact prior behavior (verified `TasksScreen.kt`'s call site needed no changes), and migrated the group picker's existing-group row onto it.
-
-#### Decoupling ✅ (n/a)
-Pure UI/styling change — no ViewModel, Repository, or Dao touched.
-
-#### Complexity & Pattern Health ✅ (checked)
-Neither extraction is single-caller: `EarnItSectionCard` has 6 call sites, `RadioRow` has 2 (`TasksScreen.kt`, `TaskEditScreen.kt`). The group picker's "+ New group" row (radio + editable text field + clear button) was left as raw `RadioButton` rather than forced into `RadioRow`'s label-only shape — a genuine variant, not a missed absorption.
-
-#### Dead Code & Hygiene ✅
-Removed now-unused `Card`/`CardDefaults` imports from `TaskEditScreen.kt`, `RewardEditScreen.kt`, `HistoryScreen.kt` (`CardDefaults` still needed in `TaskLibraryScreen.kt` for its elevation override, so only `Card` was dropped there). `./gradlew ktlintCheck` clean. `git status` clean apart from the intended files.
-
-#### Naming Consistency ✅
-`EarnItSectionCard` follows the `EarnItPrimaryButton`/`EarnItOutlinedButton` naming precedent already in `EarnItButtons.kt`.
-
-#### Hardcoded Values ✅ (n/a)
-No new hardcoded colors — `EarnItSectionCard` centralizes the `surfaceVariant` fill itself. Shape radii (12dp/16dp) are passed per call site matching each one's prior value, consistent with the app's existing convention of inlining `RoundedCornerShape(...)` rather than naming shape constants.
-
-#### Accessibility ✅ (checked)
-`RadioButton` touch targets unchanged (component enforces its own 48dp minimum regardless of surrounding padding); all `IconButton` content descriptions unchanged.
-
-#### Deprecated APIs ✅
-None touched.
-
-#### Spec Review ✅
-`EARNIT_SPEC.md`'s Task Edit line described the group picker as "a bordered radio-button list of existing groups" — stale after this fix. Updated to describe the filled-card styling, matching the auto-points and "Use to get:" sections.
-
-#### Tests ✅ (0 new files, full suite re-verified)
-- No new test files — pure styling/extraction change with no new logic paths.
-- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`.
-- Ran the full `connectedDebugAndroidTest` suite (107 tests) on a connected emulator to confirm the `EarnItSectionCard`/`RadioRow` migration didn't regress any of the 4 touched screens, including `TasksScreen.kt`'s pre-existing `RadioRow` call site. One failure surfaced (`SettingsScreenUiTest.nickname_clearedField_greetingShowsNoAddress`, `ComposeNotIdleException` global-idle-timeout) in a file this branch never touched; re-ran that class alone and all 12 passed — confirmed emulator flake, not a regression.
-- Found but deferred: `LogForRewardDialog`'s multi-reward branch (`RadioRow`'s other call site) has no instrumented coverage — the only existing test touching that dialog (`SharedDialogsCancelUiTest.logForRewardDialog_cancel_noLogRecorded`) links its task to a single reward, which takes the `else` branch and never renders `RadioRow`. Pre-existing gap, not introduced by this branch; left as a candidate for a future QA audit pass rather than expanding this pass's scope.
-- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required.
-- `TESTING.md`: no changes needed — no test added, removed, or renamed, so no counts drifted.
-
----
-
 ### Pass 54 — `chore/ci-test-report` branch
 
 CI had no visibility into test counts — a PR's Checks tab showed only a single green/red step for `./gradlew test` or `connectedDebugAndroidTest`, with pass/fail/skip counts buried in logs. Mirrored `hodit`'s reference setup: added a `mikepenz/action-junit-report@v4` step, `if: always()`, right after each existing test-execution step in `ci.yml` (unit tests) and `instrumented-tests.yml` (per shard), each publishing a named Check Run and job summary from the JUnit XML already being produced. Added the required `permissions: checks: write` / `pull-requests: write` block to both workflows. Config-only change — no Kotlin, Compose, or app code touched.
@@ -104,3 +63,27 @@ Grepped `EARNIT_SPEC.md` for `LogForRewardDialog|multi-reward|RadioRow` — no h
 - `./gradlew ktlintCheck` and `test` both pass.
 - `TESTING.md`: added a table row for `LogForRewardDialogUiTest`; extended the existing "Task attached to two rewards simultaneously" edge-case entry to reference the new UI-level coverage. Aggregate counts unchanged (one test doesn't move the rounded figures).
 - `QA_AUDIT_BACKLOG.md`: checked — this gap was never logged there (it lived only in Pass 53's log entry), so nothing to remove.
+
+---
+
+### Pass 56 — `fix/edge-to-edge-deprecated-apis` branch
+
+Play Console flagged two edge-to-edge warnings on upload: a generic "may not display for all users" notice, and a deprecated-API list (`Window.setStatusBarColor`, `Window.setNavigationBarColor`, `LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES`) attributed to obfuscated call sites (`se0.a`, `re0.b`). `enableEdgeToEdge()` was already called correctly in `MainActivity.onCreate()` and `Scaffold` already threads system-bar insets through as content padding, so the app's own Compose insets handling wasn't the problem. Root-caused to two things instead: `themes.xml` still set `android:statusBarColor`/`android:navigationBarColor` explicitly (redundant now, and one of the deprecated items Google's own edge-to-edge migration guide says to delete), and `androidx.activity:activity-compose` (1.9.0), `androidx.core:core-ktx` (1.12.0), and `com.google.android.material:material` (1.13.0) were multiple minor versions behind the rest of the stack — all three are named in public GitHub issues as sources of these exact deprecated calls inside their own `enableEdgeToEdge()`/`EdgeToEdgeUtils` internals. Removed the two theme attrs and bumped all three dependencies to current stable (1.13.0 / 1.18.0 / 1.14.0 respectively — `core-ktx` capped at 1.18.0 rather than 1.19.0 because 1.19.0's AAR metadata requires `compileSdk 37`, and bumping `compileSdk`/`targetSdk` was explicitly out of scope for this pass).
+
+#### Duplication / Decoupling / Complexity & Pattern Health / Naming Consistency / Hardcoded Values / Accessibility ✅ (n/a)
+Config-only change (one XML theme file, one Gradle version catalog) — no Kotlin, Compose, ViewModel, Repository, Dao, or resource files touched, no new files added.
+
+#### Dead Code & Hygiene ✅
+`git status`/`git diff --stat` confirm exactly the 2 intended files changed (3 insertions, 5 deletions), nothing stray. No resource became orphaned by removing the two theme attrs — `?attr/colorPrimary`/`?attr/colorSurface` are Material3 theme attributes still used throughout the app's color scheme, not resources that only these two lines referenced.
+
+#### Deprecated APIs ✅ — the point of this pass
+Removed `android:statusBarColor`/`android:navigationBarColor` from `themes.xml`; `enableEdgeToEdge()` (already in place) owns bar appearance now. Bumped the three dependencies most plausibly responsible for the library-internal deprecated calls. Caveat carried forward, not fully closed: this is a widely-reported issue (Flutter, React Native, and native apps alike hit the same three deprecated symbols from AndroidX/Material internals) with no confirmed fully-clean release as of this pass — Play Console's warning may persist even after this fix until upstream fully removes the calls. It's an advisory warning, not a publish blocker.
+
+#### Spec Review ✅ (checked, no changes needed)
+Grepped `EARNIT_SPEC.md` for `edge-to-edge|status bar|statusBar|navigationBar|colorPrimary|colorSurface` — the one hit (`nav bar` badge behavior) refers to the in-app bottom navigation bar, unrelated to the system status/navigation bars this pass touches. No documented behavior to reconcile.
+
+#### Tests ✅ (0 new test files — config/resource-only change)
+- No unit-testable logic changed; this is a theme resource + dependency-version change with no JVM-reachable code path.
+- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`. Also ran `./gradlew assembleDebugAndroidTest` even though `AppModule`/`TestAppModule`/`@Inject` weren't touched, as extra insurance given the dependency bumps sit underneath Activity/Hilt integration — passed clean.
+- Checked `MANUAL_TEST_PLAN.md`'s scope against this change: its entries are all cross-process-boundary *flows* (file picker, widget activity chain, background worker) that instrumented tests structurally can't drive. Status/nav-bar rendering across OS versions and themes is a visual/system-rendering check, not a flow of that kind, so a permanent entry doesn't fit — handled instead as a one-time manual visual check on this branch before merge (light/dark, Ocean Blue/Forest themes).
+- `TESTING.md`: no changes needed — no test added, removed, or renamed.
