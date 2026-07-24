@@ -114,6 +114,8 @@ Each reward can have tasks linked to it with two flags per link:
 | `isMandatory` | Task must be logged at least once before the reward can be claimed |
 | `isRepeatable` | Task can be logged multiple times toward this reward |
 
+A new link (creating a task, adding an existing task to a reward, or selecting a task in Reward Edit) defaults to `isMandatory = false`, `isRepeatable = true` — most tasks in practice are repeatable (chores, habits), so the toggle starts in the more common state and the user opts out for one-time tasks rather than opting in to repeatable ones.
+
 ### Gatekeeper Logic
 
 The "Complete to earn points" task list on Reward Detail shows mandatory tasks first (A→Z), then optional tasks (A→Z).
@@ -189,7 +191,7 @@ One entry in the home screen widget picker:
 - **Active:** reward name, progress bar, and + LOG or CLAIM button depending on state
 - **No tasks linked:** reward name, progress bar, and ADD TASK button (lighter style); tapping opens the app straight to the reward detail screen with the Add Task dialog already open
 - **Mandatory tasks blocking claim:** Active state with "Required tasks needed to claim" subtitle below the reward name — shown when point goal is reached but not all mandatory (★) tasks are logged
-- **All tasks done, points still short:** reward name and progress bar only; no button shown
+- **All tasks done, points still short:** reward name, progress bar, "All tasks done — add more" subtitle, and a disabled + LOG button (muted, non-interactive)
 - **Claimed / archived:** reward name + "Earned and Claimed" subtitle; tapping opens the app
 - **Empty:** "Long-press to configure" — reward not yet selected
 - Tapping anywhere on the widget body (outside buttons) opens the app to the tracked reward

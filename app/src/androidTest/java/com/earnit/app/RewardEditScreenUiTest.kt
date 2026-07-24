@@ -110,16 +110,16 @@ class RewardEditScreenUiTest {
         composeTestRule.onNodeWithText("SAVE").performClick()
 
         // Back on Reward Edit — the newly created task is auto-included, defaulting to
-        // optional + not-repeatable.
+        // optional + repeatable.
         composeTestRule.onNodeWithText("Read Book").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription(Strings.REWARD_OPTIONAL_DESC).assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription(Strings.REWARD_NOT_REPEATABLE_DESC).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(Strings.REWARD_REPEATABLE_DESC).assertIsDisplayed()
 
         composeTestRule.onNodeWithContentDescription(Strings.REWARD_OPTIONAL_DESC).performClick()
         composeTestRule.onNodeWithContentDescription(Strings.REWARD_MANDATORY_DESC).assertIsDisplayed()
 
-        composeTestRule.onNodeWithContentDescription(Strings.REWARD_NOT_REPEATABLE_DESC).performClick()
-        composeTestRule.onNodeWithContentDescription(Strings.REWARD_REPEATABLE_DESC).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(Strings.REWARD_REPEATABLE_DESC).performClick()
+        composeTestRule.onNodeWithContentDescription(Strings.REWARD_NOT_REPEATABLE_DESC).assertIsDisplayed()
 
         // Unchecking the row removes the task entirely (mandatory/repeatable reset with it).
         composeTestRule.onNodeWithContentDescription(Strings.REWARD_INCLUDED_DESC).performClick()

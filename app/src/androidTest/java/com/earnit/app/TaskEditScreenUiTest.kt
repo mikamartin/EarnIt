@@ -185,20 +185,21 @@ class TaskEditScreenUiTest {
         composeTestRule.onNodeWithText("Bike Ride").assertIsDisplayed()
 
         // Star/refresh toggles start disabled — the task isn't linked to the reward yet.
+        // Repeatable is the default for a not-yet-linked task, so the repeat icon shows already.
         composeTestRule.onNodeWithContentDescription(Strings.TASK_OPTIONAL_DESC).assertIsNotEnabled()
-        composeTestRule.onNodeWithContentDescription(Strings.TASK_ONCE_DESC).assertIsNotEnabled()
+        composeTestRule.onNodeWithContentDescription(Strings.TASK_REPEATABLE_DESC).assertIsNotEnabled()
 
         // Checking the reward card includes the task and enables the toggles.
         composeTestRule.onNodeWithText("Bike Ride").performClick()
         composeTestRule.onNodeWithContentDescription(Strings.TASK_OPTIONAL_DESC).assertIsEnabled()
-        composeTestRule.onNodeWithContentDescription(Strings.TASK_ONCE_DESC).assertIsEnabled()
+        composeTestRule.onNodeWithContentDescription(Strings.TASK_REPEATABLE_DESC).assertIsEnabled()
 
         // Toggling mandatory/repeatable flips their icon and content description.
         composeTestRule.onNodeWithContentDescription(Strings.TASK_OPTIONAL_DESC).performClick()
         composeTestRule.onNodeWithContentDescription(Strings.TASK_MANDATORY_DESC).assertIsDisplayed()
 
-        composeTestRule.onNodeWithContentDescription(Strings.TASK_ONCE_DESC).performClick()
-        composeTestRule.onNodeWithContentDescription(Strings.TASK_REPEATABLE_DESC).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(Strings.TASK_REPEATABLE_DESC).performClick()
+        composeTestRule.onNodeWithContentDescription(Strings.TASK_ONCE_DESC).assertIsDisplayed()
 
         // Unchecking the reward card resets included/mandatory/repeatable together.
         composeTestRule.onNodeWithText("Bike Ride").performClick()

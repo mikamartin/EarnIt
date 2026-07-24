@@ -268,7 +268,7 @@ fun TaskEditScreen(
                     ),
                     rewardLinks =
                         if (fromRewardId != 0L) {
-                            mapOf(fromRewardId to Pair(false, false))
+                            mapOf(fromRewardId to Pair(false, true))
                         } else {
                             rewardLinkState
                                 .filter { it.value.included }

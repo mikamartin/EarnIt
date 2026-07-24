@@ -132,7 +132,7 @@ fun RewardEditScreen(
             uiState.tasks.forEach { task ->
                 val m = cur?.mandatoryTasks?.any { it.id == task.id } == true
                 val o = cur?.optionalTasks?.any { it.id == task.id } == true
-                val r = cur?.taskRefs?.find { it.taskId == task.id }?.isRepeatable ?: false
+                val r = cur?.taskRefs?.find { it.taskId == task.id }?.isRepeatable ?: true
                 taskState[task.id] = TaskEditState(m || o, m, r)
             }
             taskStateReady = true
@@ -141,7 +141,7 @@ fun RewardEditScreen(
                 if (!taskState.containsKey(task.id)) {
                     val m = cur?.mandatoryTasks?.any { it.id == task.id } == true
                     val o = cur?.optionalTasks?.any { it.id == task.id } == true
-                    val r = cur?.taskRefs?.find { it.taskId == task.id }?.isRepeatable ?: false
+                    val r = cur?.taskRefs?.find { it.taskId == task.id }?.isRepeatable ?: true
                     taskState[task.id] = TaskEditState(m || o, m, r)
                 }
             }

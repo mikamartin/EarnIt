@@ -53,7 +53,7 @@ class RewardAllTasksLoggedHintUiTest {
         runBlocking { settingsRepository.updateNotesMandatory(false) }
     }
 
-    /** Creates "Coffee Treat" with a single default (non-repeatable, optional) task and logs it. */
+    /** Creates "Coffee Treat" with a single non-repeatable, optional task and logs it. */
     private fun createRewardWithOneLoggedTask() {
         composeTestRule.onNodeWithContentDescription("Tasks").performClick()
         composeTestRule.onNodeWithContentDescription("New Task").performClick()
@@ -71,10 +71,13 @@ class RewardAllTasksLoggedHintUiTest {
         composeTestRule.onNodeWithText("Coffee Treat").performClick()
         composeTestRule.onNodeWithText("Add task").performClick()
         composeTestRule.onNodeWithText("Morning Run").performClick()
+        // Tasks default to repeatable when added to a reward — flip it off so logging it once
+        // exhausts loggableTasks, which is this test class's entire premise.
+        composeTestRule.onNodeWithContentDescription(Strings.REWARD_REPEATABLE_DESC).performClick()
         composeTestRule.onNodeWithText("ADD SELECTED").performClick()
         composeTestRule.onNodeWithText("Morning Run").assertIsDisplayed()
 
-        // Log the task — it's non-repeatable by default, so this exhausts loggableTasks.
+        // Log the task — now non-repeatable, so this exhausts loggableTasks.
         composeTestRule.onNodeWithText(Strings.LOG_BTN).performClick()
         composeTestRule.onAllNodesWithText("Morning Run").filterToOne(hasClickAction()).performClick()
         composeTestRule.onNodeWithText(Strings.DIALOG_LOG_BTN).performClick()

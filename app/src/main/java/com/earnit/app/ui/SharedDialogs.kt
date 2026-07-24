@@ -302,7 +302,7 @@ fun ClaimDialog(
 data class TaskEditState(
     val included: Boolean = false,
     val isMandatory: Boolean = false,
-    val isRepeatable: Boolean = false,
+    val isRepeatable: Boolean = true,
 )
 
 // Unchecking a task/reward link always resets its mandatory/repeatable flags together —

@@ -11,7 +11,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Regression coverage for the widget's action-button selection (CLAIM / LOG / ADD_TASK / NONE).
+ * Regression coverage for the widget's action-button selection (CLAIM / LOG / LOG_DISABLED / ADD_TASK).
  *
  * Extracted from EarnItWidget's StandardContent specifically so this decision is unit-testable
  * without Robolectric/Glance — see WidgetContentTest for the rendered-content coverage.
@@ -61,7 +61,7 @@ class WidgetActionButtonTest {
     }
 
     @Test
-    fun `non-repeatable task already logged and points below cost returns NONE`() {
+    fun `non-repeatable task already logged and points below cost returns LOG_DISABLED`() {
         val progress =
             RewardProgress(
                 reward(10),
@@ -70,7 +70,7 @@ class WidgetActionButtonTest {
                 emptyList(),
                 listOf(log(1L, points = 1)),
             )
-        assertEquals(WidgetActionButton.NONE, widgetActionButtonFor(progress))
+        assertEquals(WidgetActionButton.LOG_DISABLED, widgetActionButtonFor(progress))
     }
 
     @Test

@@ -8,8 +8,10 @@ package com.earnit.app.widget
 internal object WidgetTestTags {
     const val REWARD_NAME = "widget_reward_name"
     const val MANDATORY_HINT = "widget_mandatory_hint"
+    const val ALL_TASKS_LOGGED_HINT = "widget_all_tasks_logged_hint"
     const val CLAIM_BUTTON = "widget_claim_button"
     const val LOG_BUTTON = "widget_log_button"
+    const val LOG_BUTTON_DISABLED = "widget_log_button_disabled"
     const val ADD_TASK_BUTTON = "widget_add_task_button"
     const val PROGRESS_CURRENT = "widget_progress_current"
     const val FLASH_CHECK = "widget_flash_check"

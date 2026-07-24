@@ -3,6 +3,7 @@ package com.earnit.app
 import androidx.compose.ui.graphics.Color
 import androidx.glance.appwidget.testing.unit.runGlanceAppWidgetUnitTest
 import androidx.glance.testing.unit.assertHasClickAction
+import androidx.glance.testing.unit.assertHasNoClickAction
 import androidx.glance.testing.unit.assertHasText
 import androidx.glance.testing.unit.hasTestTag
 import androidx.glance.unit.ColorProvider
@@ -26,8 +27,8 @@ import org.robolectric.annotation.Config
 /**
  * Renders the widget's Glance content directly (bypassing provideGlance's Hilt/Room pipeline)
  * and asserts on the resulting node tree via glance-testing. Complements WidgetActionButtonTest,
- * which covers the CLAIM/LOG/ADD_TASK/NONE decision as a pure function; this file catches the
- * next layer up — wrong/missing text, or a button rendered without its click action wired.
+ * which covers the CLAIM/LOG/LOG_DISABLED/ADD_TASK decision as a pure function; this file catches
+ * the next layer up — wrong/missing text, or a button rendered without its click action wired.
  *
  * Note: actionStartActivity(Intent) builds a StartActivityIntentAction, which
  * glance-testing's hasStartActivityClickAction() matcher does not recognize (it only matches the
@@ -113,7 +114,7 @@ class WidgetContentTest {
         }
 
     @Test
-    fun standardContent_allTasksDoneBelowCost_showsNoActionButton() =
+    fun standardContent_allTasksDoneBelowCost_showsDisabledLogButtonAndHint() =
         runGlanceAppWidgetUnitTest {
             setContext(context)
             val progress =
@@ -129,6 +130,8 @@ class WidgetContentTest {
             onNode(hasTestTag(WidgetTestTags.CLAIM_BUTTON)).assertDoesNotExist()
             onNode(hasTestTag(WidgetTestTags.LOG_BUTTON)).assertDoesNotExist()
             onNode(hasTestTag(WidgetTestTags.ADD_TASK_BUTTON)).assertDoesNotExist()
+            onNode(hasTestTag(WidgetTestTags.LOG_BUTTON_DISABLED)).assertExists().assertHasNoClickAction()
+            onNode(hasTestTag(WidgetTestTags.ALL_TASKS_LOGGED_HINT)).assertExists()
         }
 
     // ── StandardContent: text content ───────────────────────────────────────────
