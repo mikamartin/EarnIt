@@ -114,6 +114,8 @@ Each reward can have tasks linked to it with two flags per link:
 | `isMandatory` | Task must be logged at least once before the reward can be claimed |
 | `isRepeatable` | Task can be logged multiple times toward this reward |
 
+A new link (creating a task, adding an existing task to a reward, or selecting a task in Reward Edit) defaults to `isMandatory = false`, `isRepeatable = true` — most tasks in practice are repeatable (chores, habits), so the toggle starts in the more common state and the user opts out for one-time tasks rather than opting in to repeatable ones.
+
 ### Gatekeeper Logic
 
 The "Complete to earn points" task list on Reward Detail shows mandatory tasks first (A→Z), then optional tasks (A→Z).

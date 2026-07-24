@@ -102,7 +102,7 @@ class EarnItRepository
             rewardId: Long,
             taskId: Long,
             isMandatory: Boolean = false,
-            isRepeatable: Boolean = false,
+            isRepeatable: Boolean = true,
         ) {
             rewardTaskDao.insertCrossRef(RewardTaskCrossRef(rewardId, taskId, isMandatory, isRepeatable))
         }
