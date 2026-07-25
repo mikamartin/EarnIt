@@ -1,8 +1,14 @@
 package com.earnit.app
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
@@ -87,6 +93,18 @@ class LogForRewardDialogUiTest {
         composeTestRule.onNodeWithText(Strings.DIALOG_LOG_BTN).assertIsNotEnabled()
 
         composeTestRule.dialogNodeWithText("Book Time").performClick()
+
+        // Carries proper radio-group semantics for TalkBack: the chosen option reports selected,
+        // the other reports not selected, both as Role.RadioButton.
+        composeTestRule
+            .dialogNodeWithText("Book Time")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
+            .assertIsSelected()
+        composeTestRule
+            .dialogNodeWithText("Movie Night")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
+            .assertIsNotSelected()
+
         composeTestRule.onNodeWithText(Strings.DIALOG_LOG_BTN).assertIsEnabled()
         composeTestRule.onNodeWithText(Strings.DIALOG_LOG_BTN).performClick()
 

@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
@@ -56,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -112,17 +115,25 @@ fun LogTaskDialog(
                     )
                     Spacer(Modifier.height(2.dp))
                 }
-                LazyColumn(modifier = Modifier.heightIn(max = 280.dp)) {
+                LazyColumn(modifier = Modifier.heightIn(max = 280.dp).selectableGroup()) {
                     items(filteredTasks) { task ->
                         val isMandatory = rp.mandatoryTasks.any { it.id == task.id }
                         val isRepeatable = rp.taskRefs.find { it.taskId == task.id }?.isRepeatable ?: false
                         val pts = task.effectivePoints()
+                        val isSelected = selectedTask?.id == task.id
                         Row(
                             verticalAlignment = Alignment.Top,
-                            modifier = Modifier.fillMaxWidth().clickable { selectedTask = task },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .selectable(
+                                        selected = isSelected,
+                                        role = Role.RadioButton,
+                                        onClick = { selectedTask = task },
+                                    ),
                         ) {
                             RadioButton(
-                                selected = selectedTask?.id == task.id,
+                                selected = isSelected,
                                 onClick = null,
                                 modifier = Modifier.padding(top = 2.dp).size(24.dp),
                                 colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary),

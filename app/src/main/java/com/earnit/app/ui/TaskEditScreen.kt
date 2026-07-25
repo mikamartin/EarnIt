@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -76,6 +78,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -465,7 +468,7 @@ private fun TaskGroupPicker(
         if (isGroupExpanded) {
             EarnItSectionCard {
                 Column(
-                    modifier = Modifier.padding(vertical = 4.dp),
+                    modifier = Modifier.padding(vertical = 4.dp).selectableGroup(),
                 ) {
                     existingGroups.forEach { g ->
                         val selected = group == g && newGroupText.isBlank()
@@ -485,10 +488,14 @@ private fun TaskGroupPicker(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .clickable {
-                                    onGroupChange("")
-                                    newGroupFocusRequester.requestFocus()
-                                }.padding(horizontal = 16.dp, vertical = 4.dp),
+                                .selectable(
+                                    selected = newGroupText.isNotBlank(),
+                                    role = Role.RadioButton,
+                                    onClick = {
+                                        onGroupChange("")
+                                        newGroupFocusRequester.requestFocus()
+                                    },
+                                ).padding(horizontal = 16.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(
