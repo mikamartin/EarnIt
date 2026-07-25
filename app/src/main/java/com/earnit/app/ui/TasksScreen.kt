@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
@@ -368,7 +369,10 @@ fun LogForRewardDialog(
         onDismissRequest = onDismiss,
         title = { Text(Strings.tasksLogTitle(task.name), color = MaterialTheme.colorScheme.primary) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.selectableGroup(),
+            ) {
                 if (rewardsForTask.size > 1) {
                     Text(
                         Strings.TASKS_LOG_SELECT_REWARD,

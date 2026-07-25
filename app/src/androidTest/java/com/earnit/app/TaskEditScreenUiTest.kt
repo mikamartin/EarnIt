@@ -1,8 +1,13 @@
 package com.earnit.app
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -124,6 +129,12 @@ class TaskEditScreenUiTest {
         composeTestRule.onNodeWithText("Chores").assertIsDisplayed()
         composeTestRule.onNodeWithText("Chores").performClick()
         composeTestRule.onNodeWithText(Strings.taskGroupLabel("Chores")).assertIsDisplayed()
+
+        // Carries proper radio semantics for TalkBack, not just a plain clickable row.
+        composeTestRule
+            .onNodeWithText("Chores")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
+            .assertIsSelected()
 
         // Typing a new group name clears the existing-group selection and updates the header.
         composeTestRule.onNodeWithText(Strings.TASK_GROUP_PLACEHOLDER).performTextInput("Weekend")

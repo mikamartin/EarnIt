@@ -1,6 +1,11 @@
 package com.earnit.app
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.filterToOne
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -68,7 +73,13 @@ class SharedDialogsCancelUiTest {
 
         // Select a task before cancelling — proves the in-progress selection is discarded too,
         // not just that the dialog closes.
-        composeTestRule.onAllNodesWithText("Morning Run").filterToOne(hasClickAction()).performClick()
+        val taskRow = composeTestRule.onAllNodesWithText("Morning Run").filterToOne(hasClickAction())
+        taskRow.performClick()
+
+        // Carries proper radio semantics for TalkBack, not just a plain clickable row.
+        taskRow
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
+            .assertIsSelected()
 
         composeTestRule.cancelDialogAndAssertDismissed(Strings.LOG_DIALOG_TITLE, Strings.DIALOG_CANCEL)
 

@@ -8,36 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 57 — `fix/widget-screens-cutout-inset-overlap` branch
-
-Bug report: opening the log picker from the home-screen widget put the reward title under the phone's front-camera cutout. Root cause: `WidgetTaskLogActivity` and `WidgetConfigActivity` each set content on a bare `Surface` with no inset handling at all — no `enableEdgeToEdge()`, no `Scaffold`, no `windowInsetsPadding` — unlike `MainActivity`, which calls `enableEdgeToEdge()` and routes all its screens through `Scaffold` (insets arrive as content padding automatically). Since `compileSdk`/`targetSdk` is 36, edge-to-edge is enforced for every activity regardless of opt-in, so both widget activities were always drawing behind the status bar/cutout — only became visible once content reached the top of the screen. Fixed by adding `.windowInsetsPadding(WindowInsets.safeDrawing)` to the root `Surface` in both `ThemedTaskPicker` (`WidgetTaskLogActivity.kt`) and `ThemedWidgetConfig` (`WidgetConfigActivity.kt`).
-
-#### Duplication ✅ (checked, left inline)
-The same two-line modifier chain (`fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)`) now appears in both files. Considered extracting a shared wrapper composable/modifier for it: rejected — it's a standard Compose insets idiom, not a design-system value (color/spacing/shape) with an existing home to live in, and the two `Surface` blocks otherwise wrap unrelated content in files with no existing shared UI file between them. Two lines duplicated twice is clearer than a one-off abstraction for this.
-
-#### Decoupling / Complexity & Pattern Health / Naming Consistency / Accessibility ✅ (n/a)
-No ViewModel, Repository, or Dao touched; no new files, composables, or symbols added; no new tappable targets.
-
-#### Dead Code & Hygiene ✅
-`git status`/`git diff --stat` confirm exactly the 2 intended Kotlin files changed, plus the two doc files below — nothing stray.
-
-#### Hardcoded Values ✅ — the point of this fix
-Deliberately used `WindowInsets.safeDrawing` (status bar + nav bar + display cutout, all sides) rather than a fixed `Modifier.padding(top = Xdp)` — a hardcoded value would be wrong on any device with a differently sized cutout or none at all.
-
-#### Deprecated APIs ✅ (checked)
-`windowInsetsPadding`/`WindowInsets.safeDrawing` are current, non-deprecated Compose Foundation APIs — no overlap with the deprecated `Window.setStatusBarColor`-family calls Pass 56 addressed.
-
-#### Spec Review ✅ (checked, no changes needed)
-Grepped `EARNIT_SPEC.md` for `WidgetTaskLogActivity|WidgetConfigActivity` — both are described in terms of user-visible flow (reward/task selection, theming, confirmation), not layout/inset detail. This is a rendering-correctness fix, not a behavior change, so nothing to reconcile.
-
-#### Tests ✅ (0 new automated tests — added to MANUAL_TEST_PLAN.md instead)
-- Display-cutout overlap only reproduces on a real device with a physical cutout; Compose UI tests (Robolectric or emulator without a cutout) can't observe it, matching the existing widget-activity-chain rationale in `MANUAL_TEST_PLAN.md`. Added a step to the existing "Widget full flow" section instead of a new entry, since it exercises the same two activities already covered there.
-- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required.
-- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`.
-- `TESTING.md`: no changes needed — no test added, removed, or renamed.
-
----
-
 ### Pass 58 — `fix/widget-all-tasks-done-state` branch
 
 Bug report: on the Rewards screen, a reward with all one-time tasks done and no repeatable tasks shows a disabled `+ LOG` pill plus an explanatory hint (`REWARD_ALL_TASKS_LOGGED_HINT`); the equivalent widget state showed nothing at all — no button, no text. Root cause: `widgetActionButtonFor`'s (`WidgetActionButton.kt`) 4-way `when` had an `else -> NONE` branch that, given the other three branches' conditions, could only ever be reached by this exact state (all tasks done, nothing repeatable) — and `EarnItWidget.kt` rendered `NONE` as `{}`. Fixed by renaming `NONE` to `LOG_DISABLED`, rendering it as a muted, non-clickable version of the `+ LOG` button, and adding a matching one-line hint (`WIDGET_ALL_TASKS_LOGGED_HINT`, "All tasks done — add more") below the reward name — mirroring the existing `showMandatoryHint`/`WIDGET_MANDATORY_HINT` pattern, and confirmed mutually exclusive with it (both hints can never be true for the same render, so they never contend for the same line).
@@ -98,3 +68,39 @@ No new tappable targets or content descriptions — the existing mandatory-star/
 - `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`.
 - `TESTING.md`: checked every row describing the three affected test classes — none asserted a specific default value in prose (only behavior like "toggles flip their description"), so no wording was stale; no changes needed.
 - `MANUAL_TEST_PLAN.md`: step 9 (widget's all-tasks-done state, added in Pass 58) required a non-repeatable task to set up — added a note that a tester must now explicitly toggle a task to non-repeatable when linking it, since that's no longer the default.
+
+---
+
+### Pass 60 — `fix/radio-group-talkback-semantics` branch
+
+Code review comment on an unrelated PR flagged that every radio-option row in the app used `Modifier.clickable` with `RadioButton(onClick = null)` inside it, instead of `Modifier.selectable(role = Role.RadioButton)` — meaning TalkBack announces these as generic tappable rows, not radio buttons with selected state or group position. Confirmed via grep this was a real app-wide pattern, not isolated to one screen: the shared `RadioRow` composable (`EarnItButtons.kt`, used by `TaskEditScreen.kt`'s group picker and `TasksScreen.kt`'s `LogForRewardDialog` reward picker) and `SharedDialogs.kt`'s bespoke `LogTaskDialog` task-picker row both had it. Fixed all four call sites: `RadioRow` and the three bespoke rows now use `Modifier.selectable(selected, onClick, role = Role.RadioButton)`, and every list containing radio options (`TaskEditScreen.kt`'s group `Column`, `TasksScreen.kt`'s reward-picker `Column`, `SharedDialogs.kt`'s task-picker `LazyColumn`) now carries `Modifier.selectableGroup()`.
+
+#### Duplication ✅ (checked, left inline)
+The `.selectable(role = Role.RadioButton)` swap is now duplicated across 4 call sites (`RadioRow`, `TaskEditScreen.kt`'s custom-group row, `SharedDialogs.kt`'s task-picker row). Considered routing `SharedDialogs.kt`'s row through the shared `RadioRow` composable instead: rejected — that row has a trailing icon cluster (mandatory star, repeatable icon, points) after the label plus `Alignment.Top` instead of `CenterVertically` (so the cluster stays pinned to the top when a long task name wraps to two lines), neither of which `RadioRow`'s `label: String`-only API supports. Adding a trailing-content slot and configurable alignment to serve one caller would be new API surface for a cleanup pass about semantics parity, not deduplication — same reasoning as Pass 57's rejected extraction.
+
+#### Decoupling ✅ (n/a)
+No ViewModel, Repository, or Dao touched — purely Compose modifier/semantics changes.
+
+#### Complexity & Pattern Health ✅ (checked)
+No new composables or reimplemented M3 components — `RadioButton` usage itself is untouched; only the wrapping row's interaction modifier changed. `TaskEditScreen.kt`'s custom-group row (radio + inline `BasicTextField`) got the same `.selectable` swap despite the nested text field — verified on-device (see Tests) that `clickable`-family modifiers merge descendants but stop at nested interactive elements, so a fear that this would break the text field's own tap-to-position-cursor behavior turned out to be moot for the *other* three rows (no nested interactive children) and wasn't separately re-verified for this specific row's cursor-placement behavior beyond the existing test's `performTextInput` calls still passing.
+
+#### Naming Consistency / Hardcoded Values / Deprecated APIs ✅ (n/a)
+No new symbols, colors, dimensions, or new/deprecated API surface — `Modifier.selectable`/`selectableGroup` are current, non-deprecated Compose Foundation APIs.
+
+#### Dead Code & Hygiene ✅
+`git status`/`git diff --stat` confirm exactly the 7 intended source files changed, plus the two doc files. `ktlintCheck` (which enforces no-unused-imports) passes clean.
+
+#### Accessibility ✅ — the point of this fix
+This *is* the accessibility fix. No new tappable targets were added and no existing padding/size modifiers were touched, so the 48dp tap-target checklist item doesn't apply here.
+
+#### Spec Review ✅ (checked, no changes needed)
+Grepped `EARNIT_SPEC.md` for `radio`/`accessib`/`TalkBack` — the one hit (Task Edit section, describing the group picker's "filled-card radio-button list") is a user-visible-behavior description with no semantics-layer claim to reconcile; visible behavior is unchanged.
+
+#### Tests ✅ (0 new files; 3 existing tests extended with semantics assertions)
+- `TaskEditScreenUiTest.groupPicker_...`, `LogForRewardDialogUiTest.multiReward_...`, and `SharedDialogsCancelUiTest.logTaskDialog_cancel_...` each gained 1–2 assertion lines checking `Role.RadioButton` + `assertIsSelected()`/`assertIsNotSelected()` on the row(s) they already interact with — below the 3+-new-tests threshold for a new file, so extended in place per existing precedent.
+- Verified empirically, not just reasoned about: before writing the assertions, decompiled Compose Foundation's `Clickable.kt` (the shared base `selectable`/`clickable` build on) to confirm `shouldMergeDescendantSemantics` is hardcoded `true`, meaning a row's label `Text` child merges its properties up into the row's own semantics node in the tree `onNodeWithText` queries by default.
+- Ran the 3 touched classes on a connected emulator first (16/16 passed), then the full instrumented suite (108/108 passed) as a regression check given `RadioRow` is shared across multiple screens.
+- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required (`connectedDebugAndroidTest`'s successful compile of the androidTest variant covers the same ground here).
+- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`.
+- `TESTING.md`: updated the three affected table rows to mention the new semantics assertions, and added a new "Radio-group TalkBack semantics" entry under Edge Cases — Covered, since this is the app's first automated accessibility-semantics coverage and nothing referenced it before.
+- `MANUAL_TEST_PLAN.md`: checked — no update needed. That doc is scoped to journeys crossing a real system-process boundary (file picker, widget activity chain, `WorkManager`); semantics-tree assertions are fully drivable in-process, which the passing instrumented tests above demonstrate directly rather than argue by analogy.
