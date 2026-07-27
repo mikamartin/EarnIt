@@ -209,7 +209,7 @@ One entry in the home screen widget picker:
 `WidgetTaskLogActivity`:
 1. `TaskPickerScreen` — lists all loggable tasks for the tracked reward
 2. Note input screen — optional free-text detail
-3. On confirm: shows in-activity success screen (✓, task name, +X pts) for 1.5 seconds, then auto-closes. On close: triggers haptic, fires local notification ("Task name / Logged! +X pts"), writes log to DB, updates widget
+3. On confirm: shows in-activity success screen (✓, task name, +X pts) for 1.5 seconds, then auto-closes. On close: triggers haptic, writes log to DB, updates widget
 
 ### Widget Theme
 
@@ -221,7 +221,6 @@ Colors follow the app's selected color scheme (Warm Gold / Ocean Blue / Forest) 
 
 - **Haptic:** 60ms vibration on task log from widget
 - **Flash:** widget shows "✓ Logged!" for 3 seconds after a log, then reverts to normal. Revert is self-contained in the widget's Glance composition via a `produceState` timer — survives app process death (e.g. APK reinstall). `WidgetFlash` stores the expiry timestamp in SharedPrefs; `remainingMs()` lets the timer fire precisely when the flash expires.
-- **Notification:** "Task name / Logged! +X pts" system notification; requires `POST_NOTIFICATIONS` on Android 13+
 - **In-activity confirmation:** success screen (✓, task name, +X pts) shown for 1.5 s inside `WidgetTaskLogActivity` before auto-closing
 
 ---
@@ -337,7 +336,7 @@ A background check re-engages users who have stopped logging tasks, via a period
 - **Second nudge:** fires once idle time reaches 96 hours (48h after the first), only if the first nudge already fired.
 - **Cap:** exactly two nudges per idle streak — no further nudges until the user logs something again, which resets the cycle.
 - **Guardrails:** no nudge fires if nothing has ever been logged (a user still setting up the app isn't nagged), or if there are no active (unclaimed, non-archived) rewards.
-- **Notification:** channel "Inactivity nudges" (`IMPORTANCE_DEFAULT`, unlike the silent widget-log channel — this one is meant to surface). Both nudges share one notification ID, so the second replaces the first rather than stacking. Tapping opens the app. Requires `POST_NOTIFICATIONS` (Android 13+), now requested from `MainActivity` on first launch (previously only requested from the widget flow).
+- **Notification:** channel "Inactivity nudges" (`IMPORTANCE_DEFAULT` — this is the only notification channel EarnIt posts to). Both nudges share one notification ID, so the second replaces the first rather than stacking. Tapping opens the app. Requires `POST_NOTIFICATIONS` (Android 13+), requested from `MainActivity` on first launch.
 - **State:** `nudgeStage` (0/1/2) and `nudgeAnchorTimestamp` persisted in `AppSettings`/DataStore. The worker detects a new log (last-log timestamp has moved past the stored anchor) and resets the stage itself — no explicit reset call is threaded through `logCompletion`.
 - **No user-facing toggle** — the only opt-out is denying/revoking the OS notification permission.
 - **Dev tooling:** Settings → Data & Backup, dev-mode-gated "Inactivity nudge" card with two buttons, "48H" and "96H" — each backdates every completion log past that threshold (capping any log newer than the cutoff, not just the single most-recent row — a naive single-row update leaves the idle clock "fresh" whenever multiple recent logs exist, e.g. after loading full test data) and then, only once that write completes, triggers the worker immediately instead of waiting for the periodic schedule. A status line reports the resulting idle age after each tap. Real 48h/96h waits aren't practical to test manually otherwise. **Caveat, flagged in the card itself:** the backdate has no active/archived filter (it has to match `getLastLogTimestamp()`, which doesn't filter either), so it will also rewrite displayed timestamps on any recently-claimed reward's History logs — use test data, not real history.
