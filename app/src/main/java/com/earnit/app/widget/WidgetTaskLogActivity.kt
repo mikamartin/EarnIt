@@ -1,18 +1,11 @@
 package com.earnit.app.widget
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -49,12 +42,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.glance.appwidget.updateAll
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.earnit.app.MainActivity
-import com.earnit.app.R
 import com.earnit.app.data.EarnItRepository
 import com.earnit.app.data.TaskEntity
 import com.earnit.app.di.ApplicationScope
@@ -71,9 +60,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-private const val WIDGET_LOG_CHANNEL_ID = "earnit_widget_log"
-private const val WIDGET_LOG_NOTIF_ID = 1001
-
 @AndroidEntryPoint
 class WidgetTaskLogActivity : ComponentActivity() {
     @Inject lateinit var repository: EarnItRepository
@@ -82,20 +68,8 @@ class WidgetTaskLogActivity : ComponentActivity() {
     @ApplicationScope
     lateinit var appScope: CoroutineScope
 
-    private val requestNotificationPermission =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-            // no-op: showNotification() checks grant state at call time
-        }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        createNotificationChannel()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            requestNotificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-        }
-
         val rewardId = intent?.getLongExtra("rewardId", 0L) ?: 0L
 
         // Clear any stale flash from a prior process that never got to revert it.
@@ -107,10 +81,8 @@ class WidgetTaskLogActivity : ComponentActivity() {
             ThemedTaskPicker(
                 rewardId = rewardId,
                 onTaskLogged = { task, note ->
-                    val pts = task.effectivePoints()
                     val appCtx = applicationContext
                     triggerHaptic()
-                    showNotification(task, pts)
                     WidgetFlash.set(appCtx, rewardId)
                     // appScope outlives the activity: writes DB, then triggers widget re-render.
                     // The widget's own produceState handles the flash revert after 3 s.
@@ -130,47 +102,6 @@ class WidgetTaskLogActivity : ComponentActivity() {
     private fun triggerHaptic() {
         val vibrator = getSystemService(Vibrator::class.java)
         vibrator?.vibrate(VibrationEffect.createOneShot(60, VibrationEffect.DEFAULT_AMPLITUDE))
-    }
-
-    private fun showNotification(
-        task: TaskEntity,
-        pts: Int,
-    ) {
-        val canNotify =
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
-                PackageManager.PERMISSION_GRANTED
-        if (!canNotify) return
-        val tapIntent =
-            PendingIntent.getActivity(
-                applicationContext,
-                0,
-                Intent(applicationContext, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                },
-                PendingIntent.FLAG_IMMUTABLE,
-            )
-        NotificationManagerCompat.from(applicationContext).notify(
-            WIDGET_LOG_NOTIF_ID,
-            NotificationCompat
-                .Builder(applicationContext, WIDGET_LOG_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_add)
-                .setContentTitle(task.name)
-                .setContentText(Strings.widgetLoggedNotif(pts))
-                .setAutoCancel(true)
-                .setContentIntent(tapIntent)
-                .build(),
-        )
-    }
-
-    private fun createNotificationChannel() {
-        val channel =
-            NotificationChannel(
-                WIDGET_LOG_CHANNEL_ID,
-                Strings.WIDGET_NOTIF_CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_LOW,
-            )
-        getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
     }
 }
 

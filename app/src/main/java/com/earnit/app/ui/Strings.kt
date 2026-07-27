@@ -295,9 +295,6 @@ object Strings {
     const val WIDGET_NOTE_PLACEHOLDER = "What did you do?"
     const val WIDGET_LOG_TASK_BTN = "Log task"
     const val WIDGET_BACK_BTN = "Back"
-    const val WIDGET_NOTIF_CHANNEL_NAME = "Widget task logs"
-
-    fun widgetLoggedNotif(pts: Int) = "Logged! +$pts pts"
 
     // Inactivity nudge notifications
     const val NUDGE_NOTIF_CHANNEL_NAME = "Inactivity nudges"
