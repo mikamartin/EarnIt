@@ -8,38 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 58 — `fix/widget-all-tasks-done-state` branch
-
-Bug report: on the Rewards screen, a reward with all one-time tasks done and no repeatable tasks shows a disabled `+ LOG` pill plus an explanatory hint (`REWARD_ALL_TASKS_LOGGED_HINT`); the equivalent widget state showed nothing at all — no button, no text. Root cause: `widgetActionButtonFor`'s (`WidgetActionButton.kt`) 4-way `when` had an `else -> NONE` branch that, given the other three branches' conditions, could only ever be reached by this exact state (all tasks done, nothing repeatable) — and `EarnItWidget.kt` rendered `NONE` as `{}`. Fixed by renaming `NONE` to `LOG_DISABLED`, rendering it as a muted, non-clickable version of the `+ LOG` button, and adding a matching one-line hint (`WIDGET_ALL_TASKS_LOGGED_HINT`, "All tasks done — add more") below the reward name — mirroring the existing `showMandatoryHint`/`WIDGET_MANDATORY_HINT` pattern, and confirmed mutually exclusive with it (both hints can never be true for the same render, so they never contend for the same line).
-
-#### Duplication ✅ — found and fixed
-`widgetActionButtonFor` reimplemented `RewardProgress.loggableTasks`' exact filter inline (`completedIds`/`taskRefsMap`/`hasTasks` local vars duplicating `Entities.kt`'s `loggableTasks` getter). Since this pass was already rewriting that function, simplified it to call `progress.loggableTasks.isNotEmpty()` and `progress.allTasks.isEmpty()` directly — removes the duplicate logic and shortens the function to a single `when` expression. Re-ran `ktlintCheck` and `test` after this refactor to confirm behavior didn't shift.
-
-#### Decoupling / Complexity & Pattern Health / Naming Consistency ✅ (checked)
-No ViewModel/Repository/Dao touched. `LOG_DISABLED`'s render branch reuses the existing `LOG` button's shape/sizing (32dp circle) rather than introducing a new layout pattern; only the color source and click-wiring differ.
-
-#### Hardcoded Values ✅ (checked)
-New muted-button colors resolve from `WidgetColors.track`/`onSurfaceVar` (existing theme-aware `ColorProvider`s), not literal hex values — consistent with every other widget button state.
-
-#### Accessibility ✅ (checked)
-`LOG_DISABLED`'s icon `Image` carries a non-empty `contentDescription` (reusing the hint string), unlike being decorative/`null`, since the box has no visible label text of its own the way `CLAIM`/`ADD_TASK` do.
-
-#### Deprecated APIs ✅ (n/a)
-No new API surface touched beyond existing Glance `Image`/`ColorFilter.tint`, both current.
-
-#### Spec Review ✅ — found and fixed
-`EARNIT_SPEC.md`'s Widget Display States table documented the *buggy* behavior as intentional ("All tasks done, points still short: reward name and progress bar only; no button shown"). Corrected to describe the disabled button + hint.
-
-#### Tests ✅ (0 new files; 2 existing tests corrected, both previously asserting the bug)
-- `WidgetActionButtonTest`'s `` `non-repeatable task already logged and points below cost returns NONE` `` renamed and updated to assert `LOG_DISABLED` — this test was passing *because* it encoded the bug, not despite it.
-- `WidgetContentTest`'s `standardContent_allTasksDoneBelowCost_showsNoActionButton` renamed to `standardContent_allTasksDoneBelowCost_showsDisabledLogButtonAndHint`, extended to assert the disabled button exists with `assertHasNoClickAction()` and the hint text renders.
-- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required.
-- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`.
-- `TESTING.md`: updated the `WidgetActionButtonTest`/`WidgetContentTest` table rows and the "Widget action-button selection" prose section to say `LOG_DISABLED` instead of `NONE` and describe the new disabled-button-plus-hint assertion. Counts unchanged (both are renamed/extended existing tests, not new files).
-- `MANUAL_TEST_PLAN.md`: step 9 (all-tasks-done widget state) updated to describe the disabled button and hint instead of "no button is shown"; step 14 (narrow-width/minimal-footprint overflow check) extended to also cover this new hint, since it shares the exact clipping risk `fix/widget-hint-overflow` already found for the mandatory-task hint.
-
----
-
 ### Pass 59 — `fix/widget-all-tasks-done-state` branch
 
 Product change: new task/reward links now default to repeatable (`isRepeatable = true`) instead of one-time, since most real tasks (chores, habits) are repeatable and one-time tasks are the less common case. `TaskEditState`'s constructor default (`SharedDialogs.kt`) is the single UI-state source most of these flows read from, so flipping it there covers: creating a brand-new task with no reward link yet, per-row defaults in `AddTaskToRewardDialog` for tasks not yet flagged, and `RewardEditScreen`'s auto-include-newly-created-task and fallback-read paths. Three other sites don't derive from that class and needed their own flip: `RewardEditScreen.kt`'s two `?.isRepeatable ?: false` fallbacks (rendering a not-yet-linked task's row in the reward's task-selection list) → `?: true`; `TaskEditScreen.kt`'s hardcoded `Pair(false, false)` link flags for the "create new task" shortcut launched from `AddTaskToRewardDialog` (no UI toggle exists on that path) → `Pair(false, true)`; and `EarnItRepository.addTaskToReward`'s default parameter, flipped for signature-accuracy even though every call site already passes explicit args (verified via grep — dead default, zero behavioral effect). Deliberately left `RewardTaskCrossRef`'s own entity-level constructor default (`Entities.kt`) and the vestigial, UI-disconnected `TaskEntity.repeatable` field untouched — see Duplication below.
@@ -104,3 +72,28 @@ Grepped `EARNIT_SPEC.md` for `radio`/`accessib`/`TalkBack` — the one hit (Task
 - `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`.
 - `TESTING.md`: updated the three affected table rows to mention the new semantics assertions, and added a new "Radio-group TalkBack semantics" entry under Edge Cases — Covered, since this is the app's first automated accessibility-semantics coverage and nothing referenced it before.
 - `MANUAL_TEST_PLAN.md`: checked — no update needed. That doc is scoped to journeys crossing a real system-process boundary (file picker, widget activity chain, `WorkManager`); semantics-tree assertions are fully drivable in-process, which the passing instrumented tests above demonstrate directly rather than argue by analogy.
+
+---
+
+### Pass 61 — remove widget-log notification
+
+Product decision: the system notification fired every time a task was logged from the home-screen widget ("Task name / Logged! +X pts") was noise — the widget's own flash + haptic already confirm the log in the moment, and the notification added a second, redundant confirmation for an event the user just triggered themselves. Removed `WidgetTaskLogActivity`'s `showNotification()`, its notification channel (`earnit_widget_log`), and its own `POST_NOTIFICATIONS` permission request (redundant — `MainActivity` already requests that permission on first launch for inactivity nudges). Inactivity-nudge notifications, which fire when *nothing* has been logged for 48h/96h, are untouched — different code path, different channel, different purpose (re-engagement vs. confirmation).
+
+#### Duplication / Decoupling / Complexity & Pattern Health ✅ (n/a)
+Pure deletion — no composables, ViewModel, Repository, or Dao touched, nothing to duplicate or extract.
+
+#### Dead Code & Hygiene ✅ — found and fixed
+Removed now-unused imports (`NotificationChannel`, `NotificationManager`, `PendingIntent`, `Intent`, `PackageManager`, `Build`, `ActivityResultContracts`, `NotificationCompat`, `NotificationManagerCompat`, `MainActivity`, `R`), the `WIDGET_LOG_CHANNEL_ID`/`WIDGET_LOG_NOTIF_ID` constants, and the orphaned `pts` local that only existed to feed the removed notification text. `ktlintCheck` (unused-import enforcement) passes clean. Also removed `Strings.widgetLoggedNotif()` and `WIDGET_NOTIF_CHANNEL_NAME`, now unreferenced. Checked `R.drawable.ic_add` (the notification's icon) is still used elsewhere (`NudgeWorker`, `EarnItWidget`) so it wasn't orphaned. `git status`/`git diff --stat` confirm exactly the 4 intended files changed. Considered whether the now-defunct `earnit_widget_log` notification channel needs explicit cleanup (`NotificationManager.deleteNotificationChannel`) for existing installs — not needed, `versionCode`/`versionName` (1 / "1.0") confirm the app hasn't shipped a release yet, so no device has ever created that channel.
+
+#### Naming Consistency / Hardcoded Values / Accessibility / Deprecated APIs ✅ (n/a)
+No new symbols, colors, dimensions, tappable targets, or API surface — everything here is removal of existing, non-deprecated code.
+
+#### Spec Review ✅ — found and fixed
+`EARNIT_SPEC.md`: removed the notification from the "Task Logging from Widget" flow description and the "Celebratory Feedback" list, and reworded the nudge section's "unlike the silent widget-log channel" comparison (the widget-log channel no longer exists) to state plainly that nudges are now EarnIt's only notification channel. Grepped the whole doc for `notification`/`POST_NOTIFICATIONS`/`permission` afterward to confirm no other stale references remain — the one other hit ("Mascot Unlock Notifications") is an unrelated in-app badge/snackbar concept, not a system notification.
+
+#### Tests ✅ (0 new files; 0 existing tests referenced the removed notification)
+- Grepped `androidTest` and `test` source sets for `notif`/`Notification` — the only hits are `HiltTestRunner`'s generic `POST_NOTIFICATIONS` pre-grant (still needed, nudges still require it) and `MascotNotificationTest` (the unrelated in-app badge concept above). No test asserted the widget-log notification's content or channel, so none needed updating or deleting.
+- `TESTING.md`: checked — the "Widget task logging" Deferrals entry and manual-only rationale don't call out the notification specifically, no change needed.
+- `MANUAL_TEST_PLAN.md`: step 5 updated to drop "Confirm a notification appeared (...)" from the widget-logging journey.
+- `AppModule`/`TestAppModule` untouched; no new `@Inject` site. Ran `./gradlew assembleDebugAndroidTest` anyway since `WidgetTaskLogActivity` (an existing `@AndroidEntryPoint`/`@Inject` class) was touched — passed.
+- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`.
