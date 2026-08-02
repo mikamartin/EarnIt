@@ -75,6 +75,9 @@ object Strings {
     const val ABOUT_CONTACT_LABEL = "Get in touch"
     const val ABOUT_CONTACT_SUBTITLE = "Feedback, bugs, or just want to say hi."
     const val ABOUT_CONTACT_EMAIL = "hello@secondmondaystudios.com"
+    const val ABOUT_PRIVACY_LABEL = "Privacy policy"
+    const val ABOUT_PRIVACY_SUBTITLE = "How your data is handled (it isn't)."
+    const val ABOUT_PRIVACY_URL = "https://secondmondaystudios.com/privacy/earnit.html"
     const val ABOUT_TIP_TITLE = "Support the developer"
     const val ABOUT_TIP_COPY =
         "EarnIt is free and ad-free. If it's been useful, a tip keeps the coffee flowing and the updates coming."
