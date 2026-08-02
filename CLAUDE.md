@@ -37,7 +37,7 @@ This repo is also a portfolio piece. It's built with heavy AI assistance, and th
 - [EARNIT_SPEC.md](docs/EARNIT_SPEC.md) — what the app does, architecture, deferred ideas
 - [TESTING.md](docs/TESTING.md) — test strategy, coverage, cadence
 - [MANUAL_TEST_PLAN.md](docs/MANUAL_TEST_PLAN.md) — the journeys that are deliberately manual-only, not just deferred
-- [DEV_PLAYBOOK.md](docs/DEV_PLAYBOOK.md) — ship checklist, release process, tooling upgrade reference
+- [DEV_PLAYBOOK.md](docs/DEV_PLAYBOOK.md) — release process, known limitations, tooling upgrade reference
 - [CLEANUP_RULES.md](docs/CLEANUP_RULES.md) — post-work cleanup checklist and log retention rule
 - [CLEANUP_LOG.md](docs/CLEANUP_LOG.md) — the 3 most recent cleanup passes
 - [QA_AUDIT_RULES.md](docs/QA_AUDIT_RULES.md) — periodic whole-suite QA audit checklist and cadence
@@ -65,7 +65,6 @@ Follows [Conventional Commits](https://www.conventionalcommits.org/).
 - Code comments and doc updates (`DEV_PLAYBOOK.md`, `TESTING.md`, `EARNIT_SPEC.md`, etc.) describe the current state and behaviour, not the history of what was wrong or changed to get here. State the rule or behaviour directly; don't narrate the prior bug or implementation. Keep it concise. (`CLEANUP_LOG.md` is the exception — it's a retrospective record by design.)
 - After any significant feature work, walk through the checklist in `CLEANUP_RULES.md` and log a new pass in `CLEANUP_LOG.md`.
 - Keep `EARNIT_SPEC.md` in sync with what was actually built — update it when implementation diverges from the spec intentionally; if it diverged unintentionally, that's a bug to fix, not a spec update.
-- Flag `DEV_PLAYBOOK.md` ship checklist items if a task touches them, and strike resolved items out entirely — the checklist should only ever contain open work.
 
 ## Commands
 
