@@ -2,9 +2,10 @@
 
 A local-only productivity app for Android. 
 
-<!-- Badges: add once CI and Play Store listing are live -->
-<!-- ![Build](https://github.com/YOUR_USERNAME/EarnIt/actions/workflows/build.yml/badge.svg) -->
-<!-- ![Play Store](https://img.shields.io/badge/Play%20Store-coming%20soon-brightgreen) -->
+[![CI](https://github.com/mikamartin/EarnIt/actions/workflows/ci.yml/badge.svg)](https://github.com/mikamartin/EarnIt/actions/workflows/ci.yml)
+[![Play Store](https://img.shields.io/badge/Play%20Store-EarnIt-brightgreen)](https://play.google.com/store/apps/details?id=com.secondmonday.earnit)
+![Unit tests](https://img.shields.io/badge/unit%20tests-170%2B-blue)
+![Instrumented tests](https://img.shields.io/badge/instrumented%20tests-100%2B-blue)
 
 ---
 
@@ -104,7 +105,7 @@ graph LR
 
 Every feature was defined in `EARNIT_SPEC.md` before any code was written, and the AI implemented from that. Claude (via Claude Code) generated first-draft implementations, maintained documentation, ran cleanup passes, and set up tooling. All product decisions, UX direction, and architectural choices were made by the human product owner. Every branch was reviewed and approved before merging.
 
-Quality is maintained through a documented test strategy: 175+ unit tests and 100+ instrumented tests (including Compose UI tests) plus a manual test plan for flows that cross system boundaries. Structured cleanup passes are done after every feature. 
+Quality is maintained through a documented test strategy: 170+ unit tests and 100+ instrumented tests (including Compose UI tests) plus a manual test plan for flows that cross system boundaries. Structured cleanup passes are done after every feature. 
 
 ---
 
