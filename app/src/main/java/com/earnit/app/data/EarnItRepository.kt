@@ -339,7 +339,7 @@ class EarnItRepository
                 skipped
             }
 
-        // TEST DATA — gated behind Settings.devModeEnabled; not removed, see CLEANUP_LOG Pass 21
+        // TEST DATA — gated behind Settings.devModeEnabled; intentionally kept for dev-mode seeding
         suspend fun seedTestData() = TestDataSeeder.seed(database)
 
         suspend fun seedFullTestData() = TestDataSeeder.seedFull(database)
