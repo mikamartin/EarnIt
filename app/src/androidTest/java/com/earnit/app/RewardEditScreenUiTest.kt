@@ -136,14 +136,20 @@ class RewardEditScreenUiTest {
 
         composeTestRule.onNodeWithText("Original Reward").performTextClearance()
         composeTestRule.onNodeWithText(Strings.REWARD_NAME_LABEL).performTextInput("Updated Reward")
+        composeTestRule.onNodeWithText("Updated Reward").assertIsDisplayed()
 
         composeTestRule.onNodeWithText(Strings.REWARD_COST_LABEL).performTextClearance()
         composeTestRule.onNodeWithText(Strings.REWARD_COST_LABEL).performTextInput("25")
+        composeTestRule.onNodeWithText("25").assertIsDisplayed()
 
         composeTestRule.onNodeWithText(Strings.REWARD_DESC_LABEL).performTextInput("A well-earned break")
+        composeTestRule.onNodeWithText("A well-earned break").assertIsDisplayed()
 
         composeTestRule.onNodeWithText("🎯").performClick()
+        composeTestRule.onNodeWithText(Strings.TASK_ICON_PICKER_TITLE).assertIsDisplayed()
         composeTestRule.onNodeWithText("🏆").performClick()
+        composeTestRule.onNodeWithText(Strings.TASK_ICON_PICKER_TITLE).assertDoesNotExist()
+        composeTestRule.onNodeWithText("🏆").assertIsDisplayed()
 
         composeTestRule.onNodeWithText("SAVE").performClick()
 
@@ -298,14 +304,12 @@ class RewardEditScreenUiTest {
 
     @Test
     fun screenCancel_popsBackWithoutSavingReward() {
-        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
-        composeTestRule.onNodeWithContentDescription(Strings.NEW_REWARD_DESC).performClick()
-        composeTestRule.onNodeWithText(Strings.REWARD_NAME_LABEL).performTextInput("Abandoned Reward")
-
-        composeTestRule.onNodeWithText("CANCEL").performClick()
-
-        composeTestRule.onNodeWithText("Abandoned Reward").assertDoesNotExist()
-        composeTestRule.onNodeWithContentDescription(Strings.NEW_REWARD_DESC).assertIsDisplayed()
+        composeTestRule.cancelNewEntityAndAssertDiscarded(
+            tabContentDescription = "Prizes",
+            newEntityContentDescription = Strings.NEW_REWARD_DESC,
+            nameFieldLabel = Strings.REWARD_NAME_LABEL,
+            name = "Abandoned Reward",
+        )
     }
 
     @Test
