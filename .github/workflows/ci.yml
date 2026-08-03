@@ -31,6 +31,9 @@ jobs:
       - name: Lint (ktlint)
         run: ./gradlew ktlintCheck
 
+      - name: Check instrumented test tags
+        run: ./gradlew checkInstrumentedTestTags
+
       - name: Unit tests
         run: ./gradlew test
 
