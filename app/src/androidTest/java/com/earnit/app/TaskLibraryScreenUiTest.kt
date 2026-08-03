@@ -7,7 +7,6 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.earnit.app.tags.Task
 import com.earnit.app.tags.UiTest
@@ -68,7 +67,10 @@ class TaskLibraryScreenUiTest {
             composeTestRule.onAllNodesWithText(Strings.librarySkippedTitle(1)).fetchSemanticsNodes().isNotEmpty()
         }
 
-        Espresso.pressBack()
+        // Espresso.pressBack() dispatches a real system key event, which requires the emulator
+        // window to hold actual OS-level focus — flaky in headless/CI environments. Invoking the
+        // dispatcher directly exercises the same "system back" code path without that dependency.
+        composeTestRule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
 
         composeTestRule.onNodeWithText(Strings.librarySkippedTitle(1)).assertDoesNotExist()
         composeTestRule.onNodeWithText(Strings.LIBRARY_TITLE).assertDoesNotExist()

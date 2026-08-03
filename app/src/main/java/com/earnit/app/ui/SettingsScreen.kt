@@ -249,9 +249,9 @@ private fun SettingsNicknameCard(
             OutlinedTextField(
                 value = if (settings.useRandomNickname) viewModel.sessionNickname else nicknameText,
                 onValueChange = { newValue ->
-                    val next = acceptWithinLimit(nicknameText, newValue, NICKNAME_MAX_CHARS)
-                    nicknameText = next
-                    if (next == newValue && settings.useRandomNickname) viewModel.updateUseRandomNickname(false)
+                    val edit = nicknameFieldEdit(nicknameText, newValue, settings.useRandomNickname)
+                    nicknameText = edit.text
+                    if (edit.shouldDisableRandomNickname) viewModel.updateUseRandomNickname(false)
                 },
                 placeholder = { Text(Strings.SETTINGS_NAME_PLACEHOLDER) },
                 singleLine = true,

@@ -361,7 +361,7 @@ private fun RewardProgressBar(
     accents: EarnItAccents,
 ) {
     val accentColor = accents.gradientStart
-    val rawProgress = (rp.totalPoints.toFloat() / rp.reward.cost.toFloat()).coerceIn(0f, 1f)
+    val rawProgress = rp.progressFraction
     val progress by animateFloatAsState(rawProgress, tween(500, easing = FastOutSlowInEasing), label = "barProgress")
 
     val floatingOffset = remember { Animatable(0f) }

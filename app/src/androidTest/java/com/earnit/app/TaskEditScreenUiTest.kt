@@ -72,14 +72,12 @@ class TaskEditScreenUiTest {
 
     @Test
     fun screenCancel_popsBackWithoutSavingTask() {
-        composeTestRule.onNodeWithContentDescription("Tasks").performClick()
-        composeTestRule.onNodeWithContentDescription("New Task").performClick()
-        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Abandoned Task")
-
-        composeTestRule.onNodeWithText("CANCEL").performClick()
-
-        composeTestRule.onNodeWithText("Abandoned Task").assertDoesNotExist()
-        composeTestRule.onNodeWithContentDescription("New Task").assertIsDisplayed()
+        composeTestRule.cancelNewEntityAndAssertDiscarded(
+            tabContentDescription = "Tasks",
+            newEntityContentDescription = Strings.NEW_TASK_DESC,
+            nameFieldLabel = Strings.TASK_NAME_LABEL,
+            name = "Abandoned Task",
+        )
     }
 
     @Test
@@ -228,14 +226,20 @@ class TaskEditScreenUiTest {
 
         composeTestRule.onNodeWithText("Original Name").performTextClearance()
         composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Updated Name")
+        composeTestRule.onNodeWithText("Updated Name").assertIsDisplayed()
 
         composeTestRule.onNodeWithText("✅").performClick()
+        composeTestRule.onNodeWithText(Strings.TASK_ICON_PICKER_TITLE).assertIsDisplayed()
         composeTestRule.onNodeWithText("🏆").performClick()
+        composeTestRule.onNodeWithText(Strings.TASK_ICON_PICKER_TITLE).assertDoesNotExist()
+        composeTestRule.onNodeWithText("🏆").assertIsDisplayed()
 
         composeTestRule.onNodeWithText(Strings.TASK_GROUP_PLACEHOLDER).performTextInput("Errands")
+        composeTestRule.onNodeWithText("Errands").assertIsDisplayed()
 
         composeTestRule.onNodeWithText(Strings.TASK_POINTS_LABEL).performTextClearance()
         composeTestRule.onNodeWithText(Strings.TASK_POINTS_LABEL).performTextInput("7")
+        composeTestRule.onNodeWithText("7").assertIsDisplayed()
 
         composeTestRule.onNodeWithText("SAVE").performClick()
 

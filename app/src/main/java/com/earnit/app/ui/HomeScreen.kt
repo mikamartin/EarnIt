@@ -551,7 +551,7 @@ fun RewardProgressCard(
     val accents = LocalEarnItAccents.current
     val showMandatoryHint = !rp.canClaim && rp.totalPoints >= rp.reward.cost
     val showAllTasksLoggedHint = !rp.canClaim && rp.allTasks.isNotEmpty() && rp.loggableTasks.isEmpty()
-    val rawProgress = (rp.totalPoints.toFloat() / rp.reward.cost.toFloat()).coerceIn(0f, 1f)
+    val rawProgress = rp.progressFraction
     val progress by animateFloatAsState(rawProgress, tween(500, easing = FastOutSlowInEasing), label = "barProgress")
     val scale by animateFloatAsState(if (isBeingDragged) 1.03f else 1f, label = "scale")
     val elevation by animateDpAsState(if (isBeingDragged) 8.dp else 2.dp, label = "elevation")

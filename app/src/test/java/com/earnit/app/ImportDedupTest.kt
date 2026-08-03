@@ -25,6 +25,7 @@ class ImportDedupTest : RepositoryTestBase() {
         runBlocking {
             coEvery { taskDao.getAllTasks() } returns existing("Morning Run")
             coEvery { taskDao.getMaxSortOrder() } returns 0
+            coEvery { taskDao.insertTask(any()) } returns 1L
 
             val skipped = repository.importTemplate(template("Morning Run"), cleanSlate = false)
 
@@ -37,6 +38,7 @@ class ImportDedupTest : RepositoryTestBase() {
         runBlocking {
             coEvery { taskDao.getAllTasks() } returns existing("morning run")
             coEvery { taskDao.getMaxSortOrder() } returns 0
+            coEvery { taskDao.insertTask(any()) } returns 1L
 
             val skipped = repository.importTemplate(template("Morning Run"), cleanSlate = false)
 
@@ -49,6 +51,7 @@ class ImportDedupTest : RepositoryTestBase() {
         runBlocking {
             coEvery { taskDao.getAllTasks() } returns existing("Morning Run")
             coEvery { taskDao.getMaxSortOrder() } returns 0
+            coEvery { taskDao.insertTask(any()) } returns 1L
 
             val skipped = repository.importTemplate(template("  Morning Run  "), cleanSlate = false)
 

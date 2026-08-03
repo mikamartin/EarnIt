@@ -306,8 +306,8 @@ User picks a `.json` file via `ActivityResultContracts.GetContent`. Two modes:
 
 1. **MIME type** — images, video, and audio are rejected immediately (`ImportWrongFileTypeException`)
 2. **File size** — files larger than 10 MB are rejected (`ImportFileTooLargeException`)
-3. **JSON validity** — Moshi parse failures surface as `ImportInvalidJsonException`
-4. **Schema check** — valid JSON that contains none of the expected top-level keys (`tasks`, `rewards`, `rewardTaskCrossRefs`, `completionLogs`, `historyEntries`) is rejected as `ImportWrongSchemaException`; this prevents a wrong file from silently wiping user data in Replace mode
+3. **Schema check** — text containing none of the expected top-level keys (`tasks`, `rewards`, `rewardTaskCrossRefs`, `completionLogs`, `historyEntries`) is rejected as `ImportWrongSchemaException` before parsing is attempted; this catches both wrong-shape JSON (an unrelated object, a JSON array) and unrecognizable malformed text with one check, and prevents a wrong file from silently wiping user data in Replace mode
+4. **JSON validity** — for text that does contain a recognizable key, Moshi parse failures surface as `ImportInvalidJsonException`
 
 Each failure shows a specific inline error message beneath the import buttons (in error colour). Success shows "Replaced ✓" or "Merged ✓" in primary colour.
 
@@ -347,7 +347,7 @@ A background check re-engages users who have stopped logging tasks, via a period
 
 See [TESTING.md](TESTING.md) for the full picture — current coverage, known gaps, and what to write next.
 
-**Summary:** 150+ unit tests across ~20 test files. ~60 instrumented tests across ~20 files (requires device/emulator) — including ~30 Compose UI tests.
+**Summary:** 182 unit tests across 25 test files. 108 instrumented tests across 30 files (requires device/emulator) — including 74 Compose UI tests.
 
 ---
 

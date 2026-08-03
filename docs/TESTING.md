@@ -24,9 +24,9 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ```
                  [ Manual — 4 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
-            [ UI — ~70 tests ]          ComposeTestRule + Hilt, real DataStore
-       [ Integration — ~30 tests ]      Real in-memory Room, no mocks
-     [ Unit — 175+ tests ]              JVM, MockK DAOs, fast
+            [ UI — 74 tests ]           ComposeTestRule + Hilt, real DataStore
+       [ Integration — 34 tests ]       Real in-memory Room, no mocks
+     [ Unit — 182 tests ]               JVM, MockK DAOs, fast
 ```
 
 **Run unit tests** (JVM, no device needed)
@@ -43,7 +43,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ---
 
-## Unit Tests — `app/src/test/` (175+ tests)
+## Unit Tests — `app/src/test/` (182 tests)
 
 | File | What it covers |
 |---|---|
@@ -52,9 +52,9 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `LogAttributionTest` (5) | `logCompletion` — auto-points formula applied, manual points respected, task name snapshotted at log time, `rewardId` + detail recorded, `historyEntryId` null on new log |
 | `RepositoryBehaviourTest` (12) | `claimReward` (archives / no-archive / not-found), `saveRewardTasks` (correct flags, clears existing before insert), `copyRewardFromEntry` (flags and icon preserved, appended to end of list), `importTemplate` (append / clean-slate / sortOrder / group assignment), `updateTaskRewards` (removes delinked / inserts with correct flags) |
 | `ImportDedupTest` (7) | `importTemplate` dedup — exact match, case-insensitive, whitespace-trimmed; non-conflicting tasks inserted; sort order continuous across skips; skipped list preserves template casing |
-| `RewardProgressTest` (15) | `totalPoints`, `canClaim` (points gate / mandatory gate / combined / no mandatory), `showsProgressNumbers` (below cost / cost met but mandatory task unlogged / claimable / zero-cost with no mandatory tasks), `allTasks` ordering, `loggableTasks` (unlogged / non-repeatable already logged / repeatable re-loggable / mixed set) |
+| `RewardProgressTest` (18) | `totalPoints`, `canClaim` (points gate / mandatory gate / combined / no mandatory), `showsProgressNumbers` (below cost / cost met but mandatory task unlogged / claimable / zero-cost with no mandatory tasks), `progressFraction` (below cap, clamped to 1 above cost, 1 for zero-cost regardless of points), `allTasks` ordering, `loggableTasks` (unlogged / non-repeatable already logged / repeatable re-loggable / mixed set) |
 | `ClaimRewardStartOverTest` (3) | `startOver=true` — history entry created, logs archived, reward name/icon/cost snapshotted |
-| `DeleteCascadeTest` (2) | `deleteTask` clears cross-refs before delete; `deleteReward` clears cross-refs + active logs before delete |
+| `DeleteCascadeTest` (2) | `deleteTask` deletes the task; `deleteReward` clears active logs before deleting the reward — cross-ref cleanup for both is handled by the `RewardTaskCrossRef` FK cascade, not a manual repository call, which the test verifies negatively for `deleteReward` |
 | `CleanupTest` (3) | `clearAllLogs` deletes all logs (active + archived) **and** all history entries; `clearAllTasks` removes cross-refs then tasks; `clearAllRewards` removes cross-refs + active logs only (history preserved) |
 | `SortOrderTest` (7) | `upsertTask` / `upsertReward` sortOrder assignment (empty and non-empty list); upsert routes existing records to update; `updateRewardsSortOrder` / `updateTasksSortOrder` assign sequential indexes |
 | `JsonExportTest` (5) | `toJson` / `fromJson` round-trip for tasks, rewards, cross-refs, logs; empty JSON object throws `ImportWrongSchemaException` |
@@ -71,11 +71,11 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `NudgeDebugToolsTest` (3) | `EarnItViewModel.debugGetLastLogIdleHours` — whole-hour idle time from a real timestamp, null when nothing's ever been logged; `debugBackdateLastLog` writes to the repository and invokes its completion callback exactly once (the ordering the "48H"/"96H" dev buttons rely on to avoid racing `NudgeWorker` against an in-flight write) |
 | `PugslyGestureTest` (10) | `PugslyGesture.nextState`/`isComplete` — the tap-timing state machine behind the secret mascot gesture: group-gap boundary (exact pass, one ms over resets), pause-window boundaries (one ms short/over resets, exact min/max accepted), full 7-tap success path, and mid-pattern resets (extra tap before the pause, a slow tap mid-second-burst) |
 | `DragReorderTest` (9) | `DragReorder.targetIndex`/`reordered` — the hover-target math and list-move step shared by Home's reward-list and Tasks' task-list long-press-drag reorder gestures: no target while still over the dragged item's own slot, correct target over another slot, dragged item excluded even if the center falls back inside its own bounds, leading/trailing edge boundaries (exclusive), moving an item down/up shifts the in-between items correctly, and a multi-step sequence (drag down twice, up once) ends at the correct final order |
-| `FieldValidationTest` (9) | `acceptWithinLimit`/`digitsOnly`/`TaskEditState.withIncludedSetTo` — the character-cap, digit-only, and task-link uncheck-reset transforms shared by every field that caps length, filters to digits, or resets mandatory/repeatable on uncheck: under/at/over the character-cap boundary, a same-length replacement at the cap, digit-filtering of mixed/all-digit/no-digit input, and uncheck resetting both flags regardless of prior state vs. checking leaving them untouched |
+| `FieldValidationTest` (14) | `acceptWithinLimit`/`digitsOnly`/`nicknameFieldEdit`/`taskGroupFieldEdit`/`TaskEditState.withIncludedSetTo` — the character-cap, digit-only, cap-then-conditionally-reset-a-sibling-toggle, and task-link uncheck-reset transforms shared by every field that caps length, filters to digits, or resets other state on edit: under/at/over the character-cap boundary, a same-length replacement at the cap, digit-filtering of mixed/all-digit/no-digit input, the Settings nickname field disabling "random nickname" only on an accepted (non-overflow) edit, the Task group field clearing an existing-group selection only when the typed text is non-blank, and uncheck resetting both mandatory/repeatable flags regardless of prior state vs. checking leaving them untouched |
 
 ---
 
-## Instrumented Tests — `app/src/androidTest/` (~105 tests, requires device/emulator)
+## Instrumented Tests — `app/src/androidTest/` (108 tests, requires device/emulator)
 
 **State isolation:** Every `@HiltAndroidTest` class using `createAndroidComposeRule<MainActivity>()` calls `resetAppState()` (in `TestStateReset.kt`) as the first line of its `@Before`, immediately after `hiltRule.inject()` and before any test-specific overrides (e.g. `settingsRepository.updateMaxRewardCount(...)`). This gives each test a clean database and default settings to start from, independent of what ran before it in the same instrumentation process. `RoomIntegrationBase`-based repository tests don't need this — each already gets its own fresh in-memory database per test.
 
@@ -139,7 +139,7 @@ check`) fails the build if any class is missing its required layer tag or has no
 Log attribution is scoped to `(taskId, rewardId)`. Logging task T against reward R1 writes a log with `rewardId = R1`. `loggableTasks` for R2 queries `completionLogs WHERE rewardId = R2`, so T remains loggable for R2. Verified implicitly through the `loggableTasks` unit tests; the two-reward fixture is not set up explicitly at integration level — acceptable given the query isolation is straightforward Room SQL. `LogForRewardDialogUiTest` covers the UI side of the same scenario: `LogForRewardDialog`'s reward picker (shown only when a task has more than one reward) requires an explicit selection before LOG is enabled, and the resulting log is attributed to the chosen reward only.
 
 **Deleting a reward with in-progress logs** (`DeleteCascadeTest`, `ClearCascadeTest`)
-`deleteReward` removes cross-refs and all active logs before deleting the entity. `clearAllRewards` does the same across all rewards but deliberately preserves history entries from completed cycles.
+`deleteReward` removes all active logs before deleting the entity; cross-ref cleanup is handled by the FK cascade, not a manual call. `clearAllRewards` clears active logs and cross-refs across all rewards but deliberately preserves history entries from completed cycles.
 
 **Non-repeatable task logged twice** (`RewardProgressTest`)
 `loggableTasks` excludes a non-repeatable task once a log entry exists for its `(taskId, rewardId)` pair. Repeatable tasks always remain available regardless of prior logs.
@@ -166,7 +166,7 @@ Fresh-install copy on Prizes, Tasks, and both History sub-tabs is asserted direc
 Full UI path: Tasks tab → Library → expand a template → add all tasks → confirm they appear in the Tasks list. `ImportDedupTest` covers the dedup logic itself at the repository level; this test covers the UI wiring (navigation, checkbox state, button enabling) on top of it.
 
 **Post-save navigation** (`SaveNavigationUiTest`)
-Saving a new task navigates to TaskDetailScreen; saving a new reward navigates to RewardDetailScreen. Creating a task from a new-reward edit form pops back to the reward form (not forward to TaskDetailScreen), auto-includes the task in the form's task list, and persists both entities linked when the reward is subsequently saved. The home card's "+ ADD TASKS" shortcut is also asserted to land on the Add Task dialog directly rather than the Reward Edit screen — the same regression class as the other cases in this file (an extra tap silently inserted into a flow that should be one tap).
+Saving a new task navigates to TaskDetailScreen; saving a new reward navigates to RewardDetailScreen. Creating a task from a new-reward edit form pops back to the reward form (not forward to TaskDetailScreen), auto-includes the task in the form's task list, and persists both entities linked when the reward is subsequently saved. The home card's "+ ADD TASKS" shortcut is also asserted to land on the Add Task dialog directly rather than the Reward Edit screen, so the shortcut takes exactly one tap to reach the dialog.
 
 **Onboarding nudge dismissal persists** (`WidgetNudgeUiTest`, `SettingsTipUiTest`)
 Both one-time nudges (widget nudge on Reward Detail, discoverability tip on Settings) are asserted to disappear immediately on dismiss and to stay hidden after `activityRule.scenario.recreate()`, proving the DataStore flag round-trips rather than just the in-memory Compose state resetting.
@@ -175,7 +175,7 @@ Both one-time nudges (widget nudge on Reward Detail, discoverability tip on Sett
 The button-state decision (`CLAIM` / `LOG` / `LOG_DISABLED` / `ADD_TASK`) is a plain function, unit-tested directly; `WidgetContentTest` renders the actual composables via `glance-testing` + Robolectric to confirm the right button (and only that button) appears with its click action wired — or, for `LOG_DISABLED`, that the button renders with no click action alongside the "all tasks done" hint — plus reward name/points/hint text. Neither test can verify the click actually reaches the intended `Intent` extras (`glance-testing`'s click-action matchers don't recognize the raw-`Intent` `actionStartActivity` overload this widget uses) — that part stays manual, per `MANUAL_TEST_PLAN.md`.
 
 **Drag-to-reorder gesture on Home and Tasks** (`DragReorderTest`, `DragReorderUiTest`)
-`DragReorderTest` unit-tests the hover-target/list-move math (`DragReorder`) shared by both screens. `DragReorderUiTest` drives the real long-press-drag via `performTouchInput` and asserts actual on-screen card order against the underlying list state, not just the model. See `CLEANUP_LOG.md` Pass 49 for the regression this coverage catches.
+`DragReorderTest` unit-tests the hover-target/list-move math (`DragReorder`) shared by both screens. `DragReorderUiTest` drives the real long-press-drag via `performTouchInput` and asserts actual on-screen card order against the underlying list state, not just the model, since the two can diverge if the drag gesture's visual feedback and the list's persisted order fall out of sync.
 
 **Character-cap, digit-filter, and task-link uncheck-reset field transforms** (`FieldValidationTest`, `MaxLengthUiTest`, cost/points digit-filter and toggle-reset cases in `RewardEditScreenUiTest`/`TaskEditScreenUiTest`)
 `FieldValidationTest` unit-tests `acceptWithinLimit`, `digitsOnly`, and `TaskEditState.withIncludedSetTo` (`FieldValidation.kt`, `SharedDialogs.kt`) directly, including the character-cap and digit-filter boundary cases that previously only existed implicitly through full `MainActivity` instrumented tests. The existing UI tests continue to verify each field is actually wired to the shared functions.
@@ -193,7 +193,7 @@ Wrong-schema JSON (e.g. a random JSON file) throws `ImportWrongSchemaException` 
 `logCompletion` fetches the reward first and returns early if it's missing or already archived, rather than inserting unconditionally. Guards a stale-UI race (e.g. a reward claimed from one surface while another still shows its LOG button) from writing an orphaned log with no `historyEntryId`; the write is silently skipped rather than surfaced as an error, since neither call site (`EarnItViewModel.logTask`, `WidgetTaskLogActivity`) currently acts on `logCompletion`'s result.
 
 **Cancel/dismiss across every screen and dialog** (`RewardEditScreenUiTest`, `TaskEditScreenUiTest`, `SettingsScreenUiTest`, `CleanUpScreenUiTest`, `TaskLibraryScreenUiTest`, `SharedDialogsCancelUiTest`)
-Previously untested app-wide by accretion, not by a documented decision — each Cancel button and dialog dismiss is a one-line `popBackStack()`/`onDismiss()` callback with no logic, which is why none had been covered. A shared `cancelDialogAndAssertDismissed` helper (`CancelDismissAssertions.kt`) clicks a dialog's Cancel button — scoped to the dialog's own window via the `isDialog()` matcher, since several dialogs share the exact text "CANCEL" with a button on the screen behind them — and asserts the dialog is gone; each test still supplies its own setup and its own side-effect assertion (no task created, no log recorded, reward not archived, etc.). Dialogs with no explicit Cancel button (`MascotPickerDialog`, `TaskLibraryScreen`'s skipped-tasks dialog) are covered via `Espresso.pressBack()` instead, their only dismiss path.
+Every Cancel button and dialog dismiss in the app is a one-line `popBackStack()`/`onDismiss()` callback with no logic, covered here app-wide. A shared `cancelDialogAndAssertDismissed` helper (`CancelDismissAssertions.kt`) clicks a dialog's Cancel button — scoped to the dialog's own window via the `isDialog()` matcher, since several dialogs share the exact text "CANCEL" with a button on the screen behind them — and asserts the dialog is gone; each test still supplies its own setup and its own side-effect assertion (no task created, no log recorded, reward not archived, etc.). Dialogs with no explicit Cancel button (`MascotPickerDialog`, `TaskLibraryScreen`'s skipped-tasks dialog) are covered via `Espresso.pressBack()` instead, their only dismiss path.
 
 **Radio-group TalkBack semantics** (`TaskEditScreenUiTest`, `LogForRewardDialogUiTest`, `SharedDialogsCancelUiTest`)
 Every radio-option row in the app (`RadioRow` in `EarnItButtons.kt`, plus the bespoke rows in `TaskEditScreen.kt`'s custom-group entry and `SharedDialogs.kt`'s `LogTaskDialog`) uses `Modifier.selectable(role = Role.RadioButton)` with the enclosing list carrying `Modifier.selectableGroup()`, instead of a plain `Modifier.clickable` — a screen reader announces these as radio buttons with selected state, not generic tappable rows. Verified by asserting `Role.RadioButton` plus `assertIsSelected()`/`assertIsNotSelected()` on the affected rows in each of the three test files above, confirmed passing against the real merged semantics tree on a connected device (not just reasoned about) — `clickable`-based modifiers merge their descendants' semantics upward, so `onNodeWithText`/similar matchers on a row's label correctly resolve to the row's own selected/role state.
@@ -206,8 +206,8 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
-| Unit (175+ tests) | Every build/push | `./gradlew test` |
-| Integration + UI, instrumented (~105 tests) | Every push/PR via CI (two parallel API 36 emulator jobs, Workflow 2 — sharded by layer); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
+| Unit (182 tests) | Every build/push | `./gradlew test` |
+| Integration + UI, instrumented (108 tests) | Every push/PR via CI (two parallel API 36 emulator jobs, Workflow 2 — sharded by layer); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (4) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 
 See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the journeys that are deliberately never automated (not just deferred) — each crosses a system-process boundary (system file picker, Play Core API, widget activity chain, background `WorkManager` execution) that instrumented UI tests cannot drive reliably.
@@ -220,7 +220,7 @@ See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the journeys that are deliber
 Covered by manual testing, not automation — see [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for rationale and steps.
 
 **Widget refresh side effect (`refreshWidgets()`)**
-`EarnItViewModel.logTask()`, `claimReward()`, and `addTaskToReward()` each call `refreshWidgets()`, which calls `EarnItGlanceWidget().updateAll(context)` by direct instantiation rather than through an injected/mockable seam — no test verifies this call actually happens. A regression here (as happened with `addTaskToReward` — fixed in `fix/add-task-shortcut`) manifests as the widget silently showing stale content, not a crash or visible error, so it's easy to miss without a real device. Deferred because closing it properly means injecting a widget-refresh interface via Hilt, a real architectural change; the manual widget journey in `MANUAL_TEST_PLAN.md` is the current backstop.
+`EarnItViewModel.logTask()`, `claimReward()`, and `addTaskToReward()` each call `refreshWidgets()`, which calls `EarnItGlanceWidget().updateAll(context)` by direct instantiation rather than through an injected/mockable seam — no test verifies this call actually happens. A regression here manifests as the widget silently showing stale content, not a crash or visible error, so it's easy to miss without a real device. Deferred because closing it properly means injecting a widget-refresh interface via Hilt, a real architectural change; the manual widget journey in `MANUAL_TEST_PLAN.md` is the current backstop.
 
 **TipViewModel**
 `MockTipRepository` returns hardcoded prices and always succeeds. Tests written against it would validate the mock, not the billing path. Tests deferred until `MockTipRepository` is replaced with real RevenueCat calls; the `TipRepository` interface boundary makes the swap straightforward.

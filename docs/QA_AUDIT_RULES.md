@@ -12,6 +12,13 @@ TESTING.md/CLEANUP_LOG.md. Findings that require code changes (not just doc fixe
 separate proposed follow-up branches in the backlog — do not fix everything inline on the audit
 branch itself; each is its own logical unit of work.
 
+**Inline-fix mode:** the default above can be overridden by explicit user direction to fix
+everything on the audit branch this pass (typically bounded by "unless it's a genuinely large
+piece of work" or similar). When that direction is given, resolve code-level findings directly
+instead of writing them up as proposed branches, and confirm anything that looks like a large
+piece of work with the user before fixing it inline. In this mode, step 8's "Work, Grouped by
+Branch" section is unnecessary — say so explicitly in the backlog rather than leaving it empty.
+
 ## Checklist
 
 ### 1. CI/test-execution integrity
@@ -33,6 +40,14 @@ branch itself; each is its own logical unit of work.
       QA_AUDIT_BACKLOG.md's Mutation Check Results table, even if all pass. A miss usually means
       either a duplicated/untested code path (as opposed to the one the test actually exercises)
       or a genuinely weak assertion — trace it to which before concluding.
+- [ ] A pass that only happens because an unstubbed mock call threw (rather than an explicit
+      assertion or `verify` catching the wrong behavior) is a weak pass, not a clean one — it
+      would silently stop catching the bug if the mock were ever relaxed. Record it as its own
+      category in the results table and strengthen the test with an explicit assertion, the same
+      as if it were a miss.
+- [ ] Any new pure function extracted elsewhere in this pass (sections 5/6 below) gets the same
+      one-mutation spot check as this section's sampled files before its new test is considered
+      validated, not just written.
 - [ ] `git status` must be clean before committing — every mutation is transient.
 
 ### 3. Spec cross-reference
@@ -79,8 +94,15 @@ branch itself; each is its own logical unit of work.
 - [ ] Check Edge Case / narrative entries for bug-discovery history (how a bug was found, what
       the fix was) rather than current behavior — against `CLAUDE.md`'s documentation rule.
       History belongs in `CLEANUP_LOG.md`, referenced by pass number, not narrated inline.
-- [ ] Check every `Pass N` cross-reference (in TESTING.md, DEV_PLAYBOOK.md, or elsewhere) is
-      still within CLEANUP_LOG.md's retained 3-most-recent window; flag any dangling reference.
+- [ ] Check every `Pass N` cross-reference is still within CLEANUP_LOG.md's retained
+      3-most-recent window; flag any dangling reference. Grep the whole repo, not just
+      `docs/` — this includes source code comments (e.g. `// see CLEANUP_LOG Pass N`), which are
+      as easy to leave dangling as anything in TESTING.md/DEV_PLAYBOOK.md and easy to miss if the
+      search stops at the docs folder.
+- [ ] Spot-check a handful of per-file table descriptions in TESTING.md against the actual test
+      code or the behavior it documents, not just the aggregate counts and history-narration
+      checks above — a description can be flatly wrong (e.g. claiming a test verifies the
+      opposite of what it actually verifies) without any count drifting to hint at it.
 - [ ] Check CLEANUP_LOG.md's own entries are in the order its header describes (oldest retained
       pass first, newest at the bottom).
 
@@ -104,3 +126,12 @@ branch itself; each is its own logical unit of work.
 ## Verification
 
 Same build/lint/test/commit discipline as any other change — see `CLAUDE.md`.
+
+- If a connected device/emulator is available, actually run any `androidTest` files touched
+  during the audit (structural-review fixes, section 5/6 extractions) via
+  `connectedDebugAndroidTest` rather than relying on read-only review alone.
+- If verification surfaces a failure unrelated to anything the audit changed (e.g. a
+  pre-existing flaky or environment-dependent test), don't try to fix it as part of the audit —
+  but don't let it live only in conversation either. Note it somewhere durable: a short line in
+  `DEV_PLAYBOOK.md`'s Known Limitations if it looks environment-specific, or a brief aside in
+  `QA_AUDIT_BACKLOG.md` if it's unclear yet whether it's a real bug.

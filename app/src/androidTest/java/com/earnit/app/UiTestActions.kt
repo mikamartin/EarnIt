@@ -1,5 +1,6 @@
 package com.earnit.app
 
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -38,6 +39,28 @@ fun ComposeTestRule.createReward(
         onNodeWithText(Strings.REWARD_COST_LABEL).performTextInput(cost)
     }
     onNodeWithText("SAVE").performClick()
+}
+
+/**
+ * Opens the given tab's "new entity" FAB, types [name] into the name field, taps CANCEL, and
+ * asserts the entry was discarded (name gone, FAB redisplayed). Shared by the full-screen
+ * new-task and new-reward cancel flows — not a dialog, so `cancelDialogAndAssertDismissed`
+ * doesn't apply.
+ */
+fun ComposeTestRule.cancelNewEntityAndAssertDiscarded(
+    tabContentDescription: String,
+    newEntityContentDescription: String,
+    nameFieldLabel: String,
+    name: String,
+) {
+    onNodeWithContentDescription(tabContentDescription).performClick()
+    onNodeWithContentDescription(newEntityContentDescription).performClick()
+    onNodeWithText(nameFieldLabel).performTextInput(name)
+
+    onNodeWithText("CANCEL").performClick()
+
+    onNodeWithText(name).assertDoesNotExist()
+    onNodeWithContentDescription(newEntityContentDescription).assertIsDisplayed()
 }
 
 /** Waits for Task Detail to appear, identified by its unique "Points:" label. */

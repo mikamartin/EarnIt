@@ -224,6 +224,45 @@ class RewardProgressTest {
     }
 
     @Test
+    fun `progressFraction is points divided by cost below the cap`() {
+        val progress =
+            RewardProgress(
+                reward = reward(20),
+                taskRefs = emptyList(),
+                mandatoryTasks = emptyList(),
+                optionalTasks = emptyList(),
+                activeLogs = listOf(log(1L, 5)),
+            )
+        assertEquals(0.25f, progress.progressFraction, 0.0001f)
+    }
+
+    @Test
+    fun `progressFraction is clamped to 1 when points exceed cost`() {
+        val progress =
+            RewardProgress(
+                reward = reward(10),
+                taskRefs = emptyList(),
+                mandatoryTasks = emptyList(),
+                optionalTasks = emptyList(),
+                activeLogs = listOf(log(1L, 25)),
+            )
+        assertEquals(1f, progress.progressFraction, 0.0001f)
+    }
+
+    @Test
+    fun `progressFraction is 1 for a zero-cost reward regardless of points logged`() {
+        val progress =
+            RewardProgress(
+                reward = reward(0),
+                taskRefs = emptyList(),
+                mandatoryTasks = emptyList(),
+                optionalTasks = emptyList(),
+                activeLogs = emptyList(),
+            )
+        assertEquals(1f, progress.progressFraction, 0.0001f)
+    }
+
+    @Test
     fun `allTasks returns mandatory followed by optional`() {
         val t1 = task(1L)
         val t2 = task(2L)

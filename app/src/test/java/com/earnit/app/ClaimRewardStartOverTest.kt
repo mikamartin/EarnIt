@@ -18,10 +18,12 @@ class ClaimRewardStartOverTest : RepositoryTestBase() {
             coEvery { rewardDao.getReward(1) } returns reward
             coEvery { historyDao.insertEntry(any()) } returns 99L
             coEvery { logDao.archiveLogsForReward(any(), any()) } just Runs
+            coEvery { rewardDao.updateReward(any()) } just Runs
 
             repository.claimReward(1, startOver = true)
 
             coVerify(exactly = 1) { historyDao.insertEntry(any()) }
+            coVerify(exactly = 0) { rewardDao.updateReward(any()) }
         }
 
     @Test
@@ -31,10 +33,12 @@ class ClaimRewardStartOverTest : RepositoryTestBase() {
             coEvery { rewardDao.getReward(1) } returns reward
             coEvery { historyDao.insertEntry(any()) } returns 42L
             coEvery { logDao.archiveLogsForReward(any(), any()) } just Runs
+            coEvery { rewardDao.updateReward(any()) } just Runs
 
             repository.claimReward(1, startOver = true)
 
             coVerify { logDao.archiveLogsForReward(1L, 42L) }
+            coVerify(exactly = 0) { rewardDao.updateReward(any()) }
         }
 
     @Test

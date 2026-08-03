@@ -65,6 +65,9 @@ class ExportImportTest : RoomIntegrationBase() {
 
             val json = repository.exportToJson()
             repository.clearAll()
+            val emptyState = repository.observeUiState().first()
+            assertEquals(0, emptyState.historyEntries.size)
+
             repository.importFromJson(json, replace = true)
 
             val state = repository.observeUiState().first()

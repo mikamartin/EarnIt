@@ -132,6 +132,9 @@ class SettingsScreenUiTest {
             .onNodeWithContentDescription("${Strings.SETTINGS_MAX_LABEL} 1")
             .performScrollTo()
             .performClick()
+        composeTestRule
+            .onNodeWithText("${Strings.SETTINGS_MAX_LABEL}: 1")
+            .assertIsDisplayed()
 
         composeTestRule.createReward("Solo Reward", cost = "5")
 
@@ -169,7 +172,9 @@ class SettingsScreenUiTest {
     fun selectedMascot_choiceOfUnlockedMascot_persistsAfterRecreate() {
         composeTestRule.onNodeWithContentDescription("Settings").performClick()
         composeTestRule.onNodeWithText(Strings.MASCOT_SECTION_TITLE).performScrollTo().performClick()
+        composeTestRule.onNodeWithText(Strings.MASCOT_PICKER_TITLE).assertIsDisplayed()
         composeTestRule.onNodeWithText("Tabby").performClick()
+        composeTestRule.onNodeWithText(Strings.MASCOT_PICKER_TITLE).assertDoesNotExist()
 
         composeTestRule.activityRule.scenario.recreate()
 
