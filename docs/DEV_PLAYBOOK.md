@@ -4,28 +4,7 @@ The post-work cleanup checklist lives in [CLEANUP_RULES.md](CLEANUP_RULES.md).
 
 ---
 
-## 1. Ship Checklist
-
-Items are independent — work them in any order. Strip completed items as they are done — this list should only ever contain open work.
-
-### Before first release
-
-**Play Store**
-- [ ] Short and long store description
-- [ ] Content rating questionnaire completed and data-safety form submitted (truthfully: no data collected, all local)
-
-**Closed Testing**
-- [ ] Share [CLOSED_TESTING_GUIDE.md](CLOSED_TESTING_GUIDE.md) with testers when the Play closed testing track opens
-
-### Post-launch
-
-- [ ] CI badge + Play Store link in README (once CI and store listing are live)
-- [ ] Test-count badge(s) in README
-- [ ] Stretch: auto-upload AAB to Play internal testing track (r0adkll/upload-google-play or Fastlane)
-
----
-
-## 2. How to Cut a Release
+## 1. How to Cut a Release
 
 Run through this after CI is green on `main` and the Manual Test Plan has passed.
 
@@ -53,7 +32,7 @@ git push origin --delete v0.0.1-test
 
 ---
 
-## 3. Known Limitations
+## 2. Known Limitations
 
 Permanent, accepted constraints — not open work, nothing here gets checked off. Document in release notes or the store listing if relevant. For testing gaps that are manual by design rather than a temporary environment issue, see [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) instead — this section is for product/code constraints, not test strategy.
 
@@ -65,7 +44,7 @@ Permanent, accepted constraints — not open work, nothing here gets checked off
 
 ---
 
-## 4. Tooling Upgrade Reference
+## 3. Tooling Upgrade Reference
 
 Update this section each upgrade cycle. The version matrix and gotchas below reflect the most recent upgrade; update in place rather than appending.
 
@@ -124,7 +103,7 @@ Hilt 2.51.1–2.58 fail with AGP 9. Hilt 2.59.x is the first release that suppor
 
 ---
 
-## 5. Database Schema Migrations
+## 4. Database Schema Migrations
 
 The DB schema was reset to `version = 1` as the launch baseline (versions 1–10 were internal dev-only churn — renames, added columns — with no real install to ever migrate; see `CLEANUP_LOG.md`). From this baseline onward, the app has (or will soon have) real installs, so the rule changes:
 

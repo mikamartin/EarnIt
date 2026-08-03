@@ -187,6 +187,15 @@ fun AboutScreen(
                     },
                 )
 
+                AboutActionRow(
+                    emoji = "🔒",
+                    label = Strings.ABOUT_PRIVACY_LABEL,
+                    subtitle = Strings.ABOUT_PRIVACY_SUBTITLE,
+                    onClick = {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(Strings.ABOUT_PRIVACY_URL)))
+                    },
+                )
+
                 if (FeatureFlags.TIP_JAR_ENABLED) {
                     HorizontalDivider()
 

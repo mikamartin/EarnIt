@@ -57,7 +57,7 @@ object Strings {
     const val CLEANUP_CARD_LOGS = "Removes all logs and claimed reward history. Rewards and tasks stay."
     const val CLEANUP_CARD_TASKS = "Removes all tasks and unlinks them from rewards."
     const val CLEANUP_CARD_REWARDS = "Removes all active rewards and their progress logs."
-    const val CLEANUP_CARD_ALL = "Wipes everything — all tasks, rewards, logs, and history."
+    const val CLEANUP_CARD_ALL = "Wipes everything: all tasks, rewards, logs, and history."
 
     // CleanUpScreen buttons and snackbars
     const val CLEANUP_BTN_LOGS = "Clear logs"
@@ -75,6 +75,9 @@ object Strings {
     const val ABOUT_CONTACT_LABEL = "Get in touch"
     const val ABOUT_CONTACT_SUBTITLE = "Feedback, bugs, or just want to say hi."
     const val ABOUT_CONTACT_EMAIL = "hello@secondmondaystudios.com"
+    const val ABOUT_PRIVACY_LABEL = "Privacy policy"
+    const val ABOUT_PRIVACY_SUBTITLE = "How your data is handled (it isn't)."
+    const val ABOUT_PRIVACY_URL = "https://secondmondaystudios.com/privacy/earnit.html"
     const val ABOUT_TIP_TITLE = "Support the developer"
     const val ABOUT_TIP_COPY =
         "EarnIt is free and ad-free. If it's been useful, a tip keeps the coffee flowing and the updates coming."
@@ -203,7 +206,7 @@ object Strings {
 
     // Reward detail screen
     const val REWARD_DETAIL_CLAIM_BTN = "CLAIM"
-    const val REWARD_DETAIL_NO_TASKS = "No tasks added yet.\nAdd tasks below — completing them earns points toward this reward."
+    const val REWARD_DETAIL_NO_TASKS = "No tasks added yet.\nAdd tasks below. Completing them earns points toward this reward."
     const val REWARD_MANDATORY_TASKS_HINT = "Point goal reached, complete the ★ tasks to claim."
     const val REWARD_ALL_TASKS_LOGGED_HINT = "All one-time tasks are done. Add a new task for more points."
 
@@ -301,7 +304,7 @@ object Strings {
     const val NUDGE_FIRST_TITLE = "Still there?"
     const val NUDGE_FIRST_BODY = "It's been 2 days since you logged anything. Got a task to knock out?"
     const val NUDGE_SECOND_TITLE = "Your rewards are waiting"
-    const val NUDGE_SECOND_BODY = "4 days without a log — pick a task and earn something today."
+    const val NUDGE_SECOND_BODY = "4 days without a log. Pick a task and earn something today."
 
     const val WIDGET_CONFIG_TITLE = "Choose a reward"
     const val WIDGET_CONFIG_SUBTITLE = "Select which reward this widget will track."
@@ -317,5 +320,5 @@ object Strings {
     // on narrow (e.g. 3-column) layouts a wrapped second line overflows the box and
     // clips the progress bar beneath it (see fix/widget-hint-overflow).
     const val WIDGET_MANDATORY_HINT = "Finish mandatory tasks to claim"
-    const val WIDGET_ALL_TASKS_LOGGED_HINT = "All tasks done — add more"
+    const val WIDGET_ALL_TASKS_LOGGED_HINT = "All tasks done, add more"
 }
