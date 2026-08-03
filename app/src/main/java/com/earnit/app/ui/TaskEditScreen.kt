@@ -507,9 +507,9 @@ private fun TaskGroupPicker(
                         BasicTextField(
                             value = newGroupText,
                             onValueChange = {
-                                val next = acceptWithinLimit(newGroupText, it, TASK_GROUP_MAX_CHARS)
-                                onNewGroupTextChange(next)
-                                if (next.isNotBlank()) onGroupChange("")
+                                val edit = taskGroupFieldEdit(newGroupText, it)
+                                onNewGroupTextChange(edit.text)
+                                if (edit.shouldClearSelectedGroup) onGroupChange("")
                             },
                             modifier =
                                 Modifier

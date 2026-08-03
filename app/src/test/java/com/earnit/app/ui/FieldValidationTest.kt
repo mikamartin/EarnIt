@@ -42,6 +42,47 @@ class FieldValidationTest {
     }
 
     @Test
+    fun `nicknameFieldEdit disables random nickname when an accepted edit is typed while it's on`() {
+        val edit = nicknameFieldEdit(current = "", incoming = "Mika", useRandomNickname = true)
+
+        assertEquals("Mika", edit.text)
+        assertTrue(edit.shouldDisableRandomNickname)
+    }
+
+    @Test
+    fun `nicknameFieldEdit does not disable random nickname when it's already off`() {
+        val edit = nicknameFieldEdit(current = "", incoming = "Mika", useRandomNickname = false)
+
+        assertEquals("Mika", edit.text)
+        assertFalse(edit.shouldDisableRandomNickname)
+    }
+
+    @Test
+    fun `nicknameFieldEdit does not disable random nickname when the edit is rejected for exceeding the cap`() {
+        val current = "a".repeat(NICKNAME_MAX_CHARS)
+        val edit = nicknameFieldEdit(current = current, incoming = current + "x", useRandomNickname = true)
+
+        assertEquals(current, edit.text)
+        assertFalse(edit.shouldDisableRandomNickname)
+    }
+
+    @Test
+    fun `taskGroupFieldEdit signals clearing the selected group when text becomes non-blank`() {
+        val edit = taskGroupFieldEdit(current = "", incoming = "Errands")
+
+        assertEquals("Errands", edit.text)
+        assertTrue(edit.shouldClearSelectedGroup)
+    }
+
+    @Test
+    fun `taskGroupFieldEdit does not signal clearing the selected group when text is cleared back to blank`() {
+        val edit = taskGroupFieldEdit(current = "E", incoming = "")
+
+        assertEquals("", edit.text)
+        assertFalse(edit.shouldClearSelectedGroup)
+    }
+
+    @Test
     fun `withIncludedSetTo false resets mandatory and repeatable regardless of prior state`() {
         val state = TaskEditState(included = true, isMandatory = true, isRepeatable = true)
 
