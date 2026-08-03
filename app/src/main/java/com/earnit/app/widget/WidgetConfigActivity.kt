@@ -269,7 +269,7 @@ private fun RewardRow(
     rp: RewardProgress,
     onClick: () -> Unit,
 ) {
-    val fraction = (rp.totalPoints.toFloat() / rp.reward.cost.toFloat()).coerceIn(0f, 1f)
+    val fraction = rp.progressFraction
     val pct = (fraction * 100).toInt()
 
     Row(

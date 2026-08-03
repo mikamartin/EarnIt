@@ -338,8 +338,7 @@ internal fun StandardContent(
     colors: WidgetColors,
 ) {
     val current = progress.totalPoints
-    val cost = progress.reward.cost
-    val fraction = (current.toFloat() / cost.toFloat()).coerceIn(0f, 1f)
+    val fraction = progress.progressFraction
 
     val actionButton = widgetActionButtonFor(progress)
     val showMandatoryHint = !progress.canClaim && progress.totalPoints >= progress.reward.cost
