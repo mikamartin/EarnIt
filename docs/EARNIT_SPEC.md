@@ -190,8 +190,8 @@ One entry in the home screen widget picker:
 
 - **Active:** reward name, progress bar, and + LOG or CLAIM button depending on state
 - **No tasks linked:** reward name, progress bar, and ADD TASK button (lighter style); tapping opens the app straight to the reward detail screen with the Add Task dialog already open
-- **Mandatory tasks blocking claim:** Active state with an info icon (ⓘ) inline next to the reward name — shown when point goal is reached but not all mandatory (★) tasks are logged. The explanation ("Finish mandatory tasks to claim") lives in the icon's content description rather than visible text, since a second text line here has twice caused the progress bar below it to clip on short/resized widgets (see `DEV_PLAYBOOK.md`'s known limitations)
-- **All tasks done, points still short:** reward name, progress bar, the same inline info icon (content description: "All tasks done, add more"), and a disabled + LOG button (muted, non-interactive)
+- **Mandatory tasks blocking claim:** Active state with an exclamation icon (!) inline next to the reward name, tinted with the same `notification` accent as the equivalent hint on Reward Detail — shown when point goal is reached but not all mandatory (★) tasks are logged. The explanation ("Finish mandatory tasks to claim") lives in the icon's content description rather than visible text, since a second text line here has twice caused the progress bar below it to clip on short/resized widgets (see `DEV_PLAYBOOK.md`'s known limitations)
+- **All tasks done, points still short:** reward name, progress bar, the same inline exclamation icon (content description: "All tasks done, add more"), and a disabled + LOG button (muted, non-interactive)
 - **Claimed / archived:** reward name + "Earned and Claimed" subtitle; tapping opens the app
 - **Empty:** "Long-press to configure" — reward not yet selected
 - Tapping anywhere on the widget body (outside buttons) opens the app to the tracked reward

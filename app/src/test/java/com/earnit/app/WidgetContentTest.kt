@@ -50,6 +50,7 @@ class WidgetContentTest {
             onSurface = ColorProvider(Color.Black),
             onSurfaceVar = ColorProvider(Color.DarkGray),
             secondary = ColorProvider(Color.Blue),
+            notification = ColorProvider(Color.Red),
         )
 
     private fun task(

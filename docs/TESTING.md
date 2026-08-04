@@ -26,7 +26,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
                  [ Manual — 4 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
             [ UI — 75 tests ]           ComposeTestRule + Hilt, real DataStore
        [ Integration — 34 tests ]       Real in-memory Room, no mocks
-     [ Unit — 185 tests ]               JVM, MockK DAOs, fast
+     [ Unit — 189 tests ]               JVM, MockK DAOs, fast
 ```
 
 **Run unit tests** (JVM, no device needed)
@@ -43,7 +43,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ---
 
-## Unit Tests — `app/src/test/` (185 tests)
+## Unit Tests — `app/src/test/` (189 tests)
 
 | File | What it covers |
 |---|---|
@@ -66,6 +66,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `PendingRewardIdTest` (3) | `saveReward` sets `pendingRewardId` to the upserted id when creating a new reward; leaves it null when editing an existing reward; `consumePendingRewardId` clears the value |
 | `WidgetActionButtonTest` (6) | `widgetActionButtonFor` — no tasks → `ADD_TASK`; unlogged task → `LOG`; repeatable task already logged → still `LOG`; non-repeatable task already logged and below cost → `LOG_DISABLED`; `canClaim` → `CLAIM` even with a loggable task; unlogged mandatory task blocks `CLAIM` despite points met |
 | `WidgetContentTest` (12) | Renders `StandardContent`/`FlashContent`/`EmptyState`/`ClaimedState` via `glance-testing` + Robolectric (JVM, no device) — correct button shown/hidden per state with click action wired, disabled non-clickable `LOG_DISABLED` button plus its hint icon (and content description) when all one-time tasks are done, reward name/points/custom-label text, mandatory-hint icon shown/hidden with correct content description, flash and empty/claimed state text |
+| `WidgetColorsTest` (4) | `widgetColors()` — `notification` accent matches `ColorSchemes.accents()` for Warm Gold and Forest (red), diverges to amber for Ocean Blue; dark mode changes `primary` from its light-mode value for the same scheme (validates the light/dark branch itself runs), via Robolectric `RuntimeEnvironment.setQualifiers` |
 | `NudgeDeciderTest` (10) | `NudgeDecider.decide` — never-logged and no-active-reward guardrails; idle under/at/over the 48h and 96h thresholds; stage 2 never re-sends (two-nudge cap); a new log after stage 1 or stage 2 resets the streak |
 | `NudgeWorkerTest` (8) | `NudgeWorker.doWork()` via `androidx.work:work-testing`'s `TestListenableWorkerBuilder` + Robolectric — real notification posted with correct title/body per stage (asserted via `NotificationManager` shadow) and correct `SettingsRepository.updateNudgeState` call for each `NudgeDecider` outcome (first nudge, second nudge, no-op under threshold, no active reward, never logged, stage-2 cap, streak reset), plus the `POST_NOTIFICATIONS`-denied path (state still recorded, no notification shown) |
 | `NudgeDebugToolsTest` (3) | `EarnItViewModel.debugGetLastLogIdleHours` — whole-hour idle time from a real timestamp, null when nothing's ever been logged; `debugBackdateLastLog` writes to the repository and invokes its completion callback exactly once (the ordering the "48H"/"96H" dev buttons rely on to avoid racing `NudgeWorker` against an in-flight write) |
@@ -207,7 +208,7 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
-| Unit (185 tests) | Every build/push | `./gradlew test` |
+| Unit (189 tests) | Every build/push | `./gradlew test` |
 | Integration + UI, instrumented (110 tests) | Every push/PR via CI (two parallel API 36 emulator jobs, Workflow 2 — sharded by layer); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (4) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 
