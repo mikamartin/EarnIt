@@ -8,73 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 59 — `fix/widget-all-tasks-done-state` branch
-
-Product change: new task/reward links now default to repeatable (`isRepeatable = true`) instead of one-time, since most real tasks (chores, habits) are repeatable and one-time tasks are the less common case. `TaskEditState`'s constructor default (`SharedDialogs.kt`) is the single UI-state source most of these flows read from, so flipping it there covers: creating a brand-new task with no reward link yet, per-row defaults in `AddTaskToRewardDialog` for tasks not yet flagged, and `RewardEditScreen`'s auto-include-newly-created-task and fallback-read paths. Three other sites don't derive from that class and needed their own flip: `RewardEditScreen.kt`'s two `?.isRepeatable ?: false` fallbacks (rendering a not-yet-linked task's row in the reward's task-selection list) → `?: true`; `TaskEditScreen.kt`'s hardcoded `Pair(false, false)` link flags for the "create new task" shortcut launched from `AddTaskToRewardDialog` (no UI toggle exists on that path) → `Pair(false, true)`; and `EarnItRepository.addTaskToReward`'s default parameter, flipped for signature-accuracy even though every call site already passes explicit args (verified via grep — dead default, zero behavioral effect). Deliberately left `RewardTaskCrossRef`'s own entity-level constructor default (`Entities.kt`) and the vestigial, UI-disconnected `TaskEntity.repeatable` field untouched — see Duplication below.
-
-#### Duplication ✅ (checked, one default deliberately left alone)
-Considered also flipping `RewardTaskCrossRef.isRepeatable`'s entity-level default (currently `false`) for full consistency. Grepped every constructor call site across `main` and `test`: all of them (`EarnItRepository`, `TestDataSeeder`, and every unit test building a `RewardTaskCrossRef` directly) pass `isRepeatable` explicitly — except one, `GatekeeperTest.kt:20`'s `ref(taskId)` helper, which omits it and relies on the constructor default for mandatory-task-gating fixtures. Flipping the entity default would have silently turned every `GatekeeperTest` fixture repeatable, changing `canClaim`-gating test semantics for a reason unrelated to this pass. Left it at `false` — nothing in production reads it, so there's no behavioral inconsistency, only an unused constructor default that no longer matches the new UI-level house default. `TaskEntity.repeatable` (already `true`, no UI toggle anywhere) is unaffected either way.
-
-#### Decoupling / Naming Consistency / Hardcoded Values / Deprecated APIs ✅ (n/a)
-No ViewModel/Repository logic relocated, no new symbols, no hardcoded colors/dimensions, no new or deprecated API surface — every change is a boolean default flip at an existing site.
-
-#### Complexity & Pattern Health ✅ (checked)
-No new composables, branches, or abstractions — same `TaskEditState`/`Pair`/default-parameter shapes as before, only the literal values changed.
-
-#### Accessibility ✅ (n/a)
-No new tappable targets or content descriptions — the existing mandatory-star/repeatable-refresh toggle icons and their content descriptions (`REWARD_REPEATABLE_DESC`/`REWARD_NOT_REPEATABLE_DESC`, `TASK_REPEATABLE_DESC`/`TASK_ONCE_DESC`) are unchanged; only which one shows first differs.
-
-#### Spec Review ✅ — found and fixed
-`EARNIT_SPEC.md`'s Task Links (`RewardTaskCrossRef`) section documented what the `isMandatory`/`isRepeatable` flags mean but not their default for a new link. Added a line stating the new default and the reasoning (most tasks are repeatable in practice, so the toggle starts in the common state).
-
-#### Tests ✅ (0 new files; 3 existing UI tests corrected, one for the wrong reason it was passing)
-- `RewardEditScreenUiTest.taskRow_mandatoryRepeatableTogglesAndUncheckRemoves`: the newly-auto-included task now shows `REWARD_REPEATABLE_DESC` (not `REWARD_NOT_REPEATABLE_DESC`) by default; the toggle-click assertions swapped direction to match (click repeatable → not-repeatable, instead of the reverse).
-- `TaskEditScreenUiTest.rewardLinks_checkboxAndMandatoryRepeatableToggles`: same swap for the not-yet-linked task's disabled toggle state and the enabled-after-checking assertion; the uncheck-resets-to-not-repeatable ending assertion needed no change, since `withIncludedSetTo(false)` always resets to `false` regardless of the class default.
-- `RewardAllTasksLoggedHintUiTest.createRewardWithOneLoggedTask` (helper used by both tests in the class): this class's entire premise is a non-repeatable task exhausting `loggableTasks` after one log — now that `AddTaskToRewardDialog` defaults new links to repeatable, the helper explicitly clicks the repeat toggle off before confirming the add, instead of relying on the default. Without this fix both tests in the class would have failed for a reason unrelated to what they're testing.
-- Ran all three affected classes on the connected emulator (`RewardEditScreenUiTest`, `TaskEditScreenUiTest`, `RewardAllTasksLoggedHintUiTest` — 26 tests total) — all passed after the fixes above.
-- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't strictly required, but ran it anyway (and it passed) since `androidTest` sources were touched.
-- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`.
-- `TESTING.md`: checked every row describing the three affected test classes — none asserted a specific default value in prose (only behavior like "toggles flip their description"), so no wording was stale; no changes needed.
-- `MANUAL_TEST_PLAN.md`: step 9 (widget's all-tasks-done state, added in Pass 58) required a non-repeatable task to set up — added a note that a tester must now explicitly toggle a task to non-repeatable when linking it, since that's no longer the default.
-
----
-
-### Pass 60 — `fix/radio-group-talkback-semantics` branch
-
-Code review comment on an unrelated PR flagged that every radio-option row in the app used `Modifier.clickable` with `RadioButton(onClick = null)` inside it, instead of `Modifier.selectable(role = Role.RadioButton)` — meaning TalkBack announces these as generic tappable rows, not radio buttons with selected state or group position. Confirmed via grep this was a real app-wide pattern, not isolated to one screen: the shared `RadioRow` composable (`EarnItButtons.kt`, used by `TaskEditScreen.kt`'s group picker and `TasksScreen.kt`'s `LogForRewardDialog` reward picker) and `SharedDialogs.kt`'s bespoke `LogTaskDialog` task-picker row both had it. Fixed all four call sites: `RadioRow` and the three bespoke rows now use `Modifier.selectable(selected, onClick, role = Role.RadioButton)`, and every list containing radio options (`TaskEditScreen.kt`'s group `Column`, `TasksScreen.kt`'s reward-picker `Column`, `SharedDialogs.kt`'s task-picker `LazyColumn`) now carries `Modifier.selectableGroup()`.
-
-#### Duplication ✅ (checked, left inline)
-The `.selectable(role = Role.RadioButton)` swap is now duplicated across 4 call sites (`RadioRow`, `TaskEditScreen.kt`'s custom-group row, `SharedDialogs.kt`'s task-picker row). Considered routing `SharedDialogs.kt`'s row through the shared `RadioRow` composable instead: rejected — that row has a trailing icon cluster (mandatory star, repeatable icon, points) after the label plus `Alignment.Top` instead of `CenterVertically` (so the cluster stays pinned to the top when a long task name wraps to two lines), neither of which `RadioRow`'s `label: String`-only API supports. Adding a trailing-content slot and configurable alignment to serve one caller would be new API surface for a cleanup pass about semantics parity, not deduplication — same reasoning as Pass 57's rejected extraction.
-
-#### Decoupling ✅ (n/a)
-No ViewModel, Repository, or Dao touched — purely Compose modifier/semantics changes.
-
-#### Complexity & Pattern Health ✅ (checked)
-No new composables or reimplemented M3 components — `RadioButton` usage itself is untouched; only the wrapping row's interaction modifier changed. `TaskEditScreen.kt`'s custom-group row (radio + inline `BasicTextField`) got the same `.selectable` swap despite the nested text field — verified on-device (see Tests) that `clickable`-family modifiers merge descendants but stop at nested interactive elements, so a fear that this would break the text field's own tap-to-position-cursor behavior turned out to be moot for the *other* three rows (no nested interactive children) and wasn't separately re-verified for this specific row's cursor-placement behavior beyond the existing test's `performTextInput` calls still passing.
-
-#### Naming Consistency / Hardcoded Values / Deprecated APIs ✅ (n/a)
-No new symbols, colors, dimensions, or new/deprecated API surface — `Modifier.selectable`/`selectableGroup` are current, non-deprecated Compose Foundation APIs.
-
-#### Dead Code & Hygiene ✅
-`git status`/`git diff --stat` confirm exactly the 7 intended source files changed, plus the two doc files. `ktlintCheck` (which enforces no-unused-imports) passes clean.
-
-#### Accessibility ✅ — the point of this fix
-This *is* the accessibility fix. No new tappable targets were added and no existing padding/size modifiers were touched, so the 48dp tap-target checklist item doesn't apply here.
-
-#### Spec Review ✅ (checked, no changes needed)
-Grepped `EARNIT_SPEC.md` for `radio`/`accessib`/`TalkBack` — the one hit (Task Edit section, describing the group picker's "filled-card radio-button list") is a user-visible-behavior description with no semantics-layer claim to reconcile; visible behavior is unchanged.
-
-#### Tests ✅ (0 new files; 3 existing tests extended with semantics assertions)
-- `TaskEditScreenUiTest.groupPicker_...`, `LogForRewardDialogUiTest.multiReward_...`, and `SharedDialogsCancelUiTest.logTaskDialog_cancel_...` each gained 1–2 assertion lines checking `Role.RadioButton` + `assertIsSelected()`/`assertIsNotSelected()` on the row(s) they already interact with — below the 3+-new-tests threshold for a new file, so extended in place per existing precedent.
-- Verified empirically, not just reasoned about: before writing the assertions, decompiled Compose Foundation's `Clickable.kt` (the shared base `selectable`/`clickable` build on) to confirm `shouldMergeDescendantSemantics` is hardcoded `true`, meaning a row's label `Text` child merges its properties up into the row's own semantics node in the tree `onNodeWithText` queries by default.
-- Ran the 3 touched classes on a connected emulator first (16/16 passed), then the full instrumented suite (108/108 passed) as a regression check given `RadioRow` is shared across multiple screens.
-- No `AppModule`/`TestAppModule`/`@Inject` changes, so `assembleDebugAndroidTest` wasn't required (`connectedDebugAndroidTest`'s successful compile of the androidTest variant covers the same ground here).
-- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`.
-- `TESTING.md`: updated the three affected table rows to mention the new semantics assertions, and added a new "Radio-group TalkBack semantics" entry under Edge Cases — Covered, since this is the app's first automated accessibility-semantics coverage and nothing referenced it before.
-- `MANUAL_TEST_PLAN.md`: checked — no update needed. That doc is scoped to journeys crossing a real system-process boundary (file picker, widget activity chain, `WorkManager`); semantics-tree assertions are fully drivable in-process, which the passing instrumented tests above demonstrate directly rather than argue by analogy.
-
----
-
 ### Pass 61 — remove widget-log notification
 
 Product decision: the system notification fired every time a task was logged from the home-screen widget ("Task name / Logged! +X pts") was noise — the widget's own flash + haptic already confirm the log in the moment, and the notification added a second, redundant confirmation for an event the user just triggered themselves. Removed `WidgetTaskLogActivity`'s `showNotification()`, its notification channel (`earnit_widget_log`), and its own `POST_NOTIFICATIONS` permission request (redundant — `MainActivity` already requests that permission on first launch for inactivity nudges). Inactivity-nudge notifications, which fire when *nothing* has been logged for 48h/96h, are untouched — different code path, different channel, different purpose (re-engagement vs. confirmation).
@@ -96,4 +29,43 @@ No new symbols, colors, dimensions, tappable targets, or API surface — everyth
 - `TESTING.md`: checked — the "Widget task logging" Deferrals entry and manual-only rationale don't call out the notification specifically, no change needed.
 - `MANUAL_TEST_PLAN.md`: step 5 updated to drop "Confirm a notification appeared (...)" from the widget-logging journey.
 - `AppModule`/`TestAppModule` untouched; no new `@Inject` site. Ran `./gradlew assembleDebugAndroidTest` anyway since `WidgetTaskLogActivity` (an existing `@AndroidEntryPoint`/`@Inject` class) was touched — passed.
+- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`.
+
+---
+
+### Pass 62 — `fix/reward-detail-completion-icons` branch
+
+Bug: `RewardDetailScreen`'s mandatory-task star and repeatable-task icon reused the same shape+color language for two different meanings depending on screen. On `RewardEditScreen` filled/primary means "flag is on"; on `RewardDetailScreen` the same filled/primary-vs-outlined/dimmed swap instead encoded "logged this cycle," so a mandatory task that simply hadn't been logged yet displayed as a faint, easy-to-misread star — surfaced when a genuinely mandatory, already-logged task's star still read as dim. Reworked the "Complete to earn points" row to checkmark (completion) + always-solid ★/↻ (flags), so the two concerns are visually independent; applied the same "flags never dim" fix to the reward header's per-task stars; removed the near-duplicate, unlabelled version of the same star row from the `HomeScreen` reward card entirely rather than fixing it in place, since a bare star with no attached task name adds no information there. Also fixed the repeatable-flag icon's tint (`secondary` → `primary`, matching `RewardEditScreen`'s own convention) and bumped its size 14dp → 16dp, since `Icons.Default.Refresh`'s thin-stroke glyph reads visually lighter than the solid `Star`/`CheckCircle` icons beside it even at identical color and opacity.
+
+#### Duplication ✅ — found and fixed
+Extracted `RewardProgress.isTaskLogged(taskId)` (`Entities.kt`), replacing the inline `activeLogs.any { it.taskId == task.id }` in `RewardDetailScreen.kt`'s task row *and* the near-identical expression already inside `canClaim`'s own definition in the same class, so both now share one implementation. Considered also routing `EarnItWidget.kt`'s two identical `activeLogs.any { it.taskId == mt.id }` checks (its own mandatory-task display) through the same helper — left alone: that file isn't otherwise touched by this branch, and folding an unrelated file into an icon-behavior fix risks scope creep. Noted here as a followup opportunity, not done.
+
+#### Decoupling ✅ (n/a)
+No ViewModel, Repository, or Dao logic touched.
+
+#### Complexity & Pattern Health ✅ (checked)
+`RewardDetailScreen.kt`'s task-row composable stayed roughly the same size/shape — reordered branches, not new nesting. No M3-provided component reimplemented; checkmark/star/refresh are plain `Icon` calls, same idiom as before and as `SharedDialogs.kt`.
+
+#### Naming Consistency ✅ (checked)
+`isTaskLogged` matches the existing `canClaim`/`showsProgressNumbers` boolean-property convention on the same class. `REWARD_TASK_DONE_DESC`/`REWARD_TASK_NOT_DONE_DESC` follow the existing `REWARD_*_DESC` naming pattern in `Strings.kt`.
+
+#### Hardcoded Values ✅ (n/a)
+Reused existing theme colors (`colorScheme.primary`, `onSurfaceVariant.copy(alpha = 0.45f)` — the same alpha the old dimmed star already used) and the existing 14dp/16dp size scale — no new magic numbers.
+
+#### Accessibility ✅ — found and fixed
+Added `contentDescription` to the checkmark (`REWARD_TASK_DONE_DESC`/`_NOT_DONE_DESC`, new strings) and reused the existing `REWARD_MANDATORY_DESC`/`REWARD_REPEATABLE_DESC` for the task-row flag icons (previously all three were `null`). Left the reward header's per-task stars at `contentDescription = null` deliberately — they're decorative (several identical stars with no task name attached convey nothing extra to TalkBack beyond the reward name already announced; a description would just repeat "Mandatory" N times with no context). No new independently-tappable icon targets, so the 48dp tap-target item doesn't apply.
+
+#### Deprecated APIs ✅ (n/a)
+`Icons.Default.CheckCircle`/`Icons.Outlined.CheckCircle` are current, non-deprecated symbols already available via the existing `material-icons-extended` dependency.
+
+#### Spec Review ✅ — found and fixed
+Added a line to `EARNIT_SPEC.md`'s Gatekeeper Logic section documenting the checkmark + static-flag row behavior (previously undocumented). Grepped the rest of the doc for stale references afterward — the widget's own "★" mention (line 193, widget hint copy) is unrelated prose about a file this branch doesn't touch, so left as-is.
+
+#### Tests ✅ (1 new file, 1 existing file extended)
+- `RewardProgressTest.kt`: 3 new cases for `isTaskLogged` (match found / no match / distinguishes between tasks when multiple logs exist) — extended in place rather than a new file, since it's a single new property on the same `RewardProgress` class the file already covers exhaustively, not a new cohesive area of behavior.
+- `RewardDetailTaskRowUiTest.kt` (new, 2 tests): flags stay visible and unchanged across the logged/not-logged transition; both flag icons are absent when neither applies. Warrants its own file — new composable-level behavior, not an extension of an existing class's premise.
+- Ran the new class plus every Reward-related UI test class on a connected emulator (API 36): all passed, 110/110 instrumented tests total. A physical device connected in parallel failed the majority of the suite wholesale with `IllegalStateException: No compose hierarchies found in the app` (activity never launched) — a device/OS-level issue, not a real failure: it hit test classes this branch never touched (`CleanUpScreenUiTest`, `DragReorderUiTest`, etc.) just as often as the ones it did. Disregarded per direction.
+- `TESTING.md`: updated `RewardProgressTest`'s row count (18→21) and description, added the new `RewardDetailTaskRowUiTest` row, and updated the pyramid/section-header/cadence-table aggregate counts (Unit 182→185, instrumented 108→110 — both exact; UI pyramid figure rounded 76→75 per the doc's own stated rounding policy for aggregates, Integration's unrelated 34 left as-is since it didn't change).
+- `MANUAL_TEST_PLAN.md`: checked, no update needed — this row's rendering doesn't cross a system-process boundary; it's fully driven by the new instrumented test.
+- No `AppModule`/`TestAppModule`/`@Inject` changes, but ran `./gradlew assembleDebugAndroidTest` anyway since a new instrumented test file was added — passed, confirming the new test actually compiles rather than trusting Gradle's incremental build to have caught a compile error.
 - `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`.

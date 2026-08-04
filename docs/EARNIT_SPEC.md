@@ -118,7 +118,7 @@ A new link (creating a task, adding an existing task to a reward, or selecting a
 
 ### Gatekeeper Logic
 
-The "Complete to earn points" task list on Reward Detail shows mandatory tasks first (A→Z), then optional tasks (A→Z).
+The "Complete to earn points" task list on Reward Detail shows mandatory tasks first (A→Z), then optional tasks (A→Z). Each row shows a checkmark reflecting whether that task has been logged since the last claim, followed by a ★ if the task is mandatory and/or a ↻ if it's repeatable — the star and repeat icons are static flags and never change with completion status, so they read the same way here as they do on Reward Edit.
 
 The **"Earned It"** button is disabled unless:
 1. The reward's accumulated points ≥ its cost, AND

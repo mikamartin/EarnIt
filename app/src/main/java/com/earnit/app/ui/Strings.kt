@@ -193,6 +193,8 @@ object Strings {
     const val REWARD_NOT_REPEATABLE_DESC = "Not repeatable"
     const val REWARD_REPEATABLE_DESC = "Repeatable"
     const val REWARD_INCLUDED_DESC = "Included"
+    const val REWARD_TASK_DONE_DESC = "Logged"
+    const val REWARD_TASK_NOT_DONE_DESC = "Not logged yet"
     const val REWARD_SAVED = "Reward saved"
     const val DELETE_REWARD_DESC = "Delete reward"
     const val EDIT_REWARD_DESC = "Edit reward"
