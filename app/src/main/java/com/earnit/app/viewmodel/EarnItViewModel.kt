@@ -410,10 +410,6 @@ class EarnItViewModel
         }
 
         // TEST DATA — only visible when dev mode enabled
-        fun seedTestData() {
-            viewModelScope.launch { repository.seedTestData() }
-        }
-
         fun seedFullTestData() {
             viewModelScope.launch { repository.seedFullTestData() }
         }

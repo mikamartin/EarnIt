@@ -58,7 +58,6 @@ fun DataScreen(
     val settings by viewModel.settings.collectAsState()
     val importResult by viewModel.importResult.collectAsState()
     var exportStatus by remember { mutableStateOf<String?>(null) }
-    var testDataLoaded by remember { mutableStateOf(false) }
     var fullTestDataLoaded by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
@@ -202,44 +201,6 @@ fun DataScreen(
             }
 
             if (settings.devModeEnabled) {
-                SettingsCard {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Icon(
-                            Icons.Default.Science,
-                            null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp),
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Load test data", style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                "Sample data for general testing",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                viewModel.seedTestData()
-                                testDataLoaded = true
-                            },
-                            enabled = !testDataLoaded,
-                            shape = RoundedCornerShape(12.dp),
-                        ) {
-                            Text(
-                                if (testDataLoaded) "LOADED" else "LOAD",
-                                style = MaterialTheme.typography.labelSmall,
-                                letterSpacing = 0.8.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                            )
-                        }
-                    }
-                }
-
                 SettingsCard {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
