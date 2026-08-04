@@ -69,3 +69,42 @@ Added a line to `EARNIT_SPEC.md`'s Gatekeeper Logic section documenting the chec
 - `MANUAL_TEST_PLAN.md`: checked, no update needed — this row's rendering doesn't cross a system-process boundary; it's fully driven by the new instrumented test.
 - No `AppModule`/`TestAppModule`/`@Inject` changes, but ran `./gradlew assembleDebugAndroidTest` anyway since a new instrumented test file was added — passed, confirming the new test actually compiles rather than trusting Gradle's incremental build to have caught a compile error.
 - `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`.
+
+---
+
+### Pass 63 — `fix/widget-progress-bar-clipping` branch
+
+Bug: the widget's mandatory-task and all-tasks-done hints rendered as a second text line under the reward name in `StandardContent` (`EarnItWidget.kt`) — a fixed-height `Column` centered inside a fixed-size `Box` with no scroll/shrink fallback (`fea294c`; see this file's own known-limitations entry in `DEV_PLAYBOOK.md`). The extra line's height could exceed the widget's granted box on short or resized widgets, silently clipping the progress bar below it. `fix/widget-hint-overflow` had already bounded one trigger of this (the hint text wrapping to a 2nd line on narrow widths, via `maxLines = 1`) but not the height the hint's own single line adds in the first place. Replaced both hint text lines with a single small static icon (`ic_info.xml`) inline next to the reward name — same row, no added height — carrying the explanation via `contentDescription` instead of visible text.
+
+#### Duplication ✅ — found and fixed
+The two hint blocks (mandatory-task / all-tasks-done) were identical apart from their text and test tag. Extracted a private `HintIcon(hintText, tag, colors)` composable, replacing both inline blocks.
+
+#### Decoupling ✅ (n/a)
+No ViewModel, Repository, or Dao touched — purely the widget's Glance layer.
+
+#### Complexity & Pattern Health ✅ (checked)
+`StandardContent`'s name/hint row is simpler after this change (one `Row`, not a `Column` wrapping a conditional second `Text`), not more complex. The new `HintIcon` composable has 2 callers, earning its extraction (see Duplication).
+
+#### Dead Code & Hygiene ✅ (checked)
+`ktlintCheck` (unused-import enforcement) passes. `git status` confirms exactly the intended files changed, no stray untracked files.
+
+#### Naming Consistency ✅ (checked)
+`HintIcon` follows the file's existing composable naming (`ProgressBar`, `FlashContent`, `ClaimedState`, ...). `ic_info.xml` matches the existing `ic_add.xml`/`ic_trophy.xml` drawable naming convention.
+
+#### Hardcoded Values ✅ (checked, consistent with existing convention)
+`ic_info.xml`'s placeholder `fillColor="#FFFBF0"` is overridden at runtime via `ColorFilter.tint(colors.onSurfaceVar)` — the identical pattern `ic_add.xml` already uses, not a new inconsistency.
+
+#### Accessibility ✅ — the point of this fix
+The hint's explanation moves from always-visible text to an icon's `contentDescription` — same information exposed, now decoupled from the layout height it used to cost. The icon carries no independent click action (the whole widget body already routes to the app), so the 48dp tap-target item doesn't apply.
+
+#### Deprecated APIs ✅ (n/a)
+
+#### Spec Review ✅ — found and fixed
+`EARNIT_SPEC.md`'s widget Display States section described both hint states as a "subtitle below the reward name" with slightly stale literal copy (the quoted strings had already drifted from the actual `Strings.kt` constants, unrelated to this change) — rewrote both bullets to describe the icon + content-description behavior and corrected the quoted text while in there.
+
+#### Tests ✅ (0 new files; 1 existing file extended)
+- `WidgetContentTest.kt`: both hint-existence assertions (`standardContent_mandatoryTaskUnloggedButPointsMet_showsHint`, `standardContent_allTasksDoneBelowCost_showsDisabledLogButtonAndHint`) extended with `assertHasContentDescriptionEqualTo` to verify the explanation actually reaches the icon, not just that a node with the right test tag exists.
+- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass. Ran `assembleDebugAndroidTest` too even with no `AppModule`/`TestAppModule`/`@Inject` change, since a new drawable resource and widget composable restructuring are easy to get wrong in ways only a real compile catches.
+- `DEV_PLAYBOOK.md`'s known-limitations entry for `StandardContent` updated to record this as a second, differently-triggered instance of the same underlying architectural gap (no shrink/scroll fallback), not a fix of the gap itself — a longer reward name at large accessibility font scale would still reproduce the same clipping.
+- `MANUAL_TEST_PLAN.md` steps 8, 9, and 14 updated to describe the icon instead of the old hint-text-subtitle wording.
+- This branch forked before `fix/reward-detail-completion-icons` (PR #65) merged to `main`. Rebased onto the merged `main` before finishing this pass (stash → reset → pop, clean auto-merge) so `docs/CLEANUP_LOG.md`'s already-trimmed history and `TESTING.md`'s already-updated counts from that PR weren't reintroduced or duplicated.
