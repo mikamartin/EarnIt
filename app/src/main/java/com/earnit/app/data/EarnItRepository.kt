@@ -340,8 +340,6 @@ class EarnItRepository
             }
 
         // TEST DATA — gated behind Settings.devModeEnabled; intentionally kept for dev-mode seeding
-        suspend fun seedTestData() = TestDataSeeder.seed(database)
-
         suspend fun seedFullTestData() = TestDataSeeder.seedFull(database)
 
         // Ensures no completion log is newer than `hoursAgo` so the inactivity-nudge worker can
