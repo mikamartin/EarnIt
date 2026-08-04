@@ -263,6 +263,47 @@ class RewardProgressTest {
     }
 
     @Test
+    fun `isTaskLogged true when an active log exists for that task`() {
+        val progress =
+            RewardProgress(
+                reward = reward(0),
+                taskRefs = emptyList(),
+                mandatoryTasks = emptyList(),
+                optionalTasks = emptyList(),
+                activeLogs = listOf(log(1L, 5)),
+            )
+        assertTrue(progress.isTaskLogged(1L))
+    }
+
+    @Test
+    fun `isTaskLogged false when no active log matches that task`() {
+        val progress =
+            RewardProgress(
+                reward = reward(0),
+                taskRefs = emptyList(),
+                mandatoryTasks = emptyList(),
+                optionalTasks = emptyList(),
+                activeLogs = listOf(log(2L, 5)),
+            )
+        assertFalse(progress.isTaskLogged(1L))
+    }
+
+    @Test
+    fun `isTaskLogged distinguishes between tasks when multiple logs exist`() {
+        val progress =
+            RewardProgress(
+                reward = reward(0),
+                taskRefs = emptyList(),
+                mandatoryTasks = emptyList(),
+                optionalTasks = emptyList(),
+                activeLogs = listOf(log(1L, 5), log(3L, 2)),
+            )
+        assertTrue(progress.isTaskLogged(1L))
+        assertFalse(progress.isTaskLogged(2L))
+        assertTrue(progress.isTaskLogged(3L))
+    }
+
+    @Test
     fun `allTasks returns mandatory followed by optional`() {
         val t1 = task(1L)
         val t2 = task(2L)

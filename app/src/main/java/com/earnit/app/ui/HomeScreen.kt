@@ -47,8 +47,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -628,20 +626,6 @@ fun RewardProgressCard(
                         style = MaterialTheme.typography.titleMedium,
                         color = accentColor,
                     )
-                    rp.mandatoryTasks.forEach { task ->
-                        val done = rp.activeLogs.any { it.taskId == task.id }
-                        Icon(
-                            if (done) Icons.Default.Star else Icons.Outlined.Star,
-                            contentDescription = null,
-                            tint =
-                                if (done) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
-                                },
-                            modifier = Modifier.size(14.dp),
-                        )
-                    }
                 }
                 if (rp.reward.description.isNotEmpty()) {
                     Text(

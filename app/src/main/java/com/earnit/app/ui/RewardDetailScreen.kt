@@ -32,13 +32,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -300,17 +301,11 @@ private fun RewardHeaderCard(
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
-            rp.mandatoryTasks.forEach { task ->
-                val done = rp.activeLogs.any { it.taskId == task.id }
+            rp.mandatoryTasks.forEach { _ ->
                 Icon(
-                    if (done) Icons.Default.Star else Icons.Outlined.Star,
+                    Icons.Default.Star,
                     contentDescription = null,
-                    tint =
-                        if (done) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
-                        },
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(14.dp),
                 )
             }
@@ -617,36 +612,46 @@ private fun RewardTasksSection(
                 (rp.mandatoryTasks.sortedBy { it.name } + rp.optionalTasks.sortedBy { it.name }).forEach { task ->
                     val isMandatory = rp.mandatoryTasks.any { it.id == task.id }
                     val isRepeatable = rp.taskRefs.find { it.taskId == task.id }?.isRepeatable ?: false
-                    val isDone = rp.activeLogs.any { it.taskId == task.id }
+                    val isDone = rp.isTaskLogged(task.id)
                     val pts = task.effectivePoints()
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        Icon(
+                            if (isDone) Icons.Default.CheckCircle else Icons.Outlined.CheckCircle,
+                            contentDescription =
+                                if (isDone) Strings.REWARD_TASK_DONE_DESC else Strings.REWARD_TASK_NOT_DONE_DESC,
+                            tint =
+                                if (isDone) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                                },
+                            modifier = Modifier.size(16.dp),
+                        )
                         Text(
                             task.name,
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).padding(start = 6.dp),
                         )
                         if (isMandatory) {
                             Icon(
-                                if (isDone) Icons.Default.Star else Icons.Outlined.Star,
-                                contentDescription = null,
-                                tint =
-                                    if (isDone) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
-                                    },
+                                Icons.Default.Star,
+                                contentDescription = Strings.REWARD_MANDATORY_DESC,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(14.dp).padding(start = 4.dp),
                             )
                         }
                         if (isRepeatable) {
                             Icon(
                                 Icons.Default.Refresh,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.size(14.dp).padding(start = 3.dp),
+                                contentDescription = Strings.REWARD_REPEATABLE_DESC,
+                                tint = MaterialTheme.colorScheme.primary,
+                                // A couple dp larger than the star: Refresh is a thin-stroke glyph with much
+                                // less filled area than a solid star, so it reads lighter at the same size
+                                // even with identical color and full opacity.
+                                modifier = Modifier.size(16.dp).padding(start = 3.dp),
                             )
                         }
                         Text(

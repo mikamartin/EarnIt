@@ -24,9 +24,9 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ```
                  [ Manual — 4 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
-            [ UI — 74 tests ]           ComposeTestRule + Hilt, real DataStore
+            [ UI — 75 tests ]           ComposeTestRule + Hilt, real DataStore
        [ Integration — 34 tests ]       Real in-memory Room, no mocks
-     [ Unit — 182 tests ]               JVM, MockK DAOs, fast
+     [ Unit — 185 tests ]               JVM, MockK DAOs, fast
 ```
 
 **Run unit tests** (JVM, no device needed)
@@ -43,7 +43,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ---
 
-## Unit Tests — `app/src/test/` (182 tests)
+## Unit Tests — `app/src/test/` (185 tests)
 
 | File | What it covers |
 |---|---|
@@ -52,7 +52,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `LogAttributionTest` (5) | `logCompletion` — auto-points formula applied, manual points respected, task name snapshotted at log time, `rewardId` + detail recorded, `historyEntryId` null on new log |
 | `RepositoryBehaviourTest` (12) | `claimReward` (archives / no-archive / not-found), `saveRewardTasks` (correct flags, clears existing before insert), `copyRewardFromEntry` (flags and icon preserved, appended to end of list), `importTemplate` (append / clean-slate / sortOrder / group assignment), `updateTaskRewards` (removes delinked / inserts with correct flags) |
 | `ImportDedupTest` (7) | `importTemplate` dedup — exact match, case-insensitive, whitespace-trimmed; non-conflicting tasks inserted; sort order continuous across skips; skipped list preserves template casing |
-| `RewardProgressTest` (18) | `totalPoints`, `canClaim` (points gate / mandatory gate / combined / no mandatory), `showsProgressNumbers` (below cost / cost met but mandatory task unlogged / claimable / zero-cost with no mandatory tasks), `progressFraction` (below cap, clamped to 1 above cost, 1 for zero-cost regardless of points), `allTasks` ordering, `loggableTasks` (unlogged / non-repeatable already logged / repeatable re-loggable / mixed set) |
+| `RewardProgressTest` (21) | `totalPoints`, `canClaim` (points gate / mandatory gate / combined / no mandatory), `showsProgressNumbers` (below cost / cost met but mandatory task unlogged / claimable / zero-cost with no mandatory tasks), `progressFraction` (below cap, clamped to 1 above cost, 1 for zero-cost regardless of points), `allTasks` ordering, `isTaskLogged` (match found / no match / distinguishes between tasks with multiple logs present), `loggableTasks` (unlogged / non-repeatable already logged / repeatable re-loggable / mixed set) |
 | `ClaimRewardStartOverTest` (3) | `startOver=true` — history entry created, logs archived, reward name/icon/cost snapshotted |
 | `DeleteCascadeTest` (2) | `deleteTask` deletes the task; `deleteReward` clears active logs before deleting the reward — cross-ref cleanup for both is handled by the `RewardTaskCrossRef` FK cascade, not a manual repository call, which the test verifies negatively for `deleteReward` |
 | `CleanupTest` (3) | `clearAllLogs` deletes all logs (active + archived) **and** all history entries; `clearAllTasks` removes cross-refs then tasks; `clearAllRewards` removes cross-refs + active logs only (history preserved) |
@@ -75,7 +75,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ---
 
-## Instrumented Tests — `app/src/androidTest/` (108 tests, requires device/emulator)
+## Instrumented Tests — `app/src/androidTest/` (110 tests, requires device/emulator)
 
 **State isolation:** Every `@HiltAndroidTest` class using `createAndroidComposeRule<MainActivity>()` calls `resetAppState()` (in `TestStateReset.kt`) as the first line of its `@Before`, immediately after `hiltRule.inject()` and before any test-specific overrides (e.g. `settingsRepository.updateMaxRewardCount(...)`). This gives each test a clean database and default settings to start from, independent of what ran before it in the same instrumentation process. `RoomIntegrationBase`-based repository tests don't need this — each already gets its own fresh in-memory database per test.
 
@@ -117,6 +117,7 @@ check`) fails the build if any class is missing its required layer tag or has no
 | `RewardLimitUiTest` (1) | UI | Tapping the reward FAB at `maxRewardCount` shows the max-limit tooltip instead of navigating to Reward Edit |
 | `RewardProgressBarUiTest` (1) | UI | Reward Detail progress bar hides its point/cost number overlay once points meet the cost but a mandatory task is still unlogged (`RewardProgress.showsProgressNumbers` wiring; boundary cases unit-tested in `RewardProgressTest`) |
 | `RewardAllTasksLoggedHintUiTest` (2) | UI | LOG disables and an explanatory hint appears, on both Reward Detail and the Prizes home card, once every linked task is non-repeatable and already logged (`RewardProgress.loggableTasks` wiring; boundary cases unit-tested in `RewardProgressTest`) |
+| `RewardDetailTaskRowUiTest` (2) | UI | "Complete to earn points" task row: the checkmark (completion) and the ★/↻ flag icons (mandatory/repeatable) are independent — flags stay visible and unchanged across the logged/not-logged transition, and both are absent when neither flag applies (`RewardProgress.isTaskLogged` wiring; boundary cases unit-tested in `RewardProgressTest`) |
 | `TaskEditScreenUiTest` (11) | UI | Delete confirmation removes the task and returns to the Tasks list; icon picker selection updates the icon button and dismisses the dialog; group picker — selecting an existing group updates the header label, typing a new group name clears that selection, clearing the new-group text reverts to the optional label, and the selected group row carries `Role.RadioButton` + selected semantics for TalkBack; auto-points sliders drive the computed total (checked against `PointFormulaTest`'s known formula output); manual points field strips non-digit input; reward-link checkbox includes/excludes the task and enables/disables the mandatory-star and repeatable-refresh toggles, which reset together when unchecked; editing an existing task's name/icon/group/points persists after Save; reopening a task already linked to a reward pre-populates the reward-link checkbox and mandatory state from its existing link; adding a task from an existing (already-saved) reward's own Detail screen shows the "used in" line instead of the checkbox list and pops back to Reward Detail with the task linked; screen Cancel pops back without saving; delete-dialog Cancel keeps the task |
 | `SettingsScreenUiTest` (12) | UI | Nickname typed in Settings shows in the home greeting ("Earn It, Name!"); clearing it shows "Earn It!" with no address; enabling random nickname overrides the typed name on the greeting; Show Quote toggle hides/shows the daily quote section on Home; Max Reward Count defaults to 5 on a fresh install; editing Max Reward Count through the Settings slider (not the repository directly) still triggers the FAB's max-limit tooltip; mascot picker's default unlocked set is exactly Pugsly and Tabby, with the next-locked mascot's unlock hint shown and further-locked mascots showing neither name nor hint; selecting an unlocked mascot persists after `activityRule.scenario.recreate()`; mascot picker's backdrop/back-press dismiss (its only dismiss path — no explicit Cancel button) leaves the selection unchanged; About/Data & Backup/Clean Up rows navigate to their respective screens |
 | `RewardEditScreenUiTest` (13) | UI | Delete confirmation removes the reward and returns to the Prizes list; icon picker selection updates the icon button and dismisses the dialog; cost field strips non-digit input; an included task row's mandatory-star and repeatable-refresh toggles flip their content description, and unchecking the row removes the task with mandatory/repeatable reset together; editing an existing reward's name/cost/description/icon persists after Save; reopening a reward already linked to a mandatory task pre-populates that task's mandatory icon state; two tasks added via the dialog's checkbox list in one session toggle/remove independently of each other; selecting an existing task through the dialog and setting its mandatory flag inline carries that flag through on confirm; the Browse Library button navigates to Task Library; adding two new tasks in a row via "Create your own" on an *unsaved* reward keeps both included across the round-trips; screen Cancel pops back without saving; delete-dialog Cancel keeps the reward; icon-picker Cancel keeps the previous icon |
@@ -206,8 +207,8 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
-| Unit (182 tests) | Every build/push | `./gradlew test` |
-| Integration + UI, instrumented (108 tests) | Every push/PR via CI (two parallel API 36 emulator jobs, Workflow 2 — sharded by layer); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
+| Unit (185 tests) | Every build/push | `./gradlew test` |
+| Integration + UI, instrumented (110 tests) | Every push/PR via CI (two parallel API 36 emulator jobs, Workflow 2 — sharded by layer); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (4) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 
 See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the journeys that are deliberately never automated (not just deferred) — each crosses a system-process boundary (system file picker, Play Core API, widget activity chain, background `WorkManager` execution) that instrumented UI tests cannot drive reliably.
