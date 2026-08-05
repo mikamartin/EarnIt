@@ -1,5 +1,6 @@
 package com.earnit.app
 
+import android.content.Intent
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -9,15 +10,22 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.earnit.app.data.EarnItRepository
+import com.earnit.app.data.RewardEntity
 import com.earnit.app.data.SettingsRepository
+import com.earnit.app.data.TaskEntity
 import com.earnit.app.tags.Reward
 import com.earnit.app.tags.Task
 import com.earnit.app.tags.UiTest
+import com.earnit.app.tags.Widget
 import com.earnit.app.ui.Strings
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -37,10 +45,13 @@ import javax.inject.Inject
  *      when the reward is subsequently saved.
  *   4. The home card's "+ ADD TASKS" shortcut (reward with no tasks) opens the
  *      Add Task dialog directly on Reward Detail, not the Reward Edit screen.
+ *   5. The widget's ADD TASK button drives the same dialog-already-open behaviour
+ *      via MainActivity intent extras rather than an in-app click.
  */
 @UiTest
 @Task
 @Reward
+@Widget
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class SaveNavigationUiTest {
@@ -52,11 +63,20 @@ class SaveNavigationUiTest {
 
     @Inject lateinit var settingsRepository: SettingsRepository
 
+    @Inject lateinit var repository: EarnItRepository
+
+    private var deepLinkScenario: ActivityScenario<MainActivity>? = null
+
     @Before
     fun setUp() {
         hiltRule.inject()
         resetAppState()
         runBlocking { settingsRepository.updateNotesMandatory(false) }
+    }
+
+    @After
+    fun tearDown() {
+        deepLinkScenario?.close()
     }
 
     @Test
@@ -155,5 +175,35 @@ class SaveNavigationUiTest {
                 .fetchSemanticsNodes()
                 .isEmpty(),
         )
+    }
+
+    /**
+     * The widget's ADD TASK button (EarnItWidget.kt) launches MainActivity with `rewardId` and
+     * `autoOpenAddTask` intent extras; MainActivity just forwards them into EarnItApp's nav graph
+     * (MainActivity.kt, EarnItApp.kt) — the same route the home-card shortcut above drives via an
+     * in-app click. Exercising it here needs a real intent-carrying launch, not a widget host.
+     */
+    @Test
+    fun widgetAddTaskIntent_navigatesToRewardDetailWithDialogAlreadyOpen() {
+        val rewardId =
+            runBlocking {
+                repository.upsertTask(TaskEntity(name = "Morning Run", points = 5, icon = "🏃"))
+                repository.upsertReward(RewardEntity(name = "Study Time", cost = 5))
+            }
+
+        composeTestRule.activityRule.scenario.close()
+        val intent =
+            Intent(ApplicationProvider.getApplicationContext(), MainActivity::class.java).apply {
+                putExtra("rewardId", rewardId)
+                putExtra("autoOpenAddTask", true)
+            }
+        deepLinkScenario = ActivityScenario.launch(intent)
+        composeTestRule.waitForIdle()
+
+        // Landed on Reward Detail for the right reward...
+        composeTestRule.onNodeWithText("Study Time").assertIsDisplayed()
+        // ...with the Add Task dialog already open, no button tap needed.
+        composeTestRule.onNodeWithText("Morning Run").assertIsDisplayed()
+        composeTestRule.onNodeWithText("ADD SELECTED").assertIsDisplayed()
     }
 }
