@@ -152,9 +152,10 @@ class EarnItGlanceWidget : GlanceAppWidget() {
 
 // ── Theme-aware colors ─────────────────────────────────────────────────────────
 
-// internal (not private): StandardContent/FlashContent/EmptyState/ClaimedState/WidgetColors are
-// exposed to app/src/test so glance-testing can render and assert on them directly, without going
-// through the full provideGlance Hilt/Room pipeline.
+// internal (not private): StandardContent/FlashContent/EmptyState/ClaimedState/WidgetColors/
+// widgetColors are exposed to app/src/test so glance-testing (and, for widgetColors, direct calls
+// under Robolectric) can render and assert on them directly, without going through the full
+// provideGlance Hilt/Room pipeline.
 internal data class WidgetColors(
     val primary: ColorProvider,
     val surface: ColorProvider,
@@ -162,9 +163,10 @@ internal data class WidgetColors(
     val onSurface: ColorProvider,
     val onSurfaceVar: ColorProvider,
     val secondary: ColorProvider,
+    val notification: ColorProvider,
 )
 
-private fun widgetColors(
+internal fun widgetColors(
     context: Context,
     scheme: AppColorScheme,
 ): WidgetColors {
@@ -182,6 +184,9 @@ private fun widgetColors(
         onSurface = ColorProvider(cs.onSurface),
         onSurfaceVar = ColorProvider(cs.onSurfaceVariant),
         secondary = ColorProvider(cs.secondary),
+        // Same accent RewardDetailScreen uses for this exact mandatory/all-tasks-done hint copy —
+        // not light/dark-variant, one value per color scheme (ColorSchemes.accents()).
+        notification = ColorProvider(ColorSchemes.accents(scheme).notification),
     )
 }
 
@@ -330,6 +335,22 @@ internal fun ClaimedState(
 
 // ── Standard layout ────────────────────────────────────────────────────────────
 
+/** A small static icon carrying its explanation via [contentDescription] rather than a visible line of text. */
+@Composable
+private fun HintIcon(
+    hintText: String,
+    tag: String,
+    colors: WidgetColors,
+) {
+    Spacer(GlanceModifier.width(4.dp))
+    Image(
+        provider = ImageProvider(R.drawable.ic_alert),
+        contentDescription = hintText,
+        colorFilter = ColorFilter.tint(colors.notification),
+        modifier = GlanceModifier.size(22.dp).semantics { testTag = tag },
+    )
+}
+
 @Composable
 internal fun StandardContent(
     context: Context,
@@ -375,29 +396,30 @@ internal fun StandardContent(
                 modifier = GlanceModifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(modifier = GlanceModifier.defaultWeight()) {
+                Row(
+                    modifier = GlanceModifier.defaultWeight(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // No weight on the Text itself — it must hug its own content so the icon lands
+                    // right after the rendered name, not at the far edge of the row's full weighted
+                    // allocation (that was the bug: `Dimension.Expand` on the Text stretched its box
+                    // to fill the whole row, pushing the icon out to the end). The wrapping Row above
+                    // still carries the weight, so a long name is still bounded and doesn't push the
+                    // action button off-widget.
                     Text(
                         displayName,
                         maxLines = 1,
                         style = TextStyle(color = colors.primary, fontSize = 15.sp, fontWeight = FontWeight.Bold),
                         modifier = GlanceModifier.semantics { testTag = WidgetTestTags.REWARD_NAME },
                     )
+                    // A static icon next to the name, not a second text line: StandardContent has no
+                    // scroll/shrink fallback if content height exceeds the widget's granted box (see
+                    // DEV_PLAYBOOK.md), so an extra line here can silently clip the progress bar below it
+                    // on short/resized widgets. The explanation lives in contentDescription instead.
                     if (showMandatoryHint) {
-                        Spacer(GlanceModifier.height(2.dp))
-                        Text(
-                            Strings.WIDGET_MANDATORY_HINT,
-                            maxLines = 1,
-                            style = TextStyle(color = colors.onSurfaceVar, fontSize = 11.sp),
-                            modifier = GlanceModifier.semantics { testTag = WidgetTestTags.MANDATORY_HINT },
-                        )
+                        HintIcon(Strings.WIDGET_MANDATORY_HINT, WidgetTestTags.MANDATORY_HINT, colors)
                     } else if (showAllTasksLoggedHint) {
-                        Spacer(GlanceModifier.height(2.dp))
-                        Text(
-                            Strings.WIDGET_ALL_TASKS_LOGGED_HINT,
-                            maxLines = 1,
-                            style = TextStyle(color = colors.onSurfaceVar, fontSize = 11.sp),
-                            modifier = GlanceModifier.semantics { testTag = WidgetTestTags.ALL_TASKS_LOGGED_HINT },
-                        )
+                        HintIcon(Strings.WIDGET_ALL_TASKS_LOGGED_HINT, WidgetTestTags.ALL_TASKS_LOGGED_HINT, colors)
                     }
                 }
                 Spacer(GlanceModifier.width(8.dp))

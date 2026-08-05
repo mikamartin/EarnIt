@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Outline ring only (no fill), so it stays hollow and doesn't wash out the mark inside it -->
+    <path
+        android:strokeColor="#FFFBF0"
+        android:strokeWidth="2.4"
+        android:pathData="M12,12m-9,0a9,9 0 1,0 18,0a9,9 0 1,0 -18,0"/>
+    <!-- Exclamation mark, filled solid, shrunk further in from the ring's inner edge on all sides -->
+    <path
+        android:fillColor="#FFFBF0"
+        android:pathData="M10.7,7.5L13.3,7.5L13,13.5L11,13.5Z M12,15.7m-1.4,0a1.4,1.4 0 1,0 2.8,0a1.4,1.4 0 1,0 -2.8,0"/>
+</vector>

@@ -3,6 +3,7 @@ package com.earnit.app
 import androidx.compose.ui.graphics.Color
 import androidx.glance.appwidget.testing.unit.runGlanceAppWidgetUnitTest
 import androidx.glance.testing.unit.assertHasClickAction
+import androidx.glance.testing.unit.assertHasContentDescriptionEqualTo
 import androidx.glance.testing.unit.assertHasNoClickAction
 import androidx.glance.testing.unit.assertHasText
 import androidx.glance.testing.unit.hasTestTag
@@ -12,6 +13,7 @@ import com.earnit.app.data.RewardEntity
 import com.earnit.app.data.RewardProgress
 import com.earnit.app.data.RewardTaskCrossRef
 import com.earnit.app.data.TaskEntity
+import com.earnit.app.ui.Strings
 import com.earnit.app.widget.ClaimedState
 import com.earnit.app.widget.EmptyState
 import com.earnit.app.widget.FlashContent
@@ -48,6 +50,7 @@ class WidgetContentTest {
             onSurface = ColorProvider(Color.Black),
             onSurfaceVar = ColorProvider(Color.DarkGray),
             secondary = ColorProvider(Color.Blue),
+            notification = ColorProvider(Color.Red),
         )
 
     private fun task(
@@ -131,7 +134,9 @@ class WidgetContentTest {
             onNode(hasTestTag(WidgetTestTags.LOG_BUTTON)).assertDoesNotExist()
             onNode(hasTestTag(WidgetTestTags.ADD_TASK_BUTTON)).assertDoesNotExist()
             onNode(hasTestTag(WidgetTestTags.LOG_BUTTON_DISABLED)).assertExists().assertHasNoClickAction()
-            onNode(hasTestTag(WidgetTestTags.ALL_TASKS_LOGGED_HINT)).assertExists()
+            onNode(hasTestTag(WidgetTestTags.ALL_TASKS_LOGGED_HINT))
+                .assertExists()
+                .assertHasContentDescriptionEqualTo(Strings.WIDGET_ALL_TASKS_LOGGED_HINT)
         }
 
     // ── StandardContent: text content ───────────────────────────────────────────
@@ -171,7 +176,9 @@ class WidgetContentTest {
                 )
             provideComposable { StandardContent(context, progress, "", colors) }
 
-            onNode(hasTestTag(WidgetTestTags.MANDATORY_HINT)).assertExists()
+            onNode(hasTestTag(WidgetTestTags.MANDATORY_HINT))
+                .assertExists()
+                .assertHasContentDescriptionEqualTo(Strings.WIDGET_MANDATORY_HINT)
         }
 
     @Test
