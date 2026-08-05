@@ -4,8 +4,8 @@ A local-only productivity app for Android.
 
 [![CI](https://github.com/mikamartin/EarnIt/actions/workflows/ci.yml/badge.svg)](https://github.com/mikamartin/EarnIt/actions/workflows/ci.yml)
 [![Play Store](https://img.shields.io/badge/Play%20Store-EarnIt-brightgreen)](https://play.google.com/store/apps/details?id=com.secondmonday.earnit)
-![Unit tests](https://img.shields.io/badge/unit%20tests-170%2B-blue)
-![Instrumented tests](https://img.shields.io/badge/instrumented%20tests-100%2B-blue)
+![Unit tests](https://img.shields.io/badge/unit%20tests-185%2B-blue)
+![Instrumented tests](https://img.shields.io/badge/instrumented%20tests-110%2B-blue)
 
 ---
 
@@ -32,6 +32,7 @@ You've got your wants and a list of tasks you keep putting off. EarnIt connects 
 - **Mandatory gatekeeper tasks** must be completed before a reward can be claimed, so you can't shortcut your way to the prize.
 - **Claim with a tap.** Every claim archives to History with a full log of the tasks and points that funded it. Claimed rewards can be reactivated to run the cycle again.
 - **Home screen widget** for at-a-glance progress and one-tap task logging without opening the app.
+- **Inactivity nudges** — a gentle notification if you've gone quiet for 48 and again for 96 hours, capped at two per idle streak and reset the moment you log something.
 - **Task organisation** — drag to reorder, or switch to a group view with collapsible sections.
 - **Task Library** with curated templates (Healthy Living, Social, Clean Home) to get started fast.
 - **Export and import** your full data as JSON — or rely on Android's automatic daily Google account backup.
@@ -105,7 +106,7 @@ graph LR
 
 Every feature was defined in `EARNIT_SPEC.md` before any code was written, and the AI implemented from that. Claude (via Claude Code) generated first-draft implementations, maintained documentation, ran cleanup passes, and set up tooling. All product decisions, UX direction, and architectural choices were made by the human product owner. Every branch was reviewed and approved before merging.
 
-Quality is maintained through a documented test strategy: 170+ unit tests and 100+ instrumented tests (including Compose UI tests) plus a manual test plan for flows that cross system boundaries. Structured cleanup passes are done after every feature. 
+Quality is maintained through a documented test strategy: 185+ unit tests and 110+ instrumented tests (including Compose UI tests) plus a manual test plan for flows that cross system boundaries. Structured cleanup passes are done after every feature. 
 
 ---
 
