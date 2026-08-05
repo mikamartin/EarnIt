@@ -8,31 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 61 — remove widget-log notification
-
-Product decision: the system notification fired every time a task was logged from the home-screen widget ("Task name / Logged! +X pts") was noise — the widget's own flash + haptic already confirm the log in the moment, and the notification added a second, redundant confirmation for an event the user just triggered themselves. Removed `WidgetTaskLogActivity`'s `showNotification()`, its notification channel (`earnit_widget_log`), and its own `POST_NOTIFICATIONS` permission request (redundant — `MainActivity` already requests that permission on first launch for inactivity nudges). Inactivity-nudge notifications, which fire when *nothing* has been logged for 48h/96h, are untouched — different code path, different channel, different purpose (re-engagement vs. confirmation).
-
-#### Duplication / Decoupling / Complexity & Pattern Health ✅ (n/a)
-Pure deletion — no composables, ViewModel, Repository, or Dao touched, nothing to duplicate or extract.
-
-#### Dead Code & Hygiene ✅ — found and fixed
-Removed now-unused imports (`NotificationChannel`, `NotificationManager`, `PendingIntent`, `Intent`, `PackageManager`, `Build`, `ActivityResultContracts`, `NotificationCompat`, `NotificationManagerCompat`, `MainActivity`, `R`), the `WIDGET_LOG_CHANNEL_ID`/`WIDGET_LOG_NOTIF_ID` constants, and the orphaned `pts` local that only existed to feed the removed notification text. `ktlintCheck` (unused-import enforcement) passes clean. Also removed `Strings.widgetLoggedNotif()` and `WIDGET_NOTIF_CHANNEL_NAME`, now unreferenced. Checked `R.drawable.ic_add` (the notification's icon) is still used elsewhere (`NudgeWorker`, `EarnItWidget`) so it wasn't orphaned. `git status`/`git diff --stat` confirm exactly the 4 intended files changed. Considered whether the now-defunct `earnit_widget_log` notification channel needs explicit cleanup (`NotificationManager.deleteNotificationChannel`) for existing installs — not needed, `versionCode`/`versionName` (1 / "1.0") confirm the app hasn't shipped a release yet, so no device has ever created that channel.
-
-#### Naming Consistency / Hardcoded Values / Accessibility / Deprecated APIs ✅ (n/a)
-No new symbols, colors, dimensions, tappable targets, or API surface — everything here is removal of existing, non-deprecated code.
-
-#### Spec Review ✅ — found and fixed
-`EARNIT_SPEC.md`: removed the notification from the "Task Logging from Widget" flow description and the "Celebratory Feedback" list, and reworded the nudge section's "unlike the silent widget-log channel" comparison (the widget-log channel no longer exists) to state plainly that nudges are now EarnIt's only notification channel. Grepped the whole doc for `notification`/`POST_NOTIFICATIONS`/`permission` afterward to confirm no other stale references remain — the one other hit ("Mascot Unlock Notifications") is an unrelated in-app badge/snackbar concept, not a system notification.
-
-#### Tests ✅ (0 new files; 0 existing tests referenced the removed notification)
-- Grepped `androidTest` and `test` source sets for `notif`/`Notification` — the only hits are `HiltTestRunner`'s generic `POST_NOTIFICATIONS` pre-grant (still needed, nudges still require it) and `MascotNotificationTest` (the unrelated in-app badge concept above). No test asserted the widget-log notification's content or channel, so none needed updating or deleting.
-- `TESTING.md`: checked — the "Widget task logging" Deferrals entry and manual-only rationale don't call out the notification specifically, no change needed.
-- `MANUAL_TEST_PLAN.md`: step 5 updated to drop "Confirm a notification appeared (...)" from the widget-logging journey.
-- `AppModule`/`TestAppModule` untouched; no new `@Inject` site. Ran `./gradlew assembleDebugAndroidTest` anyway since `WidgetTaskLogActivity` (an existing `@AndroidEntryPoint`/`@Inject` class) was touched — passed.
-- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass sequentially per `CLAUDE.md`.
-
----
-
 ### Pass 62 — `fix/reward-detail-completion-icons` branch
 
 Bug: `RewardDetailScreen`'s mandatory-task star and repeatable-task icon reused the same shape+color language for two different meanings depending on screen. On `RewardEditScreen` filled/primary means "flag is on"; on `RewardDetailScreen` the same filled/primary-vs-outlined/dimmed swap instead encoded "logged this cycle," so a mandatory task that simply hadn't been logged yet displayed as a faint, easy-to-misread star — surfaced when a genuinely mandatory, already-logged task's star still read as dim. Reworked the "Complete to earn points" row to checkmark (completion) + always-solid ★/↻ (flags), so the two concerns are visually independent; applied the same "flags never dim" fix to the reward header's per-task stars; removed the near-duplicate, unlabelled version of the same star row from the `HomeScreen` reward card entirely rather than fixing it in place, since a bare star with no attached task name adds no information there. Also fixed the repeatable-flag icon's tint (`secondary` → `primary`, matching `RewardEditScreen`'s own convention) and bumped its size 14dp → 16dp, since `Icons.Default.Refresh`'s thin-stroke glyph reads visually lighter than the solid `Star`/`CheckCircle` icons beside it even at identical color and opacity.
@@ -114,3 +89,33 @@ The hint's explanation moves from always-visible text to an icon's `contentDescr
 - `DEV_PLAYBOOK.md`'s known-limitations entry for `StandardContent` updated to record this as a second, differently-triggered instance of the same underlying architectural gap (no shrink/scroll fallback), not a fix of the gap itself — a longer reward name at large accessibility font scale would still reproduce the same clipping.
 - `MANUAL_TEST_PLAN.md` steps 8, 9, and 14 updated to describe the icon instead of the old hint-text-subtitle wording.
 - This branch forked before `fix/reward-detail-completion-icons` (PR #65) merged to `main`. Rebased onto the merged `main` before finishing this pass (stash → reset → pop, clean auto-merge) so `docs/CLEANUP_LOG.md`'s already-trimmed history and `TESTING.md`'s already-updated counts from that PR weren't reintroduced or duplicated.
+
+---
+
+### Pass 64 — `test/close-manual-test-plan-gaps` branch
+
+Reviewed `MANUAL_TEST_PLAN.md` against the actual code to check whether any journey marked manual-only was really reachable by an instrumented test. Two were: the widget's ADD TASK button (`autoOpenAddTask`/`rewardId` intent extras into `MainActivity`) and `WidgetConfigActivity`'s label field's character cap — both are plain `ComponentActivity`/nav-graph code reachable directly, without a real widget host. Added coverage for both; also trimmed a redundant manual mascot-suppression check from the Export/Import journey (already unit-tested).
+
+#### Duplication ✅ — found and fixed
+First pass added the deep-link test as its own file (`WidgetAddTaskDeepLinkUiTest`, 1 test). Running this checklist's file-threshold item against it surfaced that `SaveNavigationUiTest.homeCardAddTasksButton_opensAddTaskDialogDirectly` already covers the identical downstream nav effect (`autoOpenAddTask`) via a different trigger (in-app click vs. intent extras) — same premise as that file's own stated scope ("shortcut navigation... opens the Add Task dialog directly"), and the new file sat below the "3+ tests for a cohesive new behaviour" guideline. Merged it into `SaveNavigationUiTest` as a 6th test and deleted the standalone file.
+Considered further: the "close the rule's default activity scenario, launch a fresh one with a custom `Intent`" boilerplate (4-5 lines) now appears in 3 places — `ProcessDeathRestoreTest`'s cold-start relaunch, the merged test above, and `MaxLengthUiTest`'s new widget-label test — each launching a different activity/intent shape (same-class relaunch vs. two different activity classes with different extras). Left inline rather than extracting a shared helper; a parameterized version would add more indirection than the handful of lines it'd save across 3 meaningfully different call sites.
+
+#### Decoupling / Complexity & Pattern Health / Hardcoded Values / Accessibility / Deprecated APIs ✅ (n/a)
+No production code touched — test files and docs only.
+
+#### Dead Code & Hygiene ✅ (checked)
+`ktlintCheck` passes. `git status` confirms exactly the intended files changed, including the deletion of the superseded standalone test file.
+
+#### Naming Consistency ✅ (checked)
+New test method names (`widgetAddTaskIntent_navigatesToRewardDetailWithDialogAlreadyOpen`, `widgetLabelInput_isCappedAtMaxChars`) follow the existing `subject_expectedOutcome` convention already used by every sibling test in both files.
+
+#### Spec Review ✅ (checked, no update needed)
+Both new tests cover pre-existing, already-documented behavior — `EARNIT_SPEC.md` already describes `autoOpenAddTask` and the widget label field — no new behavior was introduced.
+
+#### Tests ✅ — found and fixed (see Duplication above for the file-threshold finding)
+- Both new tests run on a connected emulator (API 36, two devices) — 0 failed, 0 skipped, both before and after the merge.
+- `checkInstrumentedTestTags` passes: `SaveNavigationUiTest` and `MaxLengthUiTest` both already carried their required `@UiTest` layer tag; added `@Widget` as an additional optional tag to both since they now cover widget-triggered behavior.
+- No `AppModule`/`TestAppModule` changes — both classes' new `@Inject EarnItRepository` sites reuse an existing binding other test classes already use. Ran `./gradlew assembleDebugAndroidTest` anyway (before and after the merge) to confirm compile.
+- `TESTING.md`: updated per-file counts (`MaxLengthUiTest` 5→6, `SaveNavigationUiTest` 5→6) and descriptions; header/cadence-table aggregate 110→112 (exact, matches actual `@Test` count). `EARNIT_SPEC.md`'s test summary line had pre-existing drift unrelated to this pass (182/25/108/30/74 vs. actual 189/26/112/32/78) — corrected all five figures while already touching that line.
+- `MANUAL_TEST_PLAN.md`: removed the Export/Import mascot-suppression checks (old steps 7 and part of 8) — that behavior is already unit-tested (`MascotNotificationTest`'s "seeds unlocked mascots silently without triggering notification"; confirmed it covers both replace and merge, since `checkAndUnlockMascots(silent = true)` in `importFromFile` isn't gated on the `replace` flag) and isn't a system-boundary concern within the manual plan's own stated scope.
+- `./gradlew ktlintCheck`, `test`, `assembleDebug`, `assembleDebugAndroidTest` all pass sequentially per `CLAUDE.md`.

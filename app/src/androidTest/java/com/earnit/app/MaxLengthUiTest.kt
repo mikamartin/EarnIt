@@ -1,26 +1,36 @@
 package com.earnit.app
 
+import android.appwidget.AppWidgetManager
+import android.content.Intent
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
+import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.earnit.app.data.EarnItRepository
+import com.earnit.app.data.RewardEntity
 import com.earnit.app.data.SettingsRepository
 import com.earnit.app.tags.Reward
 import com.earnit.app.tags.Settings
 import com.earnit.app.tags.Task
 import com.earnit.app.tags.UiTest
+import com.earnit.app.tags.Widget
 import com.earnit.app.ui.NICKNAME_MAX_CHARS
 import com.earnit.app.ui.REWARD_DESC_MAX_CHARS
 import com.earnit.app.ui.REWARD_NAME_MAX_CHARS
 import com.earnit.app.ui.Strings
 import com.earnit.app.ui.TASK_GROUP_MAX_CHARS
 import com.earnit.app.ui.TASK_NAME_MAX_CHARS
+import com.earnit.app.widget.WidgetConfigActivity
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -36,6 +46,7 @@ import javax.inject.Inject
 @Task
 @Reward
 @Settings
+@Widget
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class MaxLengthUiTest {
@@ -47,6 +58,10 @@ class MaxLengthUiTest {
 
     @Inject lateinit var settingsRepository: SettingsRepository
 
+    @Inject lateinit var repository: EarnItRepository
+
+    private var widgetConfigScenario: ActivityScenario<WidgetConfigActivity>? = null
+
     @Before
     fun setUp() {
         hiltRule.inject()
@@ -55,6 +70,11 @@ class MaxLengthUiTest {
             settingsRepository.updateNickname("Babe")
             settingsRepository.updateUseRandomNickname(false)
         }
+    }
+
+    @After
+    fun tearDown() {
+        widgetConfigScenario?.close()
     }
 
     @Test
@@ -121,6 +141,33 @@ class MaxLengthUiTest {
         // Nickname seeded to "Babe" in setUp() — clear it before testing the cap.
         composeTestRule.onNodeWithText("Babe").performTextClearance()
         composeTestRule.onNodeWithText(Strings.SETTINGS_NAME_PLACEHOLDER).performTextInput(atCap)
+        composeTestRule.onNodeWithText(atCap).assertExists()
+
+        composeTestRule.onNodeWithText(atCap).performTextInput("X")
+        composeTestRule.onNodeWithText(atCap).assertExists()
+        composeTestRule.onNodeWithText(atCap + "X").assertDoesNotExist()
+    }
+
+    /**
+     * WidgetConfigActivity's label field is a plain ComponentActivity reachable directly with a
+     * synthetic (unregistered) appWidgetId — enough to pass its INVALID_APPWIDGET_ID guard,
+     * without a real home-screen widget host. The confirm button is never tapped, since a real
+     * widget ID would be needed for it to succeed.
+     */
+    @Test
+    fun widgetLabelInput_isCappedAtMaxChars() {
+        runBlocking { repository.upsertReward(RewardEntity(name = "Study Time", cost = 5)) }
+        val atCap = "F".repeat(REWARD_NAME_MAX_CHARS)
+
+        composeTestRule.activityRule.scenario.close()
+        val intent =
+            Intent(ApplicationProvider.getApplicationContext(), WidgetConfigActivity::class.java)
+                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 12345)
+        widgetConfigScenario = ActivityScenario.launch(intent)
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Study Time").performClick()
+        composeTestRule.onNodeWithText("Study Time").performTextReplacement(atCap)
         composeTestRule.onNodeWithText(atCap).assertExists()
 
         composeTestRule.onNodeWithText(atCap).performTextInput("X")
