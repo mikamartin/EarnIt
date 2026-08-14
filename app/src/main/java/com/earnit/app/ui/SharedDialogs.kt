@@ -358,7 +358,7 @@ fun AddTaskToRewardDialog(
         val isChecked = selected[task.id] == true
         val flags = taskFlags[task.id] ?: TaskEditState()
         Row(
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -369,9 +369,10 @@ fun AddTaskToRewardDialog(
                 checked = isChecked,
                 onCheckedChange = null,
                 colors = checkboxColors,
+                modifier = Modifier.padding(top = 2.dp).size(24.dp),
             )
             Spacer(Modifier.width(8.dp))
-            Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f).padding(top = 2.dp)) {
                 Text(task.name, style = MaterialTheme.typography.bodyMedium)
                 if (showGroup && !task.group.isNullOrEmpty()) {
                     Text(
@@ -384,7 +385,7 @@ fun AddTaskToRewardDialog(
             if (isChecked) {
                 IconButton(
                     onClick = { taskFlags[task.id] = flags.copy(isMandatory = !flags.isMandatory) },
-                    modifier = Modifier.size(32.dp),
+                    modifier = Modifier.padding(top = 2.dp).size(32.dp),
                 ) {
                     Icon(
                         if (flags.isMandatory) Icons.Default.Star else Icons.Outlined.Star,
@@ -400,7 +401,7 @@ fun AddTaskToRewardDialog(
                 }
                 IconButton(
                     onClick = { taskFlags[task.id] = flags.copy(isRepeatable = !flags.isRepeatable) },
-                    modifier = Modifier.size(32.dp),
+                    modifier = Modifier.padding(top = 2.dp).size(32.dp),
                 ) {
                     Icon(
                         Icons.Default.Refresh,
@@ -419,6 +420,7 @@ fun AddTaskToRewardDialog(
                 task.displayPoints(),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
             )
         }
     }
