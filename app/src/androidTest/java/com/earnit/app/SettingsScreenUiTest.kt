@@ -132,6 +132,12 @@ class SettingsScreenUiTest {
             .onNodeWithContentDescription("${Strings.SETTINGS_MAX_LABEL} 1")
             .performScrollTo()
             .performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule
+                .onAllNodesWithText("${Strings.SETTINGS_MAX_LABEL}: 1")
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
         composeTestRule
             .onNodeWithText("${Strings.SETTINGS_MAX_LABEL}: 1")
             .assertIsDisplayed()
