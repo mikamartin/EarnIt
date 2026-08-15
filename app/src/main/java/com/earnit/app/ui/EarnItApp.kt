@@ -250,7 +250,7 @@ fun EarnItApp(
                     val fromRewardName = back.arguments?.getString("fromRewardName") ?: ""
                     TaskEditScreen(taskId, fromRewardId, fromRewardName, uiState, viewModel, navController, snackbarHostState)
                 }
-                composable(Screen.History.route) { HistoryScreen(uiState, viewModel) }
+                composable(Screen.History.route) { HistoryScreen(uiState, viewModel, snackbarHostState) }
                 composable(Screen.Settings.route) { SettingsScreen(viewModel, settings, navController) }
                 composable(Screen.About.route) { AboutScreen(navController) }
                 composable(Screen.SettingsData.route) { DataScreen(viewModel, navController) }

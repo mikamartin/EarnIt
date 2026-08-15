@@ -130,6 +130,8 @@ object Strings {
 
     fun historySection(count: Int) = "History ($count)"
 
+    fun historyEarnAgainAdded(name: String) = "\"$name\" re-added"
+
     // Task edit screen
     const val TASK_EDIT_NEW = "Add task"
     const val TASK_EDIT_EXISTING = "Edit task"

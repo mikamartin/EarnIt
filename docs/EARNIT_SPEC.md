@@ -172,7 +172,7 @@ Each History entry shows:
 1. Reward name, icon, and date/time claimed
 2. Chronological list of all contributing logs (task name, note, timestamp, points)
 
-A "Reactivate" option allows copying an archived reward back to the active reward list, preserving its task links.
+A "Reactivate" option ("Earn Again" in the UI) allows copying an archived reward back to the active reward list, preserving its task links, flags, description, and cost. The copy is skipped and the user is notified instead, without creating anything, if an active reward already has that name or if the active reward list is already at Max Reward Count.
 
 ---
 

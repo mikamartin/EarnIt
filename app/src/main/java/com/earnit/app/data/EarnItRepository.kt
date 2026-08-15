@@ -11,6 +11,8 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
+enum class CopyRewardOutcome { ADDED, NAME_CONFLICT, MAX_REWARDS_REACHED }
+
 class EarnItRepository
     @Inject
     constructor(
@@ -175,19 +177,41 @@ class EarnItRepository
 
         // ── History ───────────────────────────────────────────────────────────────
 
-        suspend fun copyRewardFromEntry(entryId: Long) =
+        // Returns null (no-op) if the entry is gone; otherwise NAME_CONFLICT/MAX_REWARDS_REACHED
+        // if the copy was blocked, or ADDED. Both guards are checked inside the same transaction
+        // as the insert, not against a possibly-stale in-memory snapshot, so two rapid taps can't
+        // both pass a check and both insert.
+        suspend fun copyRewardFromEntry(
+            entryId: Long,
+            maxActiveRewards: Int,
+        ): CopyRewardOutcome? =
             database.withTransaction {
-                val entry = historyDao.getAllEntries().find { it.id == entryId } ?: return@withTransaction
+                val entry = historyDao.getAllEntries().find { it.id == entryId } ?: return@withTransaction null
+                val alreadyActive =
+                    rewardDao.getAllRewards().any {
+                        !it.isArchived && it.name.trim().equals(entry.rewardName.trim(), ignoreCase = true)
+                    }
+                if (alreadyActive) return@withTransaction CopyRewardOutcome.NAME_CONFLICT
+                if (rewardDao.getActiveRewardCount() >= maxActiveRewards) {
+                    return@withTransaction CopyRewardOutcome.MAX_REWARDS_REACHED
+                }
+                val originalReward = rewardDao.getReward(entry.rewardId)
                 val taskRefs = rewardTaskDao.getTaskRefsForReward(entry.rewardId)
                 val newId =
                     upsertReward(
-                        RewardEntity(name = entry.rewardName, cost = entry.pointCost, icon = entry.rewardIcon),
+                        RewardEntity(
+                            name = entry.rewardName,
+                            cost = entry.pointCost,
+                            icon = entry.rewardIcon,
+                            description = originalReward?.description ?: "",
+                        ),
                     )
                 taskRefs.forEach { ref ->
                     rewardTaskDao.insertCrossRef(
                         RewardTaskCrossRef(newId, ref.taskId, ref.isMandatory, ref.isRepeatable),
                     )
                 }
+                CopyRewardOutcome.ADDED
             }
 
         suspend fun updateRewardsSortOrder(orderedIds: List<Long>) {

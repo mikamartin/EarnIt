@@ -23,22 +23,28 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,14 +54,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.earnit.app.data.CopyRewardOutcome
 import com.earnit.app.data.EarnItUiState
 import com.earnit.app.ui.theme.LocalEarnItAccents
 import com.earnit.app.viewmodel.EarnItViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun HistoryScreen(
     uiState: EarnItUiState,
     viewModel: EarnItViewModel,
+    snackbarHostState: SnackbarHostState,
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(0) }
 
@@ -76,7 +85,7 @@ fun HistoryScreen(
         }
         when (selectedTab) {
             0 -> CompletedTasksTab(uiState)
-            1 -> ClaimedRewardsTab(uiState, viewModel)
+            1 -> ClaimedRewardsTab(uiState, viewModel, snackbarHostState)
         }
     }
 }
@@ -174,8 +183,10 @@ private fun CompletedTasksTab(uiState: EarnItUiState) {
 private fun ClaimedRewardsTab(
     uiState: EarnItUiState,
     viewModel: EarnItViewModel,
+    snackbarHostState: SnackbarHostState,
 ) {
     val hofPalette = LocalEarnItAccents.current.cardPalette
+    val coroutineScope = rememberCoroutineScope()
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         contentPadding = PaddingValues(vertical = 12.dp),
@@ -227,20 +238,37 @@ private fun ClaimedRewardsTab(
                                     )
                                 }
                             }
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .clip(RoundedCornerShape(50))
-                                        .background(MaterialTheme.colorScheme.secondary)
-                                        .clickable { viewModel.copyRewardFromEntry(entry.entry.id) }
-                                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                            ) {
-                                Text(
-                                    Strings.HISTORY_EARN_AGAIN,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                )
+                            IconButton(onClick = {
+                                viewModel.copyRewardFromEntry(entry.entry.id) { outcome ->
+                                    val message =
+                                        when (outcome) {
+                                            CopyRewardOutcome.ADDED -> Strings.historyEarnAgainAdded(entry.entry.rewardName)
+                                            CopyRewardOutcome.NAME_CONFLICT -> Strings.rewardDuplicateError(entry.entry.rewardName)
+                                            CopyRewardOutcome.MAX_REWARDS_REACHED -> Strings.MAX_REWARD_TOOLTIP
+                                            null -> null
+                                        }
+                                    if (message != null) {
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
+                                        }
+                                    }
+                                }
+                            }) {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.secondaryContainer),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Default.Refresh,
+                                        contentDescription = Strings.HISTORY_EARN_AGAIN,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    )
+                                }
                             }
                         }
                         if (entry.logs.isNotEmpty()) {
