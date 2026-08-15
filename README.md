@@ -4,14 +4,14 @@ A local-only productivity app for Android.
 
 [![CI](https://github.com/mikamartin/EarnIt/actions/workflows/ci.yml/badge.svg)](https://github.com/mikamartin/EarnIt/actions/workflows/ci.yml)
 [![Play Store](https://img.shields.io/badge/Play%20Store-EarnIt-brightgreen)](https://play.google.com/store/apps/details?id=com.secondmonday.earnit)
-![Unit tests](https://img.shields.io/badge/unit%20tests-185%2B-blue)
-![Instrumented tests](https://img.shields.io/badge/instrumented%20tests-110%2B-blue)
+![Unit tests](https://img.shields.io/badge/unit%20tests-190%2B-blue)
+![Instrumented tests](https://img.shields.io/badge/instrumented%20tests-115%2B-blue)
 
 ---
 
 ## The idea
 
-You've got your wants and a list of tasks you keep putting off. EarnIt connects the two. Pick a reward, set a point cost, link the tasks that should fund it, then get to work. Complete the tasks, log them, watch the balance grow. A mandatory task check means no shortcuts — you actually did the work before you claim.
+You've got your wants and a list of tasks you keep putting off. EarnIt connects the two. Pick a reward, set a point cost, link the tasks that should fund it, then get to work. Complete the tasks, log them, watch the balance grow. A mandatory task check means no shortcuts: you actually did the work before you claim.
 
 ---
 
@@ -26,16 +26,16 @@ You've got your wants and a list of tasks you keep putting off. EarnIt connects 
 
 ## What it does
 
-- **Earn points by completing tasks.** Each reward has its own point balance — logging a task credits that reward only, with no global pool.
+- **Earn points by completing tasks.** Each reward has its own point balance: logging a task credits that reward only, with no global pool.
 - **Flexible task scoring.** Assign points manually, or let the app calculate them from time, difficulty, and preparation sliders using a weighted formula.
-- **Per-reward task configuration.** Each task linked to a reward can be marked mandatory or optional, and repeatable or single-log — giving you precise control over what it takes to earn each reward.
+- **Per-reward task configuration.** Each task linked to a reward can be marked mandatory or optional, and repeatable or single-log, giving you precise control over what it takes to earn each reward.
 - **Mandatory gatekeeper tasks** must be completed before a reward can be claimed, so you can't shortcut your way to the prize.
 - **Claim with a tap.** Every claim archives to History with a full log of the tasks and points that funded it. Claimed rewards can be reactivated to run the cycle again.
 - **Home screen widget** for at-a-glance progress and one-tap task logging without opening the app.
-- **Inactivity nudges** — a gentle notification if you've gone quiet for 48 and again for 96 hours, capped at two per idle streak and reset the moment you log something.
-- **Task organisation** — drag to reorder, or switch to a group view with collapsible sections.
+- **Inactivity nudges**: a gentle notification if you've gone quiet for 48 and again for 96 hours, capped at two per idle streak and reset the moment you log something.
+- **Task organisation**: drag to reorder, or switch to a group view with collapsible sections.
 - **Task Library** with curated templates (Healthy Living, Social, Clean Home) to get started fast.
-- **Export and import** your full data as JSON — or rely on Android's automatic daily Google account backup.
+- **Export and import** your full data as JSON, or rely on Android's automatic daily Google account backup.
 - **Themes** Three colour themes (Warm Gold, Ocean Blue, Forest), full light/dark mode, mascots and daily quotes.
 
 ---
@@ -46,9 +46,9 @@ You've got your wants and a list of tasks you keep putting off. EarnIt connects 
 |---|---|
 | Language | Kotlin |
 | UI | Jetpack Compose + Material 3 |
-| Architecture | MVVM — ViewModel + StateFlow |
+| Architecture | MVVM (ViewModel + StateFlow) |
 | Widget | Jetpack Glance |
-| Storage | Room (SQLite) — local only, no cloud sync |
+| Storage | Room (SQLite), local only, no cloud sync |
 | DI | Hilt |
 | Navigation | Navigation Compose |
 | Settings | DataStore Preferences |
@@ -59,7 +59,7 @@ You've got your wants and a list of tasks you keep putting off. EarnIt connects 
 
 ## Architecture
 
-MVVM throughout. `EarnItRepository` is the single source of truth, combining multiple Room Flows into a unified `EarnItUiState`. ViewModels consume that state via `StateFlow` and expose it to Compose screens. The Glance widget reads the repository directly — independent of the main activity lifecycle. Hilt wires every layer together.
+MVVM throughout. `EarnItRepository` is the single source of truth, combining multiple Room Flows into a unified `EarnItUiState`. ViewModels consume that state via `StateFlow` and expose it to Compose screens. The Glance widget reads the repository directly, independent of the main activity lifecycle. Hilt wires every layer together.
 
 ```mermaid
 graph LR
@@ -91,7 +91,7 @@ graph LR
 
 | File | Purpose |
 |---|---|
-| [`docs/EARNIT_SPEC.md`](docs/EARNIT_SPEC.md) | Full product spec — feature definitions, data model, screen map |
+| [`docs/EARNIT_SPEC.md`](docs/EARNIT_SPEC.md) | Full product spec: feature definitions, data model, screen map |
 | [`docs/TESTING.md`](docs/TESTING.md) | Test strategy, coverage tables, known gaps and deferrals |
 | [`docs/MANUAL_TEST_PLAN.md`](docs/MANUAL_TEST_PLAN.md) | Manual-only test journeys with rationale, cadence, and steps |
 | [`docs/DEV_PLAYBOOK.md`](docs/DEV_PLAYBOOK.md) | Release process, known limitations, tooling upgrade reference |
@@ -104,9 +104,9 @@ graph LR
 
 ## AI-assisted development workflow
 
-Every feature was defined in `EARNIT_SPEC.md` before any code was written, and the AI implemented from that. Claude (via Claude Code) generated first-draft implementations, maintained documentation, ran cleanup passes, and set up tooling. All product decisions, UX direction, and architectural choices were made by the human product owner. Every branch was reviewed and approved before merging.
+The human product owner drives the project end to end: every feature starts as a decision defined in `EARNIT_SPEC.md` before any code is written, every product, UX, and architectural call is theirs, and every branch is reviewed and approved by them before it merges. The AI works from that spec and direction: drafting first-pass implementations, maintaining documentation, running cleanup passes, and setting up tooling.
 
-Quality is maintained through a documented test strategy: 185+ unit tests and 110+ instrumented tests (including Compose UI tests) plus a manual test plan for flows that cross system boundaries. Structured cleanup passes are done after every feature. 
+Quality is maintained through a documented test strategy: 190+ unit tests and 115+ instrumented tests (including Compose UI tests) plus a manual test plan for flows that cross system boundaries. Structured cleanup passes run after every feature.
 
 ---
 
