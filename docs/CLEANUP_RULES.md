@@ -83,3 +83,8 @@ Run this checklist after any significant feature work or refactor. Copy it into 
   - Move items out of **Deferrals** if they are now covered.
   - Add new gaps to **Deferrals** with a reason if this pass knowingly skips coverage.
 - [ ] Does any new flow cross a system-process boundary instrumented tests can't drive (system file picker, widget activity chain, Play Store-only API)? Add it to [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) with rationale, cadence, and steps instead of leaving it untested.
+
+### Dev Seed Data
+- [ ] Does `TestDataSeeder` (or any other dev-mode/manual seed data) still cover the full set of conditions a reviewer would need to manually test this area — every state, flag combination, or entity relationship a change introduces or touches? Add the missing case rather than leaving it to be discovered by hand later.
+- [ ] Does seeded data mirror the shape production code actually produces — real FK-backed rows created through the same relationships — rather than a shortcut (e.g. a placeholder/sentinel foreign key) that renders correctly in the one screen it was written for but silently breaks a different feature reading the same data?
+- [ ] If a bug was found by manually testing against the dev-seeded dataset, does the seed data now include a case that would catch a regression of it, so the same gap doesn't need to be rediscovered by hand next time?
