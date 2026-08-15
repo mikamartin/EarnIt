@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.earnit.app.data.AppColorScheme
 import com.earnit.app.data.AppSettings
+import com.earnit.app.data.CopyRewardOutcome
 import com.earnit.app.data.EarnItRepository
 import com.earnit.app.data.EarnItUiState
 import com.earnit.app.data.ImportFileTooLargeException
@@ -257,8 +258,14 @@ class EarnItViewModel
             viewModelScope.launch { repository.updateTasksSortOrder(orderedIds) }
         }
 
-        fun copyRewardFromEntry(entryId: Long) {
-            viewModelScope.launch { repository.copyRewardFromEntry(entryId) }
+        fun copyRewardFromEntry(
+            entryId: Long,
+            onComplete: (outcome: CopyRewardOutcome?) -> Unit,
+        ) {
+            viewModelScope.launch {
+                val outcome = repository.copyRewardFromEntry(entryId, settings.value.maxRewardCount)
+                onComplete(outcome)
+            }
         }
 
         fun exportToFile(

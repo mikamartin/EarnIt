@@ -24,9 +24,9 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ```
                  [ Manual — 4 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
-            [ UI — 75 tests ]           ComposeTestRule + Hilt, real DataStore
+            [ UI — 80 tests ]           ComposeTestRule + Hilt, real DataStore
        [ Integration — 34 tests ]       Real in-memory Room, no mocks
-     [ Unit — 189 tests ]               JVM, MockK DAOs, fast
+     [ Unit — 192 tests ]               JVM, MockK DAOs, fast
 ```
 
 **Run unit tests** (JVM, no device needed)
@@ -50,7 +50,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `PointFormulaTest` (10) | `computeAutoPoints` — min, max, mixed, medium, max single-dimension bonus (time, difficulty, preparation), dimension-5 bonus boundary on `TaskEntity`'s own instance method; `effectivePoints()` auto vs manual override |
 | `GatekeeperTest` (7) | `RewardProgress.canClaim` — points boundary (exact / one-below / zero-cost), multiple mandatory tasks (all done / one missing / logged twice), zero-cost with unlogged mandatory |
 | `LogAttributionTest` (5) | `logCompletion` — auto-points formula applied, manual points respected, task name snapshotted at log time, `rewardId` + detail recorded, `historyEntryId` null on new log |
-| `RepositoryBehaviourTest` (12) | `claimReward` (archives / no-archive / not-found), `saveRewardTasks` (correct flags, clears existing before insert), `copyRewardFromEntry` (flags and icon preserved, appended to end of list), `importTemplate` (append / clean-slate / sortOrder / group assignment), `updateTaskRewards` (removes delinked / inserts with correct flags) |
+| `RepositoryBehaviourTest` (15) | `claimReward` (archives / no-archive / not-found), `saveRewardTasks` (correct flags, clears existing before insert), `copyRewardFromEntry` (flags/icon/description preserved, appended to end of list, skips creating a duplicate when an active reward already has the name, allows it when only an archived reward does, blocked at the active-reward-count cap), `importTemplate` (append / clean-slate / sortOrder / group assignment), `updateTaskRewards` (removes delinked / inserts with correct flags) |
 | `ImportDedupTest` (7) | `importTemplate` dedup — exact match, case-insensitive, whitespace-trimmed; non-conflicting tasks inserted; sort order continuous across skips; skipped list preserves template casing |
 | `RewardProgressTest` (21) | `totalPoints`, `canClaim` (points gate / mandatory gate / combined / no mandatory), `showsProgressNumbers` (below cost / cost met but mandatory task unlogged / claimable / zero-cost with no mandatory tasks), `progressFraction` (below cap, clamped to 1 above cost, 1 for zero-cost regardless of points), `allTasks` ordering, `isTaskLogged` (match found / no match / distinguishes between tasks with multiple logs present), `loggableTasks` (unlogged / non-repeatable already logged / repeatable re-loggable / mixed set) |
 | `ClaimRewardStartOverTest` (3) | `startOver=true` — history entry created, logs archived, reward name/icon/cost snapshotted |
@@ -76,7 +76,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ---
 
-## Instrumented Tests — `app/src/androidTest/` (112 tests, requires device/emulator)
+## Instrumented Tests — `app/src/androidTest/` (116 tests, requires device/emulator)
 
 **State isolation:** Every `@HiltAndroidTest` class using `createAndroidComposeRule<MainActivity>()` calls `resetAppState()` (in `TestStateReset.kt`) as the first line of its `@Before`, immediately after `hiltRule.inject()` and before any test-specific overrides (e.g. `settingsRepository.updateMaxRewardCount(...)`). This gives each test a clean database and default settings to start from, independent of what ran before it in the same instrumentation process. `RoomIntegrationBase`-based repository tests don't need this — each already gets its own fresh in-memory database per test.
 
@@ -108,6 +108,7 @@ check`) fails the build if any class is missing its required layer tag or has no
 | `ProcessDeathRestoreTest` (1) | UI | Approximates a cold start with no saved-instance-state Bundle (closes the managed `ActivityScenario`, launches a brand-new one): a logged task/reward's data survives the relaunch (Room), while having navigated to the Tasks tab beforehand does not (nav back stack resets to the default start screen) |
 | `SettingsUiTest` (2) | UI | Colour scheme selection persists after `activityRule.scenario.recreate()`; Notes required toggle disables LOG until a note is entered, enables it after |
 | `EmptyStateUiTest` (1) | UI | Fresh-install empty-state copy on all three tabs: Prizes ("No rewards yet"), Tasks ("No tasks yet"), History — both Completed Tasks and Claimed Rewards sub-tabs |
+| `EarnAgainButtonUiTest` (4) | UI | Claimed Rewards tab's icon-only "Earn Again" button: tapping it (found by content description, since it has no visible label) reaches `copyRewardFromEntry`, shows a confirmation snackbar, and a new active reward with the same name/cost appears on Prizes; the linked task and description carry over onto the new reward's detail screen; a second tap on the same history row shows an "already exists" snackbar instead of creating a duplicate; tapping while already at the configured Max Reward Count shows the same limit tooltip the FAB uses and does not exceed the cap — the UI wiring on top of `RepositoryBehaviourTest`'s coverage of `copyRewardFromEntry` itself |
 | `TaskLibraryImportUiTest` (1) | UI | Task Library: expand "Healthy Living" template, add all 10 tasks, verify they appear in the Tasks list |
 | `SaveNavigationUiTest` (6) | UI | Post-save navigation: new task → TaskDetailScreen; new reward → RewardDetailScreen; task created from new-reward form → pops back to reward form (task auto-included), both saved and linked on reward save; Add task button disabled until reward name is entered; home card's "+ ADD TASKS" shortcut and the widget's ADD TASK intent extras both open the Add Task dialog directly on Reward Detail, not Reward Edit |
 | `ImportErrorUiTest` (2) | UI | Import error messages appear on Data & Backup screen: invalid JSON file shows "File is not valid JSON"; wrong-schema JSON shows "This doesn't look like an EarnIt backup" |
@@ -194,6 +195,9 @@ Wrong-schema JSON (e.g. a random JSON file) throws `ImportWrongSchemaException` 
 **Logging against an archived reward** (`LogAgainstArchivedRewardTest`)
 `logCompletion` fetches the reward first and returns early if it's missing or already archived, rather than inserting unconditionally. Guards a stale-UI race (e.g. a reward claimed from one surface while another still shows its LOG button) from writing an orphaned log with no `historyEntryId`; the write is silently skipped rather than surfaced as an error, since neither call site (`EarnItViewModel.logTask`, `WidgetTaskLogActivity`) currently acts on `logCompletion`'s result.
 
+**"Earn Again" icon button on Claimed Rewards** (`EarnAgainButtonUiTest`, `RepositoryBehaviourTest`)
+Before this test, `copyRewardFromEntry` had only repository-level coverage of its flag/icon-preservation logic — nothing exercised the on-screen button itself (icon-only, no visible label; `Strings.HISTORY_EARN_AGAIN` supplies its `contentDescription` instead), and manual testing surfaced four real gaps this pass closes: the tap gave no feedback, rapid re-taps could create multiple active rewards sharing the same name, the copy silently dropped the original reward's description, and it ignored the configured Max Reward Count — the cap `HomeScreen`'s FAB enforces on its own reward-creation path had no equivalent here. Both the duplicate-name and reward-count guards live inside `copyRewardFromEntry`'s own `database.withTransaction` block, checked against fresh DB reads rather than a possibly-stale in-memory snapshot — the same pattern `logCompletion`'s non-repeatable-task guard already uses and `ConcurrentLogCompletionTest` proves closes this exact class of double-tap race. The repository now returns a `CopyRewardOutcome` (`ADDED`/`NAME_CONFLICT`/`MAX_REWARDS_REACHED`, or `null` if the entry vanished) instead of a bare `Boolean`, so the UI can show the right message. `EarnAgainButtonUiTest` covers the UI wiring on top: a confirmation snackbar appears, the linked task and description show up on the new reward's detail screen, a second tap on the same row shows an "already exists" snackbar instead of a duplicate, and tapping while already at the cap shows the same `MAX_REWARD_TOOLTIP` text the FAB uses without exceeding it.
+
 **Cancel/dismiss across every screen and dialog** (`RewardEditScreenUiTest`, `TaskEditScreenUiTest`, `SettingsScreenUiTest`, `CleanUpScreenUiTest`, `TaskLibraryScreenUiTest`, `SharedDialogsCancelUiTest`)
 Every Cancel button and dialog dismiss in the app is a one-line `popBackStack()`/`onDismiss()` callback with no logic, covered here app-wide. A shared `cancelDialogAndAssertDismissed` helper (`CancelDismissAssertions.kt`) clicks a dialog's Cancel button — scoped to the dialog's own window via the `isDialog()` matcher, since several dialogs share the exact text "CANCEL" with a button on the screen behind them — and asserts the dialog is gone; each test still supplies its own setup and its own side-effect assertion (no task created, no log recorded, reward not archived, etc.). Dialogs with no explicit Cancel button (`MascotPickerDialog`, `TaskLibraryScreen`'s skipped-tasks dialog) are covered via `Espresso.pressBack()` instead, their only dismiss path.
 
@@ -209,7 +213,7 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
 | Unit (189 tests) | Every build/push | `./gradlew test` |
-| Integration + UI, instrumented (112 tests) | Every push/PR via CI (two parallel API 36 emulator jobs, Workflow 2 — sharded by layer); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
+| Integration + UI, instrumented (116 tests) | Every push/PR via CI (two parallel API 36 emulator jobs, Workflow 2 — sharded by layer); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (4) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 
 See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the journeys that are deliberately never automated (not just deferred) — each crosses a system-process boundary (system file picker, Play Core API, widget activity chain, background `WorkManager` execution) that instrumented UI tests cannot drive reliably.

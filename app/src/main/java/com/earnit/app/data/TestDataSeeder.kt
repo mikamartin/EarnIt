@@ -107,6 +107,14 @@ object TestDataSeeder {
         // Even entries use high-point tasks; odd entries use lower-point tasks.
         // This guarantees all mascot unlock thresholds are crossed.
 
+        // Backs each entry with a real archived reward and its task cross-refs (mirroring
+        // EarnItRepository.claimReward, which archives rather than deletes the reward), so
+        // "Earn Again" on a seeded claimed reward actually has tasks/flags to carry over —
+        // not a bare HistoryEntryEntity pointing at a nonexistent rewardId=0. The first task
+        // logged against the reward is seeded as its mandatory task, the rest as repeatable
+        // optionals. A few names deliberately collide with an Active Reward below (Spa Day,
+        // Gaming Session, New Book, Nice Dinner) — intentional, so those entries exercise the
+        // "already exists" duplicate-name guard on Earn Again instead of every entry adding cleanly.
         suspend fun history(
             name: String,
             icon: String,
@@ -116,10 +124,19 @@ object TestDataSeeder {
             notes: List<String> = emptyList(),
         ) {
             val claimedAt = now - daysAgo * day
+            val rewardId =
+                rewardDao.insertReward(
+                    RewardEntity(name = name, cost = cost, icon = icon, isArchived = true, createdAt = claimedAt),
+                )
+            logs.map { it.first }.distinct().forEachIndexed { i, taskId ->
+                rewardTaskDao.insertCrossRef(
+                    RewardTaskCrossRef(rewardId, taskId, isMandatory = i == 0, isRepeatable = i != 0),
+                )
+            }
             val entryId =
                 historyDao.insertEntry(
                     HistoryEntryEntity(
-                        rewardId = 0L,
+                        rewardId = rewardId,
                         rewardName = name,
                         rewardIcon = icon,
                         pointCost = cost,
@@ -131,7 +148,7 @@ object TestDataSeeder {
                     CompletionLogEntity(
                         taskId = tid,
                         taskName = tname,
-                        rewardId = 0L,
+                        rewardId = rewardId,
                         historyEntryId = entryId,
                         timestamp = claimedAt - (logs.size - i) * hr,
                         detail = notes.getOrElse(i) { "" },

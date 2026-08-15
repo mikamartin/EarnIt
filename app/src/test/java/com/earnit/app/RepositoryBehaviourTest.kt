@@ -1,5 +1,6 @@
 package com.earnit.app
 
+import com.earnit.app.data.CopyRewardOutcome
 import com.earnit.app.data.HistoryEntryEntity
 import com.earnit.app.data.RewardEntity
 import com.earnit.app.data.RewardTaskCrossRef
@@ -105,13 +106,17 @@ class RepositoryBehaviourTest : RepositoryTestBase() {
                 )
             val inserted = mutableListOf<RewardTaskCrossRef>()
             coEvery { historyDao.getAllEntries() } returns listOf(entry)
+            coEvery { rewardDao.getAllRewards() } returns emptyList()
+            coEvery { rewardDao.getReward(1) } returns null
+            coEvery { rewardDao.getActiveRewardCount() } returns 0
             coEvery { rewardTaskDao.getTaskRefsForReward(1) } returns originalRefs
             coEvery { rewardDao.getMaxSortOrder() } returns null
             coEvery { rewardDao.insertReward(any()) } returns 99L
             coEvery { rewardTaskDao.insertCrossRef(capture(inserted)) } just Runs
 
-            repository.copyRewardFromEntry(5)
+            val outcome = repository.copyRewardFromEntry(5, maxActiveRewards = 5)
 
+            assertEquals(CopyRewardOutcome.ADDED, outcome)
             assertEquals(2, inserted.size)
             assertTrue(inserted[0].isMandatory)
             assertFalse(inserted[0].isRepeatable)
@@ -120,7 +125,7 @@ class RepositoryBehaviourTest : RepositoryTestBase() {
         }
 
     @Test
-    fun `copyRewardFromEntry copies icon and appends reward to end of list`() =
+    fun `copyRewardFromEntry copies icon, description, and appends reward to end of list`() =
         runBlocking {
             val entry =
                 HistoryEntryEntity(
@@ -131,17 +136,74 @@ class RepositoryBehaviourTest : RepositoryTestBase() {
                     pointCost = 30,
                     claimedAt = 0L,
                 )
+            val originalReward = RewardEntity(id = 1, name = "Spa Day", cost = 30, description = "Relax and enjoy")
             val capturedReward = slot<RewardEntity>()
             coEvery { historyDao.getAllEntries() } returns listOf(entry)
+            coEvery { rewardDao.getAllRewards() } returns listOf(originalReward.copy(isArchived = true))
+            coEvery { rewardDao.getReward(1) } returns originalReward
+            coEvery { rewardDao.getActiveRewardCount() } returns 0
             coEvery { rewardTaskDao.getTaskRefsForReward(1) } returns emptyList()
             coEvery { rewardDao.getMaxSortOrder() } returns 4
             coEvery { rewardDao.insertReward(capture(capturedReward)) } returns 99L
 
-            repository.copyRewardFromEntry(3)
+            val outcome = repository.copyRewardFromEntry(3, maxActiveRewards = 5)
 
+            assertEquals(CopyRewardOutcome.ADDED, outcome)
             assertEquals("🛁", capturedReward.captured.icon)
+            assertEquals("Relax and enjoy", capturedReward.captured.description)
             assertEquals(5, capturedReward.captured.sortOrder) // maxOrder(4) + 1
             assertTrue(capturedReward.captured.createdAt > 0L)
+        }
+
+    @Test
+    fun `copyRewardFromEntry skips creating a duplicate when an active reward already has this name`() =
+        runBlocking {
+            val entry = HistoryEntryEntity(id = 5, rewardId = 1, rewardName = "Trip", pointCost = 50, claimedAt = 0L)
+            coEvery { historyDao.getAllEntries() } returns listOf(entry)
+            coEvery { rewardDao.getAllRewards() } returns
+                listOf(RewardEntity(id = 2, name = " trip ", cost = 20, isArchived = false))
+
+            val outcome = repository.copyRewardFromEntry(5, maxActiveRewards = 5)
+
+            assertEquals(CopyRewardOutcome.NAME_CONFLICT, outcome)
+            coVerify(exactly = 0) { rewardDao.insertReward(any()) }
+        }
+
+    @Test
+    fun `copyRewardFromEntry allows the copy when only an archived reward has this name`() =
+        runBlocking {
+            val entry = HistoryEntryEntity(id = 5, rewardId = 1, rewardName = "Trip", pointCost = 50, claimedAt = 0L)
+            coEvery { historyDao.getAllEntries() } returns listOf(entry)
+            // The just-claimed original itself is archived under the same name — must not self-block.
+            coEvery { rewardDao.getAllRewards() } returns
+                listOf(RewardEntity(id = 1, name = "Trip", cost = 50, isArchived = true))
+            coEvery { rewardDao.getReward(1) } returns RewardEntity(id = 1, name = "Trip", cost = 50, isArchived = true)
+            coEvery { rewardDao.getActiveRewardCount() } returns 0
+            coEvery { rewardTaskDao.getTaskRefsForReward(1) } returns emptyList()
+            coEvery { rewardDao.getMaxSortOrder() } returns null
+            coEvery { rewardDao.insertReward(any()) } returns 99L
+
+            val outcome = repository.copyRewardFromEntry(5, maxActiveRewards = 5)
+
+            assertEquals(
+                "An archived reward sharing the name should not block re-adding it",
+                CopyRewardOutcome.ADDED,
+                outcome,
+            )
+        }
+
+    @Test
+    fun `copyRewardFromEntry blocks the copy when the active reward count is already at the max`() =
+        runBlocking {
+            val entry = HistoryEntryEntity(id = 5, rewardId = 1, rewardName = "Trip", pointCost = 50, claimedAt = 0L)
+            coEvery { historyDao.getAllEntries() } returns listOf(entry)
+            coEvery { rewardDao.getAllRewards() } returns emptyList()
+            coEvery { rewardDao.getActiveRewardCount() } returns 5
+
+            val outcome = repository.copyRewardFromEntry(5, maxActiveRewards = 5)
+
+            assertEquals(CopyRewardOutcome.MAX_REWARDS_REACHED, outcome)
+            coVerify(exactly = 0) { rewardDao.insertReward(any()) }
         }
 
     // ── importTemplate ────────────────────────────────────────────────────────

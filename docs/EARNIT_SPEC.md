@@ -172,7 +172,7 @@ Each History entry shows:
 1. Reward name, icon, and date/time claimed
 2. Chronological list of all contributing logs (task name, note, timestamp, points)
 
-A "Reactivate" option allows copying an archived reward back to the active reward list, preserving its task links.
+A "Reactivate" option ("Earn Again" in the UI) allows copying an archived reward back to the active reward list, preserving its task links, flags, description, and cost. The copy is skipped and the user is notified instead, without creating anything, if an active reward already has that name or if the active reward list is already at Max Reward Count.
 
 ---
 
@@ -347,7 +347,7 @@ A background check re-engages users who have stopped logging tasks, via a period
 
 See [TESTING.md](TESTING.md) for the full picture — current coverage, known gaps, and what to write next.
 
-**Summary:** 189 unit tests across 26 test files. 112 instrumented tests across 32 files (requires device/emulator) — including 78 Compose UI tests.
+**Summary:** 192 unit tests across 26 test files. 116 instrumented tests across 33 files (requires device/emulator) — including 82 Compose UI tests.
 
 ---
 
