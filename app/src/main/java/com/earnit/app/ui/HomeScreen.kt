@@ -86,6 +86,10 @@ import com.earnit.app.data.EarnItUiState
 import com.earnit.app.data.MascotId
 import com.earnit.app.data.Mascots
 import com.earnit.app.data.RewardProgress
+import com.earnit.app.ui.onboarding.OnboardingAnchors
+import com.earnit.app.ui.onboarding.OnboardingLogic
+import com.earnit.app.ui.onboarding.OnboardingOverlay
+import com.earnit.app.ui.onboarding.OnboardingStep
 import com.earnit.app.ui.theme.LocalEarnItAccents
 import com.earnit.app.ui.theme.cardSurface
 import com.earnit.app.viewmodel.EarnItViewModel
@@ -300,6 +304,12 @@ fun HomeScreen(
     navController: NavHostController,
 ) {
     val settings by viewModel.settings.collectAsState()
+    val settingsLoaded by viewModel.settingsLoaded.collectAsState()
+    // settingsLoaded guards against the in-memory default (onboardingSeen = false) that
+    // settings starts at before the real DataStore value has loaded — see its definition in
+    // EarnItViewModel. onboardingStep is checked too so this doesn't reappear if the user
+    // navigates back to Home mid-flow (e.g. tapping the Prizes tab) after already starting it.
+    val showWelcomeOnboarding = settingsLoaded && !settings.onboardingSeen && viewModel.onboardingStep is OnboardingStep.Intro
     val reorderedList = remember { mutableStateListOf<RewardProgress>() }
     var isDragging by remember { mutableStateOf(false) }
     var draggingIndex by remember { mutableStateOf(-1) }
@@ -359,68 +369,89 @@ fun HomeScreen(
         onDismissClaim = { claimDialogRewardId = null },
     )
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        HomeHeader(
-            mascotScale = mascotScale.value,
-            settings = settings,
-            nickname = if (settings.useRandomNickname) viewModel.sessionNickname else settings.nickname,
-            onMascotTap = {
-                if (!settings.devModeEnabled && settings.selectedMascotId == MascotId.PUGSLY) {
-                    val updated = PugslyGesture.nextState(pugslyTapTimestamps, System.currentTimeMillis())
-                    pugslyTapTimestamps.clear()
-                    pugslyTapTimestamps.addAll(updated)
-                    if (PugslyGesture.isComplete(pugslyTapTimestamps)) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            HomeHeader(
+                mascotScale = mascotScale.value,
+                settings = settings,
+                nickname = if (settings.useRandomNickname) viewModel.sessionNickname else settings.nickname,
+                onMascotTap = {
+                    if (!settings.devModeEnabled && settings.selectedMascotId == MascotId.PUGSLY) {
+                        val updated = PugslyGesture.nextState(pugslyTapTimestamps, System.currentTimeMillis())
                         pugslyTapTimestamps.clear()
-                        viewModel.enableDevMode()
-                        viewModel.bounceMascot()
-                    }
-                }
-            },
-        )
-        val accentPalette = LocalEarnItAccents.current.cardPalette
-        Box(modifier = Modifier.weight(1f)) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(top = 4.dp, bottom = 88.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                homeRewardListItems(
-                    showQuote = settings.showQuote,
-                    reorderedList = reorderedList,
-                    accentPalette = accentPalette,
-                    listState = listState,
-                    isDragging = isDragging,
-                    onDraggingChange = { isDragging = it },
-                    draggingIndex = { draggingIndex },
-                    onDraggingIndexChange = { draggingIndex = it },
-                    draggingRewardId = draggingRewardId,
-                    onDraggingRewardIdChange = { draggingRewardId = it },
-                    onReorderCommitted = { viewModel.updateRewardsOrder(reorderedList.map { it.reward.id }) },
-                    onCardClick = { rewardId ->
-                        if (!isDragging) navController.navigate(Screen.RewardDetail.route(rewardId))
-                    },
-                    onLogTask = { logDialogRewardId = it },
-                    onClaim = { claimDialogRewardId = it },
-                    onAddTask = { navController.navigate(Screen.RewardDetail.route(it, autoOpenAddTask = true)) },
-                )
-            }
-            HomeAddRewardFab(
-                isEmpty = isEmpty,
-                atMax = atMax,
-                fabPulseScale = fabPulseScale,
-                showMaxTooltip = showMaxTooltip,
-                onClick = {
-                    if (!atMax) {
-                        navController.navigate(Screen.RewardEdit.route(0L))
-                    } else {
-                        showMaxTooltip = true
-                        homeScope.launch {
-                            delay(2000)
-                            showMaxTooltip = false
+                        pugslyTapTimestamps.addAll(updated)
+                        if (PugslyGesture.isComplete(pugslyTapTimestamps)) {
+                            pugslyTapTimestamps.clear()
+                            viewModel.enableDevMode()
+                            viewModel.bounceMascot()
                         }
                     }
                 },
+            )
+            val accentPalette = LocalEarnItAccents.current.cardPalette
+            Box(modifier = Modifier.weight(1f)) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    contentPadding = PaddingValues(top = 4.dp, bottom = 88.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    homeRewardListItems(
+                        showQuote = settings.showQuote,
+                        reorderedList = reorderedList,
+                        accentPalette = accentPalette,
+                        listState = listState,
+                        isDragging = isDragging,
+                        onDraggingChange = { isDragging = it },
+                        draggingIndex = { draggingIndex },
+                        onDraggingIndexChange = { draggingIndex = it },
+                        draggingRewardId = draggingRewardId,
+                        onDraggingRewardIdChange = { draggingRewardId = it },
+                        onReorderCommitted = { viewModel.updateRewardsOrder(reorderedList.map { it.reward.id }) },
+                        onCardClick = { rewardId ->
+                            if (!isDragging) navController.navigate(Screen.RewardDetail.route(rewardId))
+                        },
+                        onLogTask = { logDialogRewardId = it },
+                        onClaim = { claimDialogRewardId = it },
+                        onAddTask = { navController.navigate(Screen.RewardDetail.route(it, autoOpenAddTask = true)) },
+                    )
+                }
+                HomeAddRewardFab(
+                    isEmpty = isEmpty,
+                    atMax = atMax,
+                    fabPulseScale = fabPulseScale,
+                    showMaxTooltip = showMaxTooltip,
+                    onClick = {
+                        if (!atMax) {
+                            navController.navigate(Screen.RewardEdit.route(0L))
+                        } else {
+                            showMaxTooltip = true
+                            homeScope.launch {
+                                delay(2000)
+                                showMaxTooltip = false
+                            }
+                        }
+                    },
+                )
+            }
+        }
+
+        if (showWelcomeOnboarding) {
+            OnboardingOverlay(
+                step = viewModel.onboardingStep,
+                anchors = remember { OnboardingAnchors() },
+                name = "",
+                onNameChange = {},
+                cost = "",
+                linkedTaskCount = 0,
+                onIntroFinished = {
+                    viewModel.updateOnboardingStep(OnboardingLogic.next(OnboardingStep.Intro))
+                    navController.navigate(Screen.RewardEdit.route(0L))
+                },
+                onSpotlightContinue = {},
+                onOutroFinished = {},
+                onBack = {},
+                onSkip = { viewModel.markOnboardingSeen() },
             )
         }
     }

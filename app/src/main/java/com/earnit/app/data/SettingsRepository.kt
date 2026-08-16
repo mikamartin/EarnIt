@@ -38,6 +38,7 @@ class SettingsRepository
             val SETTINGS_TIP_DISMISSED = booleanPreferencesKey("settings_tip_dismissed")
             val NUDGE_STAGE = intPreferencesKey("nudge_stage")
             val NUDGE_ANCHOR_TIMESTAMP = longPreferencesKey("nudge_anchor_timestamp")
+            val ONBOARDING_SEEN = booleanPreferencesKey("onboarding_seen")
         }
 
         val settings: Flow<AppSettings> =
@@ -78,6 +79,7 @@ class SettingsRepository
                         settingsTipDismissed = prefs[Keys.SETTINGS_TIP_DISMISSED] ?: false,
                         nudgeStage = prefs[Keys.NUDGE_STAGE] ?: 0,
                         nudgeAnchorTimestamp = prefs[Keys.NUDGE_ANCHOR_TIMESTAMP] ?: 0L,
+                        onboardingSeen = prefs[Keys.ONBOARDING_SEEN] ?: false,
                     )
                 }
 
@@ -131,6 +133,14 @@ class SettingsRepository
 
         suspend fun dismissSettingsTip() {
             context.dataStore.edit { it[Keys.SETTINGS_TIP_DISMISSED] = true }
+        }
+
+        suspend fun markOnboardingSeen() {
+            context.dataStore.edit { it[Keys.ONBOARDING_SEEN] = true }
+        }
+
+        suspend fun resetOnboarding() {
+            context.dataStore.edit { it[Keys.ONBOARDING_SEEN] = false }
         }
 
         suspend fun updateNudgeState(

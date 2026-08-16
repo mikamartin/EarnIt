@@ -319,6 +319,27 @@ object Strings {
 
     fun widgetRewardName(name: String) = "Reward: $name"
 
+    // Onboarding tutorial ("Pugsly's Quest Scroll")
+    const val ONBOARDING_INTRO_LINE_1 = "So. You want something."
+    const val ONBOARDING_INTRO_LINE_2 = "And some annoying little voice in your head says you haven't earned it yet."
+    const val ONBOARDING_INTRO_LINE_3 = "That voice isn't wrong. It's just... unhelpful. Let's fix that."
+    const val ONBOARDING_NAME_LINE =
+        "Not a chore. Not a 'should.' A real want, the kind you'd normally talk yourself out of. What's yours?"
+    const val ONBOARDING_COST_LINE =
+        "Price it too cheap and you're not earning it, you're bribing yourself. Too brutal and you'll just quit. Pick fair."
+    const val ONBOARDING_TASK_LINE = "Pick a task you actually dodge. Link as many as you want, however you like."
+    const val ONBOARDING_READY_TO_SAVE = "That'll do it. Tap Save below to lock it in."
+    const val ONBOARDING_OUTRO_LINE = "You're allowed to want this. Now go earn it, guilt-free."
+    const val ONBOARDING_CONTINUE = "Continue"
+    const val ONBOARDING_SKIP = "Skip tutorial"
+    const val ONBOARDING_BACK_DESC = "Previous step"
+    const val ONBOARDING_STARTER_CHIP_1 = "That 7-book series"
+    const val ONBOARDING_STARTER_CHIP_2 = "The trip you keep postponing"
+    const val ONBOARDING_STARTER_CHIP_3 = "Phone upgrade"
+    const val ONBOARDING_STARTER_CHIP_4 = "Something dumb-but-delightful"
+    const val SETTINGS_REPLAY_TUTORIAL_LABEL = "Replay tutorial"
+    const val SETTINGS_REPLAY_TUTORIAL_SUBTITLE = "See Pugsly's guide to earning your first reward again"
+
     // Widget (Glance) — EarnItWidget.kt
     // Keep short and single-line. The widget box has a fixed, non-scrolling height;
     // on narrow (e.g. 3-column) layouts a wrapped second line overflows the box and

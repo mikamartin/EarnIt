@@ -25,6 +25,7 @@ import com.earnit.app.data.SettingsRepository
 import com.earnit.app.data.TaskEntity
 import com.earnit.app.data.TaskTemplate
 import com.earnit.app.ui.Strings
+import com.earnit.app.ui.onboarding.OnboardingStep
 import com.earnit.app.ui.randomNicknames
 import com.earnit.app.widget.EarnItGlanceWidget
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -55,10 +56,36 @@ class EarnItViewModel
         var sessionNickname by mutableStateOf(randomNicknames.random())
             private set
 
+        // Held here, not as screen-local state, because the flow spans two screens (the welcome
+        // beat on Home, the rest on Create Reward) and navigating between them disposes and
+        // recreates each screen's composition.
+        var onboardingStep by mutableStateOf<OnboardingStep>(OnboardingStep.Intro)
+            private set
+
+        fun updateOnboardingStep(step: OnboardingStep) {
+            onboardingStep = step
+        }
+
         val settings: StateFlow<AppSettings> =
             settingsRepository.settings
                 .catch { emit(AppSettings()) }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())
+
+        // settings above starts at the AppSettings() seed until the real DataStore value loads.
+        // On a genuine fresh install the real value IS AppSettings() (all defaults), so the
+        // StateFlow only ever emits once — a drop(1)-style "skip the seed" check would silently
+        // swallow that one real emission and never fire. This flips only once the underlying
+        // repository flow (uncollapsed by stateIn's equality check) has actually produced a
+        // value, regardless of what that value is.
+        private val _settingsLoaded = MutableStateFlow(false)
+        val settingsLoaded: StateFlow<Boolean> = _settingsLoaded.asStateFlow()
+
+        init {
+            viewModelScope.launch {
+                settingsRepository.settings.first()
+                _settingsLoaded.value = true
+            }
+        }
 
         val uiState: StateFlow<EarnItUiState> =
             repository
@@ -89,6 +116,13 @@ class EarnItViewModel
 
         private val _importResult = MutableStateFlow<ImportResult?>(null)
         val importResult: StateFlow<ImportResult?> = _importResult.asStateFlow()
+
+        // An explicit event, not a value the caller watches for changes — Replay Tutorial needs
+        // to work even when onboardingSeen is already false (e.g. the user backed out mid-flow
+        // without finishing), and a plain settings-change collector would see no change to react
+        // to in that case since StateFlow suppresses emissions of equal values.
+        private val _requestOnboarding = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        val requestOnboarding: SharedFlow<Unit> = _requestOnboarding.asSharedFlow()
 
         data class ImportResult(
             val message: String,
@@ -349,6 +383,18 @@ class EarnItViewModel
 
         fun dismissSettingsTip() {
             viewModelScope.launch { settingsRepository.dismissSettingsTip() }
+        }
+
+        fun markOnboardingSeen() {
+            viewModelScope.launch { settingsRepository.markOnboardingSeen() }
+        }
+
+        fun replayOnboarding() {
+            onboardingStep = OnboardingStep.Intro
+            viewModelScope.launch {
+                settingsRepository.resetOnboarding()
+                _requestOnboarding.emit(Unit)
+            }
         }
 
         fun updateUseRandomNickname(use: Boolean) {

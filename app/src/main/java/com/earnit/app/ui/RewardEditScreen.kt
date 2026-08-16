@@ -5,6 +5,7 @@ package com.earnit.app.ui
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -57,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
@@ -71,6 +73,11 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.earnit.app.data.EarnItUiState
 import com.earnit.app.data.TaskEntity
+import com.earnit.app.ui.onboarding.OnboardingAnchors
+import com.earnit.app.ui.onboarding.OnboardingLogic
+import com.earnit.app.ui.onboarding.OnboardingOverlay
+import com.earnit.app.ui.onboarding.OnboardingStep
+import com.earnit.app.ui.onboarding.captureOnboardingAnchor
 import com.earnit.app.viewmodel.EarnItViewModel
 import kotlinx.coroutines.launch
 
@@ -121,6 +128,14 @@ fun RewardEditScreen(
     val coroutineScope = rememberCoroutineScope()
     val isNew = rewardId == 0L
 
+    val settings by viewModel.settings.collectAsState()
+    // showOnboarding excludes the Intro step — that's hosted on Home now (see HomeScreen), so
+    // by the time this screen shows the overlay, onboardingStep has already advanced past it.
+    val showOnboarding = isNew && !settings.onboardingSeen && viewModel.onboardingStep !is OnboardingStep.Intro
+    val onboardingStep = viewModel.onboardingStep
+    val onboardingAnchors = remember { OnboardingAnchors() }
+    var savedRewardIdForOutro by remember { mutableStateOf<Long?>(null) }
+
     LaunchedEffect(uiState.tasks, uiState.rewardProgressList) {
         val cur = uiState.rewardProgressList.find { it.reward.id == rewardId }
         if (!taskStateReady) {
@@ -164,9 +179,16 @@ fun RewardEditScreen(
             // transition, and resetting it here re-enables nameConflict for one frame, flashing
             // the duplicate-name error just before the detail screen replaces this one.
             val newId = pendingRewardId!!
-            viewModel.consumePendingRewardId()
-            navController.navigate(Screen.RewardDetail.route(newId)) {
-                popUpTo(Screen.RewardEdit.route) { inclusive = true }
+            if (showOnboarding && onboardingStep.index < OnboardingStep.Outro.index) {
+                // Hold the real navigation until the outro beat is dismissed, so the overlay
+                // (hosted inside this screen) stays mounted through the "reward saved" moment.
+                savedRewardIdForOutro = newId
+                viewModel.updateOnboardingStep(OnboardingStep.Outro)
+            } else {
+                viewModel.consumePendingRewardId()
+                navController.navigate(Screen.RewardDetail.route(newId)) {
+                    popUpTo(Screen.RewardEdit.route) { inclusive = true }
+                }
             }
         }
     }
@@ -222,73 +244,114 @@ fun RewardEditScreen(
         },
     )
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } },
-    ) {
-        RewardEditTitleBar(
-            isNew = isNew,
-            onBack = { navController.popBackStack() },
-            onDeleteClick = { showDeleteDialog = true },
-        )
-
-        // ── Scrollable content ────────────────────────────────────────────────
-        LazyColumn(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
             modifier =
                 Modifier
-                    .weight(1f)
-                    .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .fillMaxSize()
+                    .pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } },
         ) {
-            item {
-                RewardIconAndNameField(
-                    icon = icon,
-                    onIconClick = { showIconPicker = true },
-                    name = name,
-                    onNameChange = { name = it },
-                    nameConflict = nameConflict,
+            RewardEditTitleBar(
+                isNew = isNew,
+                onBack = { navController.popBackStack() },
+                onDeleteClick = { showDeleteDialog = true },
+            )
+
+            // ── Scrollable content ────────────────────────────────────────────────
+            LazyColumn(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                item {
+                    Box(modifier = Modifier.captureOnboardingAnchor { onboardingAnchors.name = it }) {
+                        RewardIconAndNameField(
+                            icon = icon,
+                            onIconClick = { showIconPicker = true },
+                            name = name,
+                            onNameChange = { name = it },
+                            nameConflict = nameConflict,
+                        )
+                    }
+                }
+                item {
+                    Box(modifier = Modifier.captureOnboardingAnchor { onboardingAnchors.cost = it }) {
+                        RewardCostAndDescriptionFields(
+                            cost = cost,
+                            onCostChange = { cost = it },
+                            description = description,
+                            onDescriptionChange = { description = it },
+                            onImeDone = { focusManager.clearFocus() },
+                        )
+                    }
+                }
+                rewardEditTasksSection(
+                    includedTasks = includedTasks,
+                    taskState = taskState,
+                    canAddTask = name.isNotBlank(),
+                    onAddTaskClick = { showAddTaskDialog = true },
+                    onAddTaskButtonPositioned = { onboardingAnchors.tasks = it },
                 )
             }
-            item {
-                RewardCostAndDescriptionFields(
-                    cost = cost,
-                    onCostChange = { cost = it },
-                    description = description,
-                    onDescriptionChange = { description = it },
-                    onImeDone = { focusManager.clearFocus() },
-                )
-            }
-            rewardEditTasksSection(
-                includedTasks = includedTasks,
-                taskState = taskState,
-                canAddTask = name.isNotBlank(),
-                onAddTaskClick = { showAddTaskDialog = true },
+
+            RewardEditBottomBar(
+                canSave = canSave,
+                onCancel = { navController.popBackStack() },
+                onSave = {
+                    view.hapticTap()
+                    val taskTriples =
+                        taskState.entries
+                            .filter { it.value.included }
+                            .map { (id, s) -> Triple(id, s.isMandatory, s.isRepeatable) }
+                    viewModel.saveReward(rewardId, name.trim(), cost.toIntOrNull() ?: 10, description.trim(), icon, taskTriples)
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(Strings.REWARD_SAVED, duration = SnackbarDuration.Short)
+                    }
+                    if (!isNew) {
+                        navController.popBackStack()
+                    } else {
+                        pendingRewardSaveNav = true
+                    }
+                },
+                onSaveButtonPositioned = { onboardingAnchors.save = it },
             )
         }
 
-        RewardEditBottomBar(
-            canSave = canSave,
-            onCancel = { navController.popBackStack() },
-            onSave = {
-                view.hapticTap()
-                val taskTriples =
-                    taskState.entries
-                        .filter { it.value.included }
-                        .map { (id, s) -> Triple(id, s.isMandatory, s.isRepeatable) }
-                viewModel.saveReward(rewardId, name.trim(), cost.toIntOrNull() ?: 10, description.trim(), icon, taskTriples)
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar(Strings.REWARD_SAVED, duration = SnackbarDuration.Short)
-                }
-                if (!isNew) {
-                    navController.popBackStack()
-                } else {
-                    pendingRewardSaveNav = true
-                }
-            },
-        )
+        if (showOnboarding) {
+            OnboardingOverlay(
+                step = onboardingStep,
+                anchors = onboardingAnchors,
+                name = name,
+                onNameChange = { name = it },
+                cost = cost,
+                linkedTaskCount = includedTasks.size,
+                onIntroFinished = { viewModel.updateOnboardingStep(OnboardingLogic.next(onboardingStep)) },
+                onSpotlightContinue = { viewModel.updateOnboardingStep(OnboardingLogic.next(onboardingStep)) },
+                onBack = { viewModel.updateOnboardingStep(OnboardingLogic.previous(onboardingStep)) },
+                onSkip = {
+                    viewModel.markOnboardingSeen()
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Home.route) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
+                onOutroFinished = {
+                    viewModel.markOnboardingSeen()
+                    if (savedRewardIdForOutro != null) {
+                        viewModel.consumePendingRewardId()
+                    }
+                    // Land on Home, not Reward Detail — the point is to see the real reward
+                    // live where it'll actually be worked from, not a one-off detail view.
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Home.route) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
     }
 }
 
@@ -510,6 +573,7 @@ private fun LazyListScope.rewardEditTasksSection(
     taskState: SnapshotStateMap<Long, TaskEditState>,
     canAddTask: Boolean,
     onAddTaskClick: () -> Unit,
+    onAddTaskButtonPositioned: ((Rect) -> Unit)? = null,
 ) {
     if (includedTasks.isNotEmpty()) {
         item {
@@ -536,7 +600,10 @@ private fun LazyListScope.rewardEditTasksSection(
         OutlinedButton(
             onClick = onAddTaskClick,
             enabled = canAddTask,
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier.fillMaxWidth().let { m ->
+                    if (onAddTaskButtonPositioned != null) m.captureOnboardingAnchor(onAddTaskButtonPositioned) else m
+                },
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary),
         ) {
@@ -607,6 +674,7 @@ private fun RewardEditBottomBar(
     canSave: Boolean,
     onCancel: () -> Unit,
     onSave: () -> Unit,
+    onSaveButtonPositioned: ((Rect) -> Unit)? = null,
 ) {
     Row(
         modifier =
@@ -624,7 +692,10 @@ private fun RewardEditBottomBar(
         EarnItPrimaryButton(
             text = "SAVE",
             enabled = canSave,
-            modifier = Modifier.weight(2f),
+            modifier =
+                Modifier.weight(2f).let { m ->
+                    if (onSaveButtonPositioned != null) m.captureOnboardingAnchor(onSaveButtonPositioned) else m
+                },
             onClick = onSave,
         )
     }
