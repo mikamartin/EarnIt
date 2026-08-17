@@ -11,7 +11,8 @@ object Strings {
         "We all have those things we really want but don't \"need\" and a list of dreaded chores. " +
             "EarnIt is here to help you treat yourself guilt-free by crushing those \"ew\" tasks.\n\n" +
             "I kept the app simple: use it alongside your main never-ending to-do list to stay motivated. Use a widget as a reminder and to see your progress. " +
-            "I take your privacy seriously, so all your data stays right here on your phone.\n\n" +
+            "I take your privacy seriously: nothing leaves your phone except an optional backup to your own Google " +
+            "account, which you can turn off anytime in Settings > Data & Backup.\n\n" +
             "Enjoy the company of my mascots, Pugsly and Tabby, and if you have a great quote to share, I'd love to hear it!"
 
     const val NAME_INFO =
@@ -270,6 +271,8 @@ object Strings {
     const val IMPORT_ERROR_INVALID_JSON = "File is not valid JSON"
     const val IMPORT_ERROR_WRONG_SCHEMA = "This doesn't look like an EarnIt backup"
     const val IMPORT_ERROR_UNREADABLE = "Couldn't open the file"
+    const val DATA_CLOUD_BACKUP_TITLE = "Back up to Google account"
+    const val DATA_CLOUD_BACKUP_SUBTITLE = "Let Android include your data in its automatic device backup"
 
     // Clean Up screen
     const val CLEANUP_SCREEN_TITLE = "Clean Up"

@@ -39,6 +39,7 @@ class SettingsRepository
             val NUDGE_STAGE = intPreferencesKey("nudge_stage")
             val NUDGE_ANCHOR_TIMESTAMP = longPreferencesKey("nudge_anchor_timestamp")
             val ONBOARDING_SEEN = booleanPreferencesKey("onboarding_seen")
+            val CLOUD_BACKUP_ENABLED = booleanPreferencesKey("cloud_backup_enabled")
         }
 
         val settings: Flow<AppSettings> =
@@ -80,6 +81,7 @@ class SettingsRepository
                         nudgeStage = prefs[Keys.NUDGE_STAGE] ?: 0,
                         nudgeAnchorTimestamp = prefs[Keys.NUDGE_ANCHOR_TIMESTAMP] ?: 0L,
                         onboardingSeen = prefs[Keys.ONBOARDING_SEEN] ?: false,
+                        cloudBackupEnabled = prefs[Keys.CLOUD_BACKUP_ENABLED] ?: true,
                     )
                 }
 
@@ -141,6 +143,10 @@ class SettingsRepository
 
         suspend fun resetOnboarding() {
             context.dataStore.edit { it[Keys.ONBOARDING_SEEN] = false }
+        }
+
+        suspend fun updateCloudBackupEnabled(enabled: Boolean) {
+            context.dataStore.edit { it[Keys.CLOUD_BACKUP_ENABLED] = enabled }
         }
 
         suspend fun updateNudgeState(
