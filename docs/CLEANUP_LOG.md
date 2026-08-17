@@ -8,51 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 63 — `fix/widget-progress-bar-clipping` branch
-
-Bug: the widget's mandatory-task and all-tasks-done hints rendered as a second text line under the reward name in `StandardContent` (`EarnItWidget.kt`) — a fixed-height `Column` centered inside a fixed-size `Box` with no scroll/shrink fallback (`fea294c`; see this file's own known-limitations entry in `DEV_PLAYBOOK.md`). The extra line's height could exceed the widget's granted box on short or resized widgets, silently clipping the progress bar below it. `fix/widget-hint-overflow` had already bounded one trigger of this (the hint text wrapping to a 2nd line on narrow widths, via `maxLines = 1`) but not the height the hint's own single line adds in the first place. Replaced both hint text lines with a single exclamation-mark icon (`ic_alert.xml`), tinted with the same `notification` accent `RewardDetailScreen` already uses for this exact hint copy (`accents.notification` — red on Warm Gold/Forest, amber on Ocean Blue), inline next to the reward name — same row, no added height — carrying the explanation via `contentDescription` instead of visible text. `WidgetColors` didn't expose that accent before; added a `notification` field, sourced from `ColorSchemes.accents(scheme)` (a single value per color scheme, not light/dark-variant like the rest of `WidgetColors`). Several iteration issues along the way, each caught only once actually seen rendered rather than reasoned about in code:
-1. First pass tinted the icon `colors.onSurfaceVar` (muted), then `colors.primary` — both read as too weak/not urgent enough. Matching `RewardDetailScreen`'s own notification color for the identical hint text fixed both the visibility complaint and a cross-screen consistency gap.
-2. The icon started as a Material "error"-style glyph — a *filled* circle with an exclamation mark inside. Tinted as a single flat color, the filled circle and the mark inside it were the same solid color with no contrast, so the mark nearly disappeared at widget scale. First fix removed the circle entirely (bare bar+dot mark, no enclosure), widening the glyph to use more of its 24×24 viewport in the process — the initial mark-only attempt occupied only a ~3.5-unit-wide sliver, reading thin even before the circle problem. Shape then went through several more rendered-and-reviewed rounds: restored a circle as a hollow *stroke* ring (not a fill) around the mark, since `ColorFilter.tint()` renders both in one uniform color but the ring's hollow interior stays transparent, so ring and mark read as two distinct shapes rather than merging into one flat disc; bumped the rendered size 18dp→22dp and thickened both the ring stroke and the mark itself for boldness; then shrunk and re-centered the mark twice more to open up clear padding between the mark and the ring's inner edge, which the size/weight bump had eaten into. `ic_alert.xml`'s final geometry: a `strokeWidth="2.4"` ring at r=9 (centered in the 24×24 viewport), with the mark's bar and dot kept within roughly r≈5, leaving a visible transparent gap between them.
-3. First pass placed the icon far from the name: giving the reward-name `Text` its own `defaultWeight()` (`Dimension.Expand`) stretched its box to fill the whole row, so the icon (unweighted, positioned after) landed at the row's far edge instead of right after the rendered glyphs. Fixed by removing the weight from the `Text` — only the wrapping `Row` carries it — so the name hugs its own content and the icon sits immediately after it, while a long name is still bounded by the `Row`'s weighted allocation rather than pushing the action button off-widget.
-
-#### Duplication ✅ — found and fixed
-The two hint blocks (mandatory-task / all-tasks-done) were identical apart from their text and test tag. Extracted a private `HintIcon(hintText, tag, colors)` composable, replacing both inline blocks.
-
-#### Decoupling ✅ (n/a)
-No ViewModel, Repository, or Dao touched — purely the widget's Glance layer.
-
-#### Complexity & Pattern Health ✅ (checked)
-`StandardContent`'s name/hint row is simpler after this change (one `Row`, not a `Column` wrapping a conditional second `Text`), not more complex. The new `HintIcon` composable has 2 callers, earning its extraction (see Duplication).
-
-#### Dead Code & Hygiene ✅ (checked)
-`ktlintCheck` (unused-import enforcement) passes. `git status` confirms exactly the intended files changed, no stray untracked files.
-
-#### Naming Consistency ✅ (checked)
-`HintIcon` follows the file's existing composable naming (`ProgressBar`, `FlashContent`, `ClaimedState`, ...). `ic_alert.xml` matches the existing `ic_add.xml`/`ic_trophy.xml` drawable naming convention.
-
-#### Hardcoded Values ✅ (checked, consistent with existing convention)
-`ic_alert.xml`'s placeholder `fillColor="#FFFBF0"` is overridden at runtime via `ColorFilter.tint(colors.notification)` — the identical pattern `ic_add.xml` already uses, not a new inconsistency.
-
-#### Accessibility ✅ — the point of this fix
-The hint's explanation moves from always-visible text to an icon's `contentDescription` — same information exposed, now decoupled from the layout height it used to cost. The icon carries no independent click action (the whole widget body already routes to the app), so the 48dp tap-target item doesn't apply.
-
-#### Deprecated APIs ✅ (n/a)
-
-#### Spec Review ✅ — found and fixed
-`EARNIT_SPEC.md`'s widget Display States section described both hint states as a "subtitle below the reward name" with slightly stale literal copy (the quoted strings had already drifted from the actual `Strings.kt` constants, unrelated to this change) — rewrote both bullets to describe the icon + content-description behavior and corrected the quoted text while in there.
-
-#### Tests ✅ (1 new file, 1 existing file extended; 1 pre-existing gap found and closed)
-- `WidgetContentTest.kt`: both hint-existence assertions (`standardContent_mandatoryTaskUnloggedButPointsMet_showsHint`, `standardContent_allTasksDoneBelowCost_showsDisabledLogButtonAndHint`) extended with `assertHasContentDescriptionEqualTo` to verify the explanation actually reaches the icon, not just that a node with the right test tag exists.
-- The icon-adjacency bug itself (the `Text` `defaultWeight()` mistake) has no automated regression test — checked `glance-testing`'s unit-test filters (`UnitTestFilters.kt`) directly and confirmed they only cover `testTag`/`contentDescription`/`text`/click-action, nothing for layout, width, weight, or sibling position. Not automatable with the current tooling; covered instead by the `MANUAL_TEST_PLAN.md` step 8 update below, which now explicitly calls out checking that the icon lands next to the name rather than at the row's far edge.
-- Found and closed a pre-existing gap while adding the `notification` field: `widgetColors()` (scheme + light/dark mode → `WidgetColors`) had zero test coverage — `WidgetContentTest` always builds its own hardcoded `WidgetColors` fixture and passes it straight to `StandardContent`, never calling `widgetColors()` itself. True for every field before this pass, not just the new one, but this pass is what extended that already-untested function. Changed `widgetColors()` from `private` to `internal` (same rationale as the existing `StandardContent`/`WidgetColors` precedent) and added `WidgetColorsTest.kt` (4 tests): `notification` matches `ColorSchemes.accents()` for Warm Gold and Forest, diverges to amber for Ocean Blue (the one scheme where it actually differs — the case most likely to silently regress), and dark mode changes `primary` from its light-mode value for the same scheme (via Robolectric `RuntimeEnvironment.setQualifiers("+night")`), confirming the light/dark branch itself runs rather than just compiling.
-- `./gradlew ktlintCheck`, `test`, `assembleDebug` all pass. Ran `assembleDebugAndroidTest` too even with no `AppModule`/`TestAppModule`/`@Inject` change, since a new drawable resource and widget composable restructuring are easy to get wrong in ways only a real compile catches.
-- `TESTING.md`: added the `WidgetColorsTest` row and updated the unit-test aggregate counts (185→189, pyramid + section header + cadence table, all exact).
-- `DEV_PLAYBOOK.md`'s known-limitations entry for `StandardContent` updated to record this as a second, differently-triggered instance of the same underlying architectural gap (no shrink/scroll fallback), not a fix of the gap itself — a longer reward name at large accessibility font scale would still reproduce the same clipping.
-- `MANUAL_TEST_PLAN.md` steps 8, 9, and 14 updated to describe the icon instead of the old hint-text-subtitle wording.
-- This branch forked before `fix/reward-detail-completion-icons` (PR #65) merged to `main`. Rebased onto the merged `main` before finishing this pass (stash → reset → pop, clean auto-merge) so `docs/CLEANUP_LOG.md`'s already-trimmed history and `TESTING.md`'s already-updated counts from that PR weren't reintroduced or duplicated.
-
----
-
 ### Pass 64 — `test/close-manual-test-plan-gaps` branch
 
 Reviewed `MANUAL_TEST_PLAN.md` against the actual code to check whether any journey marked manual-only was really reachable by an instrumented test. Two were: the widget's ADD TASK button (`autoOpenAddTask`/`rewardId` intent extras into `MainActivity`) and `WidgetConfigActivity`'s label field's character cap — both are plain `ComponentActivity`/nav-graph code reachable directly, without a real widget host. Added coverage for both; also trimmed a redundant manual mascot-suppression check from the Export/Import journey (already unit-tested).
@@ -137,3 +92,46 @@ No new hex colors or magic numbers — reused `Strings.rewardDuplicateError`/add
 - `CLEANUP_RULES.md`: added a new "Dev Seed Data" section — nothing in the checklist previously asked whether dev/manual seed data actually covers the conditions it's meant to, or whether it mirrors real production data shape rather than a shortcut like the placeholder-`rewardId` gap found here. Future passes now check this explicitly instead of it only surfacing when a user happens to manually test against the seeded dataset.
 - Re-ran this checklist a second time against the accumulated diff once the branch stopped growing, rather than trusting the log entries written progressively while each bug was still being found. One genuine gap surfaced: `EarnAgainButtonUiTest`'s class doc comment still only described the name-conflict guard, predating the `MAX_REWARDS_REACHED` guard added afterward — updated it to describe all three outcomes. Everything else (duplication, decoupling, naming, hardcoded values, accessibility, dead code, every `copyRewardFromEntry` call site on its current signature) re-checked clean; `checkInstrumentedTestTags` and the full build/test/instrumented sequence re-run and pass after the fix.
 - `./gradlew ktlintCheck`, `test`, `assembleDebug`, `assembleDebugAndroidTest` all pass sequentially per `CLAUDE.md`.
+
+---
+
+### Pass 66 — `feature/onboarding-tutorial` branch
+
+Ran against the whole branch: the two original feature commits (`4fc7244` feat, `0dbe1f9` test) plus this session's UX/copy pass and bug fixes on top, reviewed together as one diff against `main`.
+
+#### Duplication ✅ (checked)
+`RewardIconAndNameField`/`TaskIconAndNameField` are near-identical (icon button + name field + conditional duplicate-name error) — but that predates this branch (present on `main` before onboarding work started). This session touched both identically to fix the layout bug below, without adding new duplication. Considered extracting a shared composable; didn't — the two differ in max-char constant, default icon glyph, label, and error-string function, enough that a shared version would need nearly as many parameters as either version's own body saves. No inline strings bypassing `Strings.kt`, no hardcoded colors.
+
+#### Decoupling ✅ (checked, n/a)
+No new coupling introduced. `OnboardingStep` living in the same file as Compose UI code, and the ViewModel using `mutableStateOf` directly for `onboardingStep`/`sessionNickname`, are both pre-existing patterns from the original feature commits — unchanged this session.
+
+#### Complexity & Pattern Health ✅ — found and fixed two real bugs
+1. **Layout-overlap bug.** `TaskPointsSection`, `TaskIconAndNameField`, and `RewardIconAndNameField` each emit more than one top-level composable (a toggle row + a conditional sliders card + a totals row; or a row + a conditional error text). Wrapping a call like that in a bare `Box` (for onboarding anchor-capture) breaks Column-based vertical stacking — `Box` overlays multiple children instead of stacking them, which is exactly why "Total points" rendered on top of "Time" once auto-points was on, and would have identically hidden the duplicate-name error text behind the name field. Fixed by giving each composable its own `modifier` parameter and a single root `Column`, called with `modifier = Modifier.captureOnboardingAnchor { }` directly instead of an external `Box` wrapper.
+2. `taskCoachStep` used raw `Int` literals (`0`/`1`) for a two-state sub-flow, inconsistent with the rest of this same feature's typed state (`OnboardingStep`/`OnboardingField` sealed types/enums). Renamed to a `Boolean` (`taskCoachedOnPoints`).
+
+Also noted, not fixed: `TaskEditScreen` (196 lines already on `main`, before this branch) and `RewardEditScreen` (252 lines already after the original onboarding commits, before this session) both exceed the ~150-line composable guideline. This session added ~49 lines to `TaskEditScreen` for the coaching bubble and a net +1 line to `RewardEditScreen`. Considered extracting the coaching scrim+bubble into a helper composable; not done — the scrim needs to render inside the scrollable `Box` (to dim just that section) while the bubble renders outside it in the same `Column`, so there's no single natural call site to extract to without restructuring the box hierarchy.
+
+#### Dead Code & Hygiene ✅ (checked)
+`ktlintCheck` passes. `git status` shows exactly the 8 intended files changed, no stray untracked files. No TODO/FIXME introduced, no commented-out code.
+
+#### Naming Consistency ✅ (checked)
+New `Strings.kt` constants (`ONBOARDING_TASK_LINKED_LINE`, `ONBOARDING_TASK_NAME_LINE`, `ONBOARDING_TASK_POINTS_LINE`, `ONBOARDING_SAVE_BLOCKED_LINE`, `ONBOARDING_STARTER_CHIPS_LABEL`) follow the existing `ONBOARDING_*` convention. No new files this session.
+
+#### Hardcoded Values ✅ (checked)
+No new hex colors. The `taskCoachStep` magic-number fix is covered under Complexity above.
+
+#### Accessibility / Deprecated APIs ✅ (n/a)
+No new icon-only buttons or tappable targets, no deprecation warnings from this session's changes.
+
+#### Spec Review ✅ — found and fixed a significant gap
+`EARNIT_SPEC.md` didn't mention the onboarding tutorial at all — a full first-launch feature, entirely undocumented. Added §3a ("First-Launch Onboarding Tutorial") describing the flow, the task-creation detour, and the save-blocked state; added an "Onboarding Seen" row to the App Settings table cross-referencing it.
+
+#### Tests ✅ — found and closed real coverage gaps
+- The entire two-step task-creation coaching sub-flow (name → points), the "task linked" copy switch, and the "Save blocked" fallback had zero coverage despite being added mid-session. Extended `OnboardingFlowUiTest`'s happy-path test to assert all three; added `replayTutorial_duplicateRewardName_blocksSaveWithExplanation`, which seeds a reward whose name matches a starter chip, replays the tutorial, picks that same chip, and confirms Save is disabled with the explanatory message shown instead of a silently-dead button.
+- Ran the extended and new tests on a connected emulator. A second physical device joined the adb pool mid-session, causing an unrelated `IllegalStateException: No compose hierarchies found in the app` on `connectedDebugAndroidTest` (it runs across every attached device by default); confirmed as environment noise rather than a regression by re-running pinned to the emulator alone (`ANDROID_SERIAL=emulator-5554`) — 0 failed, both before and after the `taskCoachedOnPoints` rename.
+- `TESTING.md`: added `OnboardingStepTest` (11) and `OnboardingFlowUiTest` (3, up from 2) rows. While updating, found the doc's file counts (26 unit / 33 instrumented files) were already stale on `main` itself, unrelated to this branch — actual was 28 / 40 — corrected to current true figures (29 / 41) instead of adding this branch's delta on top of a wrong baseline. Aggregate test counts rounded per the doc's own stated convention (ballpark, not a maintained tally): Unit 189/192 (the pyramid and section header disagreed with each other before this pass) → 205; Instrumented 116 → 120; UI 80/82 → 85.
+- `EARNIT_SPEC.md`'s own test-summary line updated to match, kept exact per that line's existing convention: 203 unit / 119 instrumented / 85 UI.
+- `./gradlew ktlintCheck`, `test`, `assembleDebugAndroidTest` all pass. `connectedDebugAndroidTest` against `OnboardingFlowUiTest` (pinned to the emulator) — 0 failed.
+
+#### Dev Seed Data ✅ (checked, n/a)
+Onboarding is specifically a first-launch/clean-state flow — it doesn't read or depend on `TestDataSeeder`'s dev-mode seed data.
