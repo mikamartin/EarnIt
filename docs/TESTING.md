@@ -116,7 +116,6 @@ check`) fails the build if any class is missing its required layer tag or has no
 | `ImportErrorUiTest` (2) | UI | Import error messages appear on Data & Backup screen: invalid JSON file shows "File is not valid JSON"; wrong-schema JSON shows "This doesn't look like an EarnIt backup" |
 | `MaxLengthUiTest` (6) | UI | Reward name, task name, reward description, task group name, nickname, and widget label fields each accept input up to their character cap and silently reject one character past it |
 | `WidgetNudgeUiTest` (1) | UI | Widget nudge banner on Reward Detail: hidden while a reward has no tasks, appears once the first task is linked, dismiss hides it and persists across `activityRule.scenario.recreate()` |
-| `SettingsTipUiTest` (1) | UI | Settings discoverability tip: shown on first visit, dismiss hides it and persists across `activityRule.scenario.recreate()` and subsequent visits |
 | `DuplicateNameUiTest` (2) | UI | Duplicate-name error shown and SAVE disabled when a task or reward name conflicts with an existing one, case-insensitive |
 | `RewardLimitUiTest` (1) | UI | Tapping the reward FAB at `maxRewardCount` shows the max-limit tooltip instead of navigating to Reward Edit |
 | `RewardProgressBarUiTest` (1) | UI | Reward Detail progress bar hides its point/cost number overlay once points meet the cost but a mandatory task is still unlogged (`RewardProgress.showsProgressNumbers` wiring; boundary cases unit-tested in `RewardProgressTest`) |
@@ -177,8 +176,8 @@ Full UI path: Tasks tab → Library → expand a template → add all tasks → 
 **Post-save navigation** (`SaveNavigationUiTest`)
 Saving a new task navigates to TaskDetailScreen; saving a new reward navigates to RewardDetailScreen. Creating a task from a new-reward edit form pops back to the reward form (not forward to TaskDetailScreen), auto-includes the task in the form's task list, and persists both entities linked when the reward is subsequently saved. The home card's "+ ADD TASKS" shortcut is also asserted to land on the Add Task dialog directly rather than the Reward Edit screen, so the shortcut takes exactly one tap to reach the dialog.
 
-**Onboarding nudge dismissal persists** (`WidgetNudgeUiTest`, `SettingsTipUiTest`)
-Both one-time nudges (widget nudge on Reward Detail, discoverability tip on Settings) are asserted to disappear immediately on dismiss and to stay hidden after `activityRule.scenario.recreate()`, proving the DataStore flag round-trips rather than just the in-memory Compose state resetting.
+**Widget nudge dismissal persists** (`WidgetNudgeUiTest`)
+The one-time widget nudge banner on Reward Detail is asserted to disappear immediately on dismiss and to stay hidden after `activityRule.scenario.recreate()`, proving the DataStore flag round-trips rather than just the in-memory Compose state resetting.
 
 **Widget action-button selection** (`WidgetActionButtonTest`, `WidgetContentTest`)
 The button-state decision (`CLAIM` / `LOG` / `LOG_DISABLED` / `ADD_TASK`) is a plain function, unit-tested directly; `WidgetContentTest` renders the actual composables via `glance-testing` + Robolectric to confirm the right button (and only that button) appears with its click action wired — or, for `LOG_DISABLED`, that the button renders with no click action alongside the "all tasks done" hint icon — plus reward name/points text and the hint icon's content description. Neither test can verify the click actually reaches the intended `Intent` extras (`glance-testing`'s click-action matchers don't recognize the raw-`Intent` `actionStartActivity` overload this widget uses) — that part stays manual, per `MANUAL_TEST_PLAN.md`.

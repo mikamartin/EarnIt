@@ -35,7 +35,6 @@ class SettingsRepository
             val TASKS_GROUP_VIEW = booleanPreferencesKey("tasks_group_view")
             val DEV_MODE_ENABLED = booleanPreferencesKey("dev_mode_enabled")
             val WIDGET_NUDGE_DISMISSED = booleanPreferencesKey("widget_nudge_dismissed")
-            val SETTINGS_TIP_DISMISSED = booleanPreferencesKey("settings_tip_dismissed")
             val NUDGE_STAGE = intPreferencesKey("nudge_stage")
             val NUDGE_ANCHOR_TIMESTAMP = longPreferencesKey("nudge_anchor_timestamp")
             val ONBOARDING_SEEN = booleanPreferencesKey("onboarding_seen")
@@ -77,7 +76,6 @@ class SettingsRepository
                         tasksGroupView = prefs[Keys.TASKS_GROUP_VIEW] ?: false,
                         devModeEnabled = prefs[Keys.DEV_MODE_ENABLED] ?: false,
                         widgetNudgeDismissed = prefs[Keys.WIDGET_NUDGE_DISMISSED] ?: false,
-                        settingsTipDismissed = prefs[Keys.SETTINGS_TIP_DISMISSED] ?: false,
                         nudgeStage = prefs[Keys.NUDGE_STAGE] ?: 0,
                         nudgeAnchorTimestamp = prefs[Keys.NUDGE_ANCHOR_TIMESTAMP] ?: 0L,
                         onboardingSeen = prefs[Keys.ONBOARDING_SEEN] ?: false,
@@ -131,10 +129,6 @@ class SettingsRepository
 
         suspend fun dismissWidgetNudge() {
             context.dataStore.edit { it[Keys.WIDGET_NUDGE_DISMISSED] = true }
-        }
-
-        suspend fun dismissSettingsTip() {
-            context.dataStore.edit { it[Keys.SETTINGS_TIP_DISMISSED] = true }
         }
 
         suspend fun markOnboardingSeen() {
