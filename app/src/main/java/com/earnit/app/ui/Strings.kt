@@ -52,13 +52,15 @@ object Strings {
     const val CLEANUP_DIALOG_LOGS_BODY = "All logs and claimed reward history will be permanently deleted. Rewards and tasks are not affected."
     const val CLEANUP_DIALOG_TASKS_BODY = "All tasks will be permanently deleted and removed from all rewards."
     const val CLEANUP_DIALOG_REWARDS_BODY = "All active rewards and their logged progress will be permanently deleted."
-    const val CLEANUP_DIALOG_ALL_BODY = "This will permanently delete all tasks, rewards, logs, and history. The app will be completely empty."
+    const val CLEANUP_DIALOG_ALL_BODY =
+        "This will permanently delete all tasks, rewards, logs, and history, and reset all settings " +
+            "(theme, nickname, mascots) to default. Your cloud backup choice is kept."
 
     // CleanUpScreen cards
     const val CLEANUP_CARD_LOGS = "Removes all logs and claimed reward history. Rewards and tasks stay."
     const val CLEANUP_CARD_TASKS = "Removes all tasks and unlinks them from rewards."
     const val CLEANUP_CARD_REWARDS = "Removes all active rewards and their progress logs."
-    const val CLEANUP_CARD_ALL = "Wipes everything: all tasks, rewards, logs, and history."
+    const val CLEANUP_CARD_ALL = "Wipes everything: all tasks, rewards, logs, history, and settings. Your cloud backup choice is kept."
 
     // CleanUpScreen buttons and snackbars
     const val CLEANUP_BTN_LOGS = "Clear logs"

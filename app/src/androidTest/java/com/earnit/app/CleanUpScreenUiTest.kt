@@ -2,13 +2,17 @@ package com.earnit.app
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.earnit.app.data.AppColorScheme
 import com.earnit.app.data.EarnItRepository
+import com.earnit.app.data.MascotId
 import com.earnit.app.data.RewardEntity
+import com.earnit.app.data.SettingsRepository
 import com.earnit.app.data.TaskEntity
 import com.earnit.app.tags.CleanUp
 import com.earnit.app.tags.UiTest
@@ -18,6 +22,8 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -41,6 +47,8 @@ class CleanUpScreenUiTest {
     val composeTestRule = createAndroidComposeRule<MainActivity>()
 
     @Inject lateinit var repository: EarnItRepository
+
+    @Inject lateinit var settingsRepository: SettingsRepository
 
     @Before
     fun setUp() {
@@ -94,5 +102,41 @@ class CleanUpScreenUiTest {
     @Test
     fun clearAllDialog_cancel_clearsNothing() {
         assertCancelClearsNothing(Strings.CLEANUP_BTN_ALL, Strings.CLEANUP_DIALOG_ALL_TITLE)
+    }
+
+    @Test
+    fun clearAllDialog_confirm_wipesDataAndResetsSettingsExceptBackupChoice() {
+        runBlocking {
+            settingsRepository.updateColorScheme(AppColorScheme.OCEAN_BLUE)
+            settingsRepository.updateNickname("Custom")
+            settingsRepository.enableDevMode()
+            settingsRepository.updateUnlockedMascots(setOf(MascotId.PUGSLY, MascotId.TABBY, MascotId.MASCOT_3))
+            settingsRepository.updateCloudBackupEnabled(false)
+        }
+
+        composeTestRule.onNodeWithText(Strings.CLEANUP_BTN_ALL, ignoreCase = true).performScrollTo().performClick()
+        composeTestRule.onNodeWithText(Strings.CLEANUP_DIALOG_ALL_TITLE).assertIsDisplayed()
+        // The card's open button and the dialog's confirm button share the same rendered text
+        // ("WIPE EVERYTHING"); the dialog's popup is added after the underlying screen, so its
+        // button is the last matching node.
+        val allWipeButtons = composeTestRule.onAllNodesWithText(Strings.CLEANUP_BTN_ALL, ignoreCase = true)
+        allWipeButtons[allWipeButtons.fetchSemanticsNodes().size - 1].performClick()
+
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.onAllNodesWithText(Strings.CLEANUP_SNACKBAR_ALL).fetchSemanticsNodes().isNotEmpty()
+        }
+
+        val state = runBlocking { repository.observeUiState().first() }
+        assertTrue(state.tasks.isEmpty())
+        assertTrue(state.rewardProgressList.isEmpty())
+        assertTrue(state.allLogs.isEmpty())
+
+        val settings = runBlocking { settingsRepository.settings.first() }
+        assertEquals(AppColorScheme.WARM_GOLD, settings.colorScheme)
+        assertEquals("Babe", settings.nickname)
+        assertFalse(settings.devModeEnabled)
+        assertEquals(setOf(MascotId.PUGSLY, MascotId.TABBY), settings.unlockedMascotIds)
+        // The cloud backup opt-out is a privacy choice, not app data — it must survive the wipe.
+        assertFalse(settings.cloudBackupEnabled)
     }
 }

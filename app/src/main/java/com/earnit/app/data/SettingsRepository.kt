@@ -165,4 +165,15 @@ class SettingsRepository
         suspend fun resetToDefaults() {
             context.dataStore.edit { it.clear() }
         }
+
+        // Backs the "Wipe Everything" action: resets every preference to default except the
+        // cloud backup opt-out, which is a privacy choice rather than app data and shouldn't
+        // silently flip back on.
+        suspend fun resetForWipeEverything() {
+            context.dataStore.edit { prefs ->
+                val backupChoice = prefs[Keys.CLOUD_BACKUP_ENABLED]
+                prefs.clear()
+                if (backupChoice != null) prefs[Keys.CLOUD_BACKUP_ENABLED] = backupChoice
+            }
+        }
     }

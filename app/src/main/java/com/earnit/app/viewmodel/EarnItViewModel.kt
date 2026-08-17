@@ -442,6 +442,7 @@ class EarnItViewModel
         fun clearAll(onComplete: () -> Unit = {}) {
             viewModelScope.launch {
                 repository.clearAll()
+                settingsRepository.resetForWipeEverything()
                 onComplete()
             }
         }
