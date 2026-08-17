@@ -8,49 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 66 — `feature/onboarding-tutorial` branch
-
-Ran against the whole branch: the two original feature commits (`4fc7244` feat, `0dbe1f9` test) plus this session's UX/copy pass and bug fixes on top, reviewed together as one diff against `main`.
-
-#### Duplication ✅ (checked)
-`RewardIconAndNameField`/`TaskIconAndNameField` are near-identical (icon button + name field + conditional duplicate-name error) — but that predates this branch (present on `main` before onboarding work started). This session touched both identically to fix the layout bug below, without adding new duplication. Considered extracting a shared composable; didn't — the two differ in max-char constant, default icon glyph, label, and error-string function, enough that a shared version would need nearly as many parameters as either version's own body saves. No inline strings bypassing `Strings.kt`, no hardcoded colors.
-
-#### Decoupling ✅ (checked, n/a)
-No new coupling introduced. `OnboardingStep` living in the same file as Compose UI code, and the ViewModel using `mutableStateOf` directly for `onboardingStep`/`sessionNickname`, are both pre-existing patterns from the original feature commits — unchanged this session.
-
-#### Complexity & Pattern Health ✅ — found and fixed two real bugs
-1. **Layout-overlap bug.** `TaskPointsSection`, `TaskIconAndNameField`, and `RewardIconAndNameField` each emit more than one top-level composable (a toggle row + a conditional sliders card + a totals row; or a row + a conditional error text). Wrapping a call like that in a bare `Box` (for onboarding anchor-capture) breaks Column-based vertical stacking — `Box` overlays multiple children instead of stacking them, which is exactly why "Total points" rendered on top of "Time" once auto-points was on, and would have identically hidden the duplicate-name error text behind the name field. Fixed by giving each composable its own `modifier` parameter and a single root `Column`, called with `modifier = Modifier.captureOnboardingAnchor { }` directly instead of an external `Box` wrapper.
-2. `taskCoachStep` used raw `Int` literals (`0`/`1`) for a two-state sub-flow, inconsistent with the rest of this same feature's typed state (`OnboardingStep`/`OnboardingField` sealed types/enums). Renamed to a `Boolean` (`taskCoachedOnPoints`).
-
-Also noted, not fixed: `TaskEditScreen` (196 lines already on `main`, before this branch) and `RewardEditScreen` (252 lines already after the original onboarding commits, before this session) both exceed the ~150-line composable guideline. This session added ~49 lines to `TaskEditScreen` for the coaching bubble and a net +1 line to `RewardEditScreen`. Considered extracting the coaching scrim+bubble into a helper composable; not done — the scrim needs to render inside the scrollable `Box` (to dim just that section) while the bubble renders outside it in the same `Column`, so there's no single natural call site to extract to without restructuring the box hierarchy.
-
-#### Dead Code & Hygiene ✅ (checked)
-`ktlintCheck` passes. `git status` shows exactly the 8 intended files changed, no stray untracked files. No TODO/FIXME introduced, no commented-out code.
-
-#### Naming Consistency ✅ (checked)
-New `Strings.kt` constants (`ONBOARDING_TASK_LINKED_LINE`, `ONBOARDING_TASK_NAME_LINE`, `ONBOARDING_TASK_POINTS_LINE`, `ONBOARDING_SAVE_BLOCKED_LINE`, `ONBOARDING_STARTER_CHIPS_LABEL`) follow the existing `ONBOARDING_*` convention. No new files this session.
-
-#### Hardcoded Values ✅ (checked)
-No new hex colors. The `taskCoachStep` magic-number fix is covered under Complexity above.
-
-#### Accessibility / Deprecated APIs ✅ (n/a)
-No new icon-only buttons or tappable targets, no deprecation warnings from this session's changes.
-
-#### Spec Review ✅ — found and fixed a significant gap
-`EARNIT_SPEC.md` didn't mention the onboarding tutorial at all — a full first-launch feature, entirely undocumented. Added §3a ("First-Launch Onboarding Tutorial") describing the flow, the task-creation detour, and the save-blocked state; added an "Onboarding Seen" row to the App Settings table cross-referencing it.
-
-#### Tests ✅ — found and closed real coverage gaps
-- The entire two-step task-creation coaching sub-flow (name → points), the "task linked" copy switch, and the "Save blocked" fallback had zero coverage despite being added mid-session. Extended `OnboardingFlowUiTest`'s happy-path test to assert all three; added `replayTutorial_duplicateRewardName_blocksSaveWithExplanation`, which seeds a reward whose name matches a starter chip, replays the tutorial, picks that same chip, and confirms Save is disabled with the explanatory message shown instead of a silently-dead button.
-- Ran the extended and new tests on a connected emulator. A second physical device joined the adb pool mid-session, causing an unrelated `IllegalStateException: No compose hierarchies found in the app` on `connectedDebugAndroidTest` (it runs across every attached device by default); confirmed as environment noise rather than a regression by re-running pinned to the emulator alone (`ANDROID_SERIAL=emulator-5554`) — 0 failed, both before and after the `taskCoachedOnPoints` rename.
-- `TESTING.md`: added `OnboardingStepTest` (11) and `OnboardingFlowUiTest` (3, up from 2) rows. While updating, found the doc's file counts (26 unit / 33 instrumented files) were already stale on `main` itself, unrelated to this branch — actual was 28 / 40 — corrected to current true figures (29 / 41) instead of adding this branch's delta on top of a wrong baseline. Aggregate test counts rounded per the doc's own stated convention (ballpark, not a maintained tally): Unit 189/192 (the pyramid and section header disagreed with each other before this pass) → 205; Instrumented 116 → 120; UI 80/82 → 85.
-- `EARNIT_SPEC.md`'s own test-summary line updated to match, kept exact per that line's existing convention: 203 unit / 119 instrumented / 85 UI.
-- `./gradlew ktlintCheck`, `test`, `assembleDebugAndroidTest` all pass. `connectedDebugAndroidTest` against `OnboardingFlowUiTest` (pinned to the emulator) — 0 failed.
-
-#### Dev Seed Data ✅ (checked, n/a)
-Onboarding is specifically a first-launch/clean-state flow — it doesn't read or depend on `TestDataSeeder`'s dev-mode seed data.
-
----
-
 ### Pass 67 — `fix/backup-privacy-opt-out` branch
 
 `allowBackup="true"` plus `data_extraction_rules.xml` meant Android's Auto Backup silently uploaded the Room database and DataStore preferences to the user's Google account, contradicting the About screen's "all your data stays right here on your phone" claim (confirmed by reproducing it: wipe → uninstall → reinstall → old data came back). Added an opt-out toggle (`SettingsRepository.cloudBackupEnabled`, default `true`, so existing users see no behavior change), enforced via a new `EarnItBackupAgent.onFullBackup` override — `allowBackup`/`dataExtractionRules` are static manifest attributes the OS reads once at install time, so they can't be toggled at runtime. Corrected the About screen copy to describe the opt-out instead of claiming an absolute "never leaves the phone."
@@ -135,3 +92,29 @@ No new tappable elements. The tip banner's dismiss `IconButton` (and its `conten
 
 #### Dev Seed Data ✅ (checked, n/a)
 `TestDataSeeder` seeds database rows only; Wipe Everything's settings-reset path and the tip-banner removal don't touch it.
+
+---
+
+### Pass 69 — `chore/release-v1.3.0-prep` branch (doc sync ahead of the v1.3.0 release cut)
+
+User asked to confirm README.md and EARNIT_SPEC.md were current before cutting the v1.3.0 release. Pass 66–68 had each done a spec review, so EARNIT_SPEC.md's feature coverage was accurate, but README.md was never touched by any of the three preceding feature branches and had drifted; both docs also carried one shared stale claim and a stale test-count line.
+
+Most checklist sections are n/a — this is a documentation-only pass, no source changes.
+
+#### Duplication / Decoupling / Complexity & Pattern Health / Naming Consistency / Hardcoded Values / Accessibility / Deprecated APIs / Dev Seed Data — n/a
+No source code touched this pass.
+
+#### Dead Code & Hygiene ✅ (checked)
+`git status` shows only the intended doc + `app/build.gradle.kts` changes.
+
+#### Spec Review ✅ — found and fixed
+- `README.md`: missing the first-launch onboarding tutorial from the feature list entirely; the backup bullet didn't mention it's opt-out; the intro line and Tech Stack table both claimed an absolute "local only, no cloud sync" that contradicts the Auto Backup opt-out shipped in Pass 67 (the same class of inaccuracy Pass 67 already fixed in the in-app About copy, just missed in README). Fixed all three.
+- `EARNIT_SPEC.md`: the Overview and Stack table carried the same absolute "local only, no cloud" wording as README, inconsistent with §7's own accurate description of the opt-out backup. Fixed both to match §7, with a cross-reference link from the Overview.
+- `EARNIT_SPEC.md`'s test-summary line (§ Tests) was stale on two axes: test counts (203/119/85 vs. actual 206/120/85 per `TESTING.md`'s current headers) and file counts (claimed 29/41, actual 28/32 — verified against both the filesystem and `TESTING.md`'s own table row counts). Corrected to 206 unit tests / 28 files, 120 instrumented / 32 files, 85 Compose UI tests.
+- Did not touch `TESTING.md`'s test pyramid (`Unit — 205 tests` / `UI — 85 tests` / `Integration — 34 tests`, which sums to 119 against the section header's 120) — that's a pre-existing internal inconsistency predating this branch, out of scope for a doc-sync pass; flagging here rather than silently leaving it for the next person to rediscover.
+
+#### Tests — n/a
+No test files changed.
+
+#### Release
+Version bump for the v1.3.0 cut: `app/build.gradle.kts` `versionCode` 3→4, `versionName` "1.2.0"→"1.3.0", per `DEV_PLAYBOOK.md`'s release process.
