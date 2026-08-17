@@ -381,10 +381,6 @@ class EarnItViewModel
             viewModelScope.launch { settingsRepository.dismissWidgetNudge() }
         }
 
-        fun dismissSettingsTip() {
-            viewModelScope.launch { settingsRepository.dismissSettingsTip() }
-        }
-
         fun markOnboardingSeen() {
             viewModelScope.launch { settingsRepository.markOnboardingSeen() }
         }
@@ -442,6 +438,7 @@ class EarnItViewModel
         fun clearAll(onComplete: () -> Unit = {}) {
             viewModelScope.launch {
                 repository.clearAll()
+                settingsRepository.resetForWipeEverything()
                 onComplete()
             }
         }

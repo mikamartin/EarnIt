@@ -108,14 +108,6 @@ fun SettingsScreen(
                 .padding(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        if (!settings.settingsTipDismissed) {
-            DismissibleTipBanner(
-                text = Strings.SETTINGS_TIP,
-                onDismiss = { viewModel.dismissSettingsTip() },
-                dismissContentDescription = Strings.SETTINGS_TIP_DISMISS_DESC,
-            )
-        }
-
         SettingsAboutSection(navController)
 
         SettingsReplayTutorialRow(viewModel)

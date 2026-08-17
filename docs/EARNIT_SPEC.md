@@ -251,12 +251,14 @@ Settings are persisted via DataStore Preferences.
 | Nickname | String | `"Babe"` | Displayed in the home screen greeting. Clearing the field stores `""` — greeting shows "Earn It!" with no address. |
 | Use Random Nickname | Boolean | false | When true, a random fun nickname is chosen each session instead of the saved name |
 | Selected Mascot | MascotId? | `PUGSLY` | Active mascot shown on the home screen; `null` = hidden. Migrated from legacy `show_pugsly` boolean. |
-| Unlocked Mascots | Set\<MascotId\> | `{PUGSLY, TABBY}` | Set of mascots the user has earned. Grows as milestones are hit; never shrinks. |
+| Unlocked Mascots | Set\<MascotId\> | `{PUGSLY, TABBY}` | Set of mascots the user has earned. Grows as milestones are hit; never shrinks except via Clean Up → Wipe Everything. |
 | Show Quote | Boolean | true | Shows or hides the daily quote on the home screen |
 | Tasks Group View | Boolean | false | When true, the Tasks screen shows tasks in collapsible group sections instead of a flat list |
 | Dev Mode Enabled | Boolean | false | Gates developer tools (seed test data on Data & Backup screen, 48H/96H nudge debug buttons); toggled via the secret mascot-tap gesture on the home screen |
-| Onboarding Seen | Boolean | false | Gates the first-launch tutorial (see [§3a](#3a-first-launch-onboarding-tutorial-pugslys-quest-scroll)); reset via Settings → Replay Tutorial |
+| Onboarding Seen | Boolean | false | Gates the first-launch tutorial (see [§3a](#3a-first-launch-onboarding-tutorial-pugslys-quest-scroll)); reset via Settings → Replay Tutorial or Clean Up → Wipe Everything |
 | Cloud Backup Enabled | Boolean | true | Opt-out toggle for Android Auto Backup, on Data & Backup (see [§7](#7-export--import--backup)) |
+
+Clean Up → Wipe Everything resets every setting above to its default value — except Cloud Backup Enabled, which is left untouched since it's a privacy choice, not app data.
 
 ### Mascot Unlock Notifications
 
@@ -270,10 +272,6 @@ When a reward claim triggers a new mascot unlock, a snackbar appears at the bott
 A `!` badge appears on the Settings icon in the bottom nav bar whenever a mascot has been unlocked and the user has not yet opened Settings. The badge clears as soon as the user navigates to any Settings-family screen (Settings, About, Data & Backup, Clean Up).
 
 **Import/restore suppression:** When the user restores data via import (replace or merge), the app silently seeds the unlocked-mascot list from the restored history without firing a snackbar or badge. This prevents spurious "new mascot" notifications for mascots the user already earned before the backup.
-
-### Discoverability Tip
-
-A dismissible banner at the top of the Settings screen ("Tip: personalize your name, quote, and color theme below.") is shown once on first visit and hides permanently once dismissed (`settingsTipDismissed` in DataStore).
 
 ### Colour Schemes
 
@@ -388,7 +386,7 @@ Main App
     ├── Max Rewards          — max count input
     ├── Tasks                — notes required toggle
     ├── Data & Backup        — cloud backup toggle (Android Auto Backup opt-out), export JSON, import JSON (replace or merge)
-    └── Clean Up             — separate cards: clear logs / clear tasks / clear rewards / clear all; each operation shows a snackbar confirmation after completing; "Clear Logs" deletes both completion logs and all history entries
+    └── Clean Up             — separate cards: clear logs / clear tasks / clear rewards / clear all; each operation shows a snackbar confirmation after completing; "Clear Logs" deletes both completion logs and all history entries; "Wipe Everything" also resets every DataStore setting (theme, nickname, mascots, dev mode, onboarding, etc.) to default, preserving only the cloud backup opt-out
 
 Widget (Glance)
 ├── Progress display         — custom widget label + balance/cost bar

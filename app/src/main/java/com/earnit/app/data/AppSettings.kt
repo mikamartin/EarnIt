@@ -14,7 +14,6 @@ data class AppSettings(
     val tasksGroupView: Boolean = false,
     val devModeEnabled: Boolean = false,
     val widgetNudgeDismissed: Boolean = false,
-    val settingsTipDismissed: Boolean = false,
     val nudgeStage: Int = 0,
     val nudgeAnchorTimestamp: Long = 0L,
     val onboardingSeen: Boolean = false,
