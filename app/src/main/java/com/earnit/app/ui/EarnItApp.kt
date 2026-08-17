@@ -147,6 +147,22 @@ fun EarnItApp(
             }
         }
 
+        // No cold-start navigation needed here: Home is already the start destination, and it
+        // hosts the welcome beat itself (see HomeScreen) once settings have actually loaded —
+        // avoids the abrupt "launch straight past Home into the tutorial" jump this used to do.
+        // Replaying later (from Settings, or after backing out mid-flow) goes through this
+        // explicit event rather than watching settings for a change, since onboardingSeen might
+        // already be false (e.g. backed out without finishing) and a value-diffing watch
+        // wouldn't fire again in that case.
+        LaunchedEffect(Unit) {
+            viewModel.requestOnboarding.collect {
+                navController.navigate(Screen.Home.route) {
+                    popUpTo(Screen.Home.route) { inclusive = false }
+                    launchSingleTop = true
+                }
+            }
+        }
+
         LaunchedEffect(Unit) {
             viewModel.triggerInAppReview.collect {
                 val activity = context as? Activity ?: return@collect

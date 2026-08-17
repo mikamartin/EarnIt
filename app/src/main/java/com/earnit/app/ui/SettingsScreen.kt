@@ -118,6 +118,8 @@ fun SettingsScreen(
 
         SettingsAboutSection(navController)
 
+        SettingsReplayTutorialRow(viewModel)
+
         SettingsAppearanceSection(
             viewModel = viewModel,
             settings = settings,
@@ -170,6 +172,32 @@ private fun SettingsAboutSection(navController: NavHostController) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Icon(
+                Icons.Default.ChevronRight,
+                null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsReplayTutorialRow(viewModel: EarnItViewModel) {
+    SettingsCard {
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable { viewModel.replayOnboarding() },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(Strings.SETTINGS_REPLAY_TUTORIAL_LABEL, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    Strings.SETTINGS_REPLAY_TUTORIAL_SUBTITLE,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Icon(

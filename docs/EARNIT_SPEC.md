@@ -152,6 +152,20 @@ A dismissible banner appears on the Reward Detail screen the first time a reward
 
 ---
 
+## 3a. First-Launch Onboarding Tutorial ("Pugsly's Quest Scroll")
+
+Triggered automatically on first launch (gated by `onboardingSeen` in DataStore) or replayed anytime via **Settings → Replay Tutorial**. Walks the user through creating a real reward and linking a real task — nothing is a mockup; what's built during the tutorial is left behind as the user's actual first reward.
+
+**Flow** (`OnboardingStep`, `com.earnit.app.ui.onboarding`): Intro (bubble on Home, three tap-through lines introducing Pugsly) → name the reward (spotlight on the name field; four starter-idea chips are offered while the field is still empty) → price it (spotlight on the cost field) → link a task (spotlight on "Add task"; once a task is linked, the spotlight shifts to the required/repeatable icons on that task row instead) → hands off to the real Save button (no overlay-owned save action — one source of truth for "the reward is actually saved") → Outro (mentions Settings personalization, wishes the user luck). Every step shares one presentation: a Pugsly speech bubble (`SpeechBubble.kt`) over a dimming scrim with a cutout around the real field being taught (`SpotlightScrim.kt`).
+
+**Task-creation detour:** when the reward has no existing tasks yet (the normal first-run case), "Add task" → "Create New" navigates to the real Task Edit screen. A separate two-beat coaching bubble continues there — name the task, then set its points (or flip on auto-points) — each with its own scrim cutout. It doesn't claim the required/repeatable toggle exists on this screen, since that toggle only lives on the Reward Edit task row once the user returns.
+
+**Save-blocked state:** if the reward name collides with an existing one (e.g. replaying the tutorial and reusing a starter-idea chip a prior run already saved), the final bubble explains the conflict instead of pointing at a Save button that won't respond.
+
+**Persistence:** `onboardingSeen: Boolean` (DataStore, via `SettingsRepository`), defaults `false`. `markOnboardingSeen()` sets it; `replayOnboarding()` (Settings row) resets it and restarts the flow from Intro.
+
+---
+
 ## 4. History
 
 When a reward is claimed, a `HistoryEntryEntity` is created:
@@ -241,6 +255,7 @@ Settings are persisted via DataStore Preferences.
 | Show Quote | Boolean | true | Shows or hides the daily quote on the home screen |
 | Tasks Group View | Boolean | false | When true, the Tasks screen shows tasks in collapsible group sections instead of a flat list |
 | Dev Mode Enabled | Boolean | false | Gates developer tools (seed test data on Data & Backup screen, 48H/96H nudge debug buttons); toggled via the secret mascot-tap gesture on the home screen |
+| Onboarding Seen | Boolean | false | Gates the first-launch tutorial (see [§3a](#3a-first-launch-onboarding-tutorial-pugslys-quest-scroll)); reset via Settings → Replay Tutorial |
 
 ### Mascot Unlock Notifications
 
@@ -347,7 +362,7 @@ A background check re-engages users who have stopped logging tasks, via a period
 
 See [TESTING.md](TESTING.md) for the full picture — current coverage, known gaps, and what to write next.
 
-**Summary:** 192 unit tests across 26 test files. 116 instrumented tests across 33 files (requires device/emulator) — including 82 Compose UI tests.
+**Summary:** 203 unit tests across 29 test files. 119 instrumented tests across 41 files (requires device/emulator) — including 85 Compose UI tests.
 
 ---
 

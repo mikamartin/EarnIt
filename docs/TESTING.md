@@ -24,9 +24,9 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ```
                  [ Manual — 4 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
-            [ UI — 80 tests ]           ComposeTestRule + Hilt, real DataStore
+            [ UI — 85 tests ]           ComposeTestRule + Hilt, real DataStore
        [ Integration — 34 tests ]       Real in-memory Room, no mocks
-     [ Unit — 192 tests ]               JVM, MockK DAOs, fast
+     [ Unit — 205 tests ]               JVM, MockK DAOs, fast
 ```
 
 **Run unit tests** (JVM, no device needed)
@@ -43,7 +43,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ---
 
-## Unit Tests — `app/src/test/` (189 tests)
+## Unit Tests — `app/src/test/` (205 tests)
 
 | File | What it covers |
 |---|---|
@@ -73,10 +73,11 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `PugslyGestureTest` (10) | `PugslyGesture.nextState`/`isComplete` — the tap-timing state machine behind the secret mascot gesture: group-gap boundary (exact pass, one ms over resets), pause-window boundaries (one ms short/over resets, exact min/max accepted), full 7-tap success path, and mid-pattern resets (extra tap before the pause, a slow tap mid-second-burst) |
 | `DragReorderTest` (9) | `DragReorder.targetIndex`/`reordered` — the hover-target math and list-move step shared by Home's reward-list and Tasks' task-list long-press-drag reorder gestures: no target while still over the dragged item's own slot, correct target over another slot, dragged item excluded even if the center falls back inside its own bounds, leading/trailing edge boundaries (exclusive), moving an item down/up shifts the in-between items correctly, and a multi-step sequence (drag down twice, up once) ends at the correct final order |
 | `FieldValidationTest` (14) | `acceptWithinLimit`/`digitsOnly`/`nicknameFieldEdit`/`taskGroupFieldEdit`/`TaskEditState.withIncludedSetTo` — the character-cap, digit-only, cap-then-conditionally-reset-a-sibling-toggle, and task-link uncheck-reset transforms shared by every field that caps length, filters to digits, or resets other state on edit: under/at/over the character-cap boundary, a same-length replacement at the cap, digit-filtering of mixed/all-digit/no-digit input, the Settings nickname field disabling "random nickname" only on an accepted (non-overflow) edit, the Task group field clearing an existing-group selection only when the typed text is non-blank, and uncheck resetting both mandatory/repeatable flags regardless of prior state vs. checking leaving them untouched |
+| `OnboardingStepTest` (11) | `OnboardingLogic`/`OnboardingStep` — pure state-machine logic behind the onboarding tutorial: per-step `canAdvance` gating (name non-blank, cost positive, ≥1 task linked; Intro/AwaitingSave/Outro always advance), `next`/`previous` step ordering, Outro as a terminal state for both directions, `next`/`previous` inverse for every non-terminal step, `fromIndex` round-trips every step's index |
 
 ---
 
-## Instrumented Tests — `app/src/androidTest/` (116 tests, requires device/emulator)
+## Instrumented Tests — `app/src/androidTest/` (120 tests, requires device/emulator)
 
 **State isolation:** Every `@HiltAndroidTest` class using `createAndroidComposeRule<MainActivity>()` calls `resetAppState()` (in `TestStateReset.kt`) as the first line of its `@Before`, immediately after `hiltRule.inject()` and before any test-specific overrides (e.g. `settingsRepository.updateMaxRewardCount(...)`). This gives each test a clean database and default settings to start from, independent of what ran before it in the same instrumentation process. `RoomIntegrationBase`-based repository tests don't need this — each already gets its own fresh in-memory database per test.
 
@@ -123,6 +124,7 @@ check`) fails the build if any class is missing its required layer tag or has no
 | `TaskEditScreenUiTest` (11) | UI | Delete confirmation removes the task and returns to the Tasks list; icon picker selection updates the icon button and dismisses the dialog; group picker — selecting an existing group updates the header label, typing a new group name clears that selection, clearing the new-group text reverts to the optional label, and the selected group row carries `Role.RadioButton` + selected semantics for TalkBack; auto-points sliders drive the computed total (checked against `PointFormulaTest`'s known formula output); manual points field strips non-digit input; reward-link checkbox includes/excludes the task and enables/disables the mandatory-star and repeatable-refresh toggles, which reset together when unchecked; editing an existing task's name/icon/group/points persists after Save; reopening a task already linked to a reward pre-populates the reward-link checkbox and mandatory state from its existing link; adding a task from an existing (already-saved) reward's own Detail screen shows the "used in" line instead of the checkbox list and pops back to Reward Detail with the task linked; screen Cancel pops back without saving; delete-dialog Cancel keeps the task |
 | `SettingsScreenUiTest` (12) | UI | Nickname typed in Settings shows in the home greeting ("Earn It, Name!"); clearing it shows "Earn It!" with no address; enabling random nickname overrides the typed name on the greeting; Show Quote toggle hides/shows the daily quote section on Home; Max Reward Count defaults to 5 on a fresh install; editing Max Reward Count through the Settings slider (not the repository directly) still triggers the FAB's max-limit tooltip; mascot picker's default unlocked set is exactly Pugsly and Tabby, with the next-locked mascot's unlock hint shown and further-locked mascots showing neither name nor hint; selecting an unlocked mascot persists after `activityRule.scenario.recreate()`; mascot picker's backdrop/back-press dismiss (its only dismiss path — no explicit Cancel button) leaves the selection unchanged; About/Data & Backup/Clean Up rows navigate to their respective screens |
 | `RewardEditScreenUiTest` (13) | UI | Delete confirmation removes the reward and returns to the Prizes list; icon picker selection updates the icon button and dismisses the dialog; cost field strips non-digit input; an included task row's mandatory-star and repeatable-refresh toggles flip their content description, and unchecking the row removes the task with mandatory/repeatable reset together; editing an existing reward's name/cost/description/icon persists after Save; reopening a reward already linked to a mandatory task pre-populates that task's mandatory icon state; two tasks added via the dialog's checkbox list in one session toggle/remove independently of each other; selecting an existing task through the dialog and setting its mandatory flag inline carries that flag through on confirm; the Browse Library button navigates to Task Library; adding two new tasks in a row via "Create your own" on an *unsaved* reward keeps both included across the round-trips; screen Cancel pops back without saving; delete-dialog Cancel keeps the reward; icon-picker Cancel keeps the previous icon |
+| `OnboardingFlowUiTest` (3) | UI | First-launch onboarding tutorial end-to-end: triggers on first launch, each spotlight step's real field is reachable through the cutout, the starter chip fills the real reward-name field, the task-creation detour's two-beat coaching bubble (name, then points) and the post-link required/repeatable-icon bubble both appear at the right moment, completing the flow persists the seen flag and leaves a real reward + task on Home, and Settings → Replay Tutorial re-triggers it; a duplicate reward name (e.g. replaying and reusing a starter chip a prior run already saved) blocks Save with an explanatory message instead of a silently-disabled button |
 | `CleanUpScreenUiTest` (4) | UI | Each of the four destructive-action dialogs (Clear Logs / Clear Tasks / Clear Rewards / Wipe Everything) — Cancel dismisses the dialog and clears nothing, confirmed directly against the repository rather than just the UI |
 | `TaskLibraryScreenUiTest` (1) | UI | The skipped-tasks dialog's only dismiss path (backdrop/back-press — no explicit Cancel button, only "OK" which does the same navigate-back) still applies the already-completed import correctly |
 | `SharedDialogsCancelUiTest` (4) | UI | Cancel path for each dialog shared across screens: `LogTaskDialog` (no log recorded, selected task row carries `Role.RadioButton` + selected semantics before the cancel), `ClaimDialog` (reward stays active, not archived), `AddTaskToRewardDialog` (task not included), `LogForRewardDialog` (no log recorded) — none had a dedicated cancel-path test before, only confirm-path coverage |
@@ -212,8 +214,8 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
-| Unit (189 tests) | Every build/push | `./gradlew test` |
-| Integration + UI, instrumented (116 tests) | Every push/PR via CI (two parallel API 36 emulator jobs, Workflow 2 — sharded by layer); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
+| Unit (205 tests) | Every build/push | `./gradlew test` |
+| Integration + UI, instrumented (120 tests) | Every push/PR via CI (two parallel API 36 emulator jobs, Workflow 2 — sharded by layer); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (4) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 
 See [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) for the journeys that are deliberately never automated (not just deferred) — each crosses a system-process boundary (system file picker, Play Core API, widget activity chain, background `WorkManager` execution) that instrumented UI tests cannot drive reliably.

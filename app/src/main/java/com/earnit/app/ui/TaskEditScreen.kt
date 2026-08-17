@@ -73,9 +73,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
@@ -90,6 +94,11 @@ import androidx.navigation.NavHostController
 import com.earnit.app.data.EarnItUiState
 import com.earnit.app.data.RewardProgress
 import com.earnit.app.data.TaskEntity
+import com.earnit.app.ui.onboarding.OnboardingField
+import com.earnit.app.ui.onboarding.OnboardingSpeechBubble
+import com.earnit.app.ui.onboarding.OnboardingStep
+import com.earnit.app.ui.onboarding.SpotlightScrim
+import com.earnit.app.ui.onboarding.captureOnboardingAnchor
 import com.earnit.app.viewmodel.EarnItViewModel
 import kotlinx.coroutines.launch
 
@@ -104,6 +113,14 @@ fun TaskEditScreen(
     snackbarHostState: SnackbarHostState,
 ) {
     val existing = uiState.tasks.find { it.id == taskId }
+    val settings by viewModel.settings.collectAsState()
+    var formBoxOrigin by remember { mutableStateOf(Offset.Zero) }
+    var nameFieldAnchor by remember { mutableStateOf<Rect?>(null) }
+    var pointsFieldAnchor by remember { mutableStateOf<Rect?>(null) }
+    // Local two-beat sub-flow for the onboarding coaching bubble: name it, then set its points.
+    // Separate from the main OnboardingStep machine since this screen is a detour off it, not
+    // one of its own steps.
+    var taskCoachedOnPoints by rememberSaveable { mutableStateOf(false) }
     val view = LocalView.current
     var name by rememberSaveable { mutableStateOf(existing?.name.orEmpty()) }
     var icon by rememberSaveable { mutableStateOf(existing?.icon.orEmpty()) }
@@ -128,6 +145,15 @@ fun TaskEditScreen(
             ?.destination
             ?.route
             ?.startsWith("reward_edit") == true
+    // Reached via onboarding's "Create New" detour off RewardEditScreen. During onboarding the
+    // reward itself hasn't been saved yet, so fromRewardId is still 0 — fromRewardEditScreen is
+    // what actually distinguishes this detour, regardless of save state. No mandatory/repeatable
+    // toggle exists on this screen (that only lives on RewardEditScreen's task row), so this is
+    // a continuity-only coaching bubble, not a spotlight.
+    val showOnboardingCoach =
+        fromRewardEditScreen &&
+            !settings.onboardingSeen &&
+            (viewModel.onboardingStep as? OnboardingStep.Spotlight)?.field == OnboardingField.TASKS
     val nameConflict =
         !pendingSaveNav &&
             name.isNotBlank() &&
@@ -196,58 +222,90 @@ fun TaskEditScreen(
         )
 
         // ── Scrollable form ───────────────────────────────────────────────────
-        Column(
+        // Wrapped in a Box (not just the Column) so the onboarding detour can dim this section
+        // with the same scrim treatment used everywhere else in the tutorial, without covering
+        // the real Cancel/Save bar below it — the coaching bubble sits in its own space between
+        // this section and the bottom bar instead of overlaying either. The name field itself
+        // gets a real cutout (like every other spotlighted field) rather than being dimmed along
+        // with the rest of the form.
+        Box(
             modifier =
                 Modifier
                     .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .onGloballyPositioned { formBoxOrigin = it.positionInWindow() },
         ) {
-            Spacer(Modifier.height(0.dp))
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Spacer(Modifier.height(0.dp))
 
-            TaskIconAndNameField(
-                icon = icon,
-                onIconClick = { showIconPicker = true },
-                name = name,
-                onNameChange = { name = it },
-                nameConflict = nameConflict,
+                TaskIconAndNameField(
+                    icon = icon,
+                    onIconClick = { showIconPicker = true },
+                    name = name,
+                    onNameChange = { name = it },
+                    nameConflict = nameConflict,
+                    modifier = Modifier.captureOnboardingAnchor { nameFieldAnchor = it },
+                )
+
+                TaskGroupPicker(
+                    tasks = uiState.tasks,
+                    group = group,
+                    onGroupChange = { group = it },
+                    newGroupText = newGroupText,
+                    onNewGroupTextChange = { newGroupText = it },
+                    isGroupExpanded = isGroupExpanded,
+                    onToggleExpanded = { isGroupExpanded = !isGroupExpanded },
+                )
+
+                TaskPointsSection(
+                    useAuto = useAuto,
+                    onUseAutoChange = { useAuto = it },
+                    time = time,
+                    onTimeChange = { time = it },
+                    difficulty = difficulty,
+                    onDifficultyChange = { difficulty = it },
+                    preparation = preparation,
+                    onPreparationChange = { preparation = it },
+                    autoPointsTotal = viewModel.computeAutoPoints(time, difficulty, preparation),
+                    points = points,
+                    onPointsChange = { points = it },
+                    onPointsImeDone = { focusManager.clearFocus() },
+                    modifier = Modifier.captureOnboardingAnchor { pointsFieldAnchor = it },
+                )
+
+                TaskRewardLinksSection(
+                    fromRewardId = fromRewardId,
+                    fromRewardEditScreen = fromRewardEditScreen,
+                    fromRewardName = fromRewardName,
+                    rewardProgressList = uiState.rewardProgressList,
+                    rewardLinkState = rewardLinkState,
+                )
+
+                Spacer(Modifier.height(4.dp))
+            }
+
+            if (showOnboardingCoach) {
+                val coachTarget = if (taskCoachedOnPoints) pointsFieldAnchor else nameFieldAnchor
+                SpotlightScrim(
+                    targetRect = coachTarget?.translate(-formBoxOrigin),
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+
+        if (showOnboardingCoach) {
+            val onCoachContinue: (() -> Unit)? = if (taskCoachedOnPoints) null else ({ taskCoachedOnPoints = true })
+            OnboardingSpeechBubble(
+                text = if (taskCoachedOnPoints) Strings.ONBOARDING_TASK_POINTS_LINE else Strings.ONBOARDING_TASK_NAME_LINE,
+                continueEnabled = name.isNotBlank(),
+                onContinue = onCoachContinue,
             )
-
-            TaskGroupPicker(
-                tasks = uiState.tasks,
-                group = group,
-                onGroupChange = { group = it },
-                newGroupText = newGroupText,
-                onNewGroupTextChange = { newGroupText = it },
-                isGroupExpanded = isGroupExpanded,
-                onToggleExpanded = { isGroupExpanded = !isGroupExpanded },
-            )
-
-            TaskPointsSection(
-                useAuto = useAuto,
-                onUseAutoChange = { useAuto = it },
-                time = time,
-                onTimeChange = { time = it },
-                difficulty = difficulty,
-                onDifficultyChange = { difficulty = it },
-                preparation = preparation,
-                onPreparationChange = { preparation = it },
-                autoPointsTotal = viewModel.computeAutoPoints(time, difficulty, preparation),
-                points = points,
-                onPointsChange = { points = it },
-                onPointsImeDone = { focusManager.clearFocus() },
-            )
-
-            TaskRewardLinksSection(
-                fromRewardId = fromRewardId,
-                fromRewardEditScreen = fromRewardEditScreen,
-                fromRewardName = fromRewardName,
-                rewardProgressList = uiState.rewardProgressList,
-                rewardLinkState = rewardLinkState,
-            )
-
-            Spacer(Modifier.height(4.dp))
         }
 
         val canSave = name.isNotBlank() && !nameConflict
@@ -388,47 +446,54 @@ private fun TaskIconAndNameField(
     name: String,
     onNameChange: (String) -> Unit,
     nameConflict: Boolean,
+    modifier: Modifier = Modifier,
 ) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        OutlinedButton(
-            onClick = onIconClick,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.size(56.dp),
-            contentPadding = PaddingValues(0.dp),
+    // Single root Column (rather than emitting the row and the conditional error text as direct
+    // top-level siblings) so a caller can attach one modifier — e.g. an onboarding anchor
+    // capture — without them stacking on top of each other under a plain Box instead of
+    // vertically.
+    Column(modifier = modifier) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                if (icon.isNotEmpty()) icon else "✅",
-                style = MaterialTheme.typography.titleLarge,
+            OutlinedButton(
+                onClick = onIconClick,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.size(56.dp),
+                contentPadding = PaddingValues(0.dp),
+            ) {
+                Text(
+                    if (icon.isNotEmpty()) icon else "✅",
+                    style = MaterialTheme.typography.titleLarge,
+                )
+            }
+            OutlinedTextField(
+                value = name,
+                onValueChange = { onNameChange(acceptWithinLimit(name, it, TASK_NAME_MAX_CHARS)) },
+                label = { Text(Strings.TASK_NAME_LABEL) },
+                placeholder = { Text(Strings.TASK_NAME_PLACEHOLDER) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                isError = nameConflict,
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                    ),
             )
         }
-        OutlinedTextField(
-            value = name,
-            onValueChange = { onNameChange(acceptWithinLimit(name, it, TASK_NAME_MAX_CHARS)) },
-            label = { Text(Strings.TASK_NAME_LABEL) },
-            placeholder = { Text(Strings.TASK_NAME_PLACEHOLDER) },
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true,
-            isError = nameConflict,
-            colors =
-                OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                ),
-        )
-    }
-    if (nameConflict) {
-        Text(
-            Strings.taskDuplicateError(name.trim()),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.padding(start = 4.dp, top = 2.dp),
-        )
+        if (nameConflict) {
+            Text(
+                Strings.taskDuplicateError(name.trim()),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 4.dp, top = 2.dp),
+            )
+        }
     }
 }
 
@@ -567,82 +632,88 @@ private fun TaskPointsSection(
     points: String,
     onPointsChange: (String) -> Unit,
     onPointsImeDone: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(Strings.TASK_AUTO_POINTS_TOGGLE, style = MaterialTheme.typography.bodyMedium)
-        Switch(
-            checked = useAuto,
-            onCheckedChange = onUseAutoChange,
-            modifier = Modifier.semantics { contentDescription = Strings.TASK_AUTO_POINTS_DESC },
-        )
-    }
-
-    if (useAuto) {
-        EarnItSectionCard {
-            Column(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                SliderRow(Strings.TASK_SLIDER_TIME, time, onTimeChange)
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(
-                            1.dp,
-                        ).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                )
-                SliderRow(Strings.TASK_SLIDER_DIFFICULTY, difficulty, onDifficultyChange)
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(
-                            1.dp,
-                        ).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                )
-                SliderRow(Strings.TASK_SLIDER_PREPARATION, preparation, onPreparationChange)
-            }
-        }
+    // Single root Column (rather than emitting these as direct top-level siblings) so a caller
+    // can attach one modifier — e.g. an onboarding anchor capture — without the multiple
+    // top-level children stacking on top of each other under a plain Box instead of vertically.
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                Strings.TASK_POINTS_TOTAL,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                "$autoPointsTotal",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.primary,
+            Text(Strings.TASK_AUTO_POINTS_TOGGLE, style = MaterialTheme.typography.bodyMedium)
+            Switch(
+                checked = useAuto,
+                onCheckedChange = onUseAutoChange,
+                modifier = Modifier.semantics { contentDescription = Strings.TASK_AUTO_POINTS_DESC },
             )
         }
-    } else {
-        OutlinedTextField(
-            value = points,
-            onValueChange = { onPointsChange(it.digitsOnly()) },
-            label = { Text(Strings.TASK_POINTS_LABEL) },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            keyboardOptions =
-                KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Done,
-                ),
-            keyboardActions = KeyboardActions(onDone = { onPointsImeDone() }),
-            colors =
-                OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                ),
-        )
+
+        if (useAuto) {
+            EarnItSectionCard {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    SliderRow(Strings.TASK_SLIDER_TIME, time, onTimeChange)
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(
+                                1.dp,
+                            ).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                    )
+                    SliderRow(Strings.TASK_SLIDER_DIFFICULTY, difficulty, onDifficultyChange)
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(
+                                1.dp,
+                            ).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                    )
+                    SliderRow(Strings.TASK_SLIDER_PREPARATION, preparation, onPreparationChange)
+                }
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    Strings.TASK_POINTS_TOTAL,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    "$autoPointsTotal",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        } else {
+            OutlinedTextField(
+                value = points,
+                onValueChange = { onPointsChange(it.digitsOnly()) },
+                label = { Text(Strings.TASK_POINTS_LABEL) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done,
+                    ),
+                keyboardActions = KeyboardActions(onDone = { onPointsImeDone() }),
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                    ),
+            )
+        }
     }
 }
 

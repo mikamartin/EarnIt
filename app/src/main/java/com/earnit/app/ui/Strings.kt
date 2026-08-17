@@ -319,6 +319,43 @@ object Strings {
 
     fun widgetRewardName(name: String) = "Reward: $name"
 
+    // Onboarding tutorial ("Pugsly's Quest Scroll")
+    const val ONBOARDING_INTRO_LINE_1 = "Hi, I'm Pugsly. Let's set up your first reward, together."
+    const val ONBOARDING_INTRO_LINE_2 =
+        "Pick the reward you want but struggle to let yourself go for, then earn your own permission by " +
+            "doing tasks you'd normally put off. Double win."
+    const val ONBOARDING_INTRO_LINE_3 = "You've got this. Let's go."
+    const val ONBOARDING_NAME_LINE =
+        "First, name what you want. Not a chore, not a 'should.' Just a real want. Type it into the " +
+            "highlighted field."
+    const val ONBOARDING_COST_LINE =
+        "Now set how many points it costs. Price it fair: too cheap and it won't feel earned, too steep and " +
+            "you'll give up. Enter a number in the highlighted field."
+    const val ONBOARDING_TASK_LINE =
+        "Last step: link a task you'd normally avoid. Tap \"Add task\" below to get started."
+    const val ONBOARDING_TASK_LINKED_LINE =
+        "Nice, it's linked. Use ⭐ to mark it required, and the repeat icon if you'll do it more than once. " +
+            "Then hit Continue."
+    const val ONBOARDING_TASK_NAME_LINE = "Give this task a name."
+    const val ONBOARDING_TASK_POINTS_LINE =
+        "Now set its points, or flip on \"Assign points automatically\" to let the app estimate them. " +
+            "Then tap Save. You'll choose whether it's required back on the reward screen."
+    const val ONBOARDING_READY_TO_SAVE = "Nice work. Tap Save below to lock it in."
+    const val ONBOARDING_SAVE_BLOCKED_LINE = "Looks like that name's taken. Scroll up, tweak it, then tap Save."
+    const val ONBOARDING_OUTRO_LINE =
+        "You're set. Whenever you like, Settings has more ways to make EarnIt feel like yours: themes, " +
+            "mascots, quotes, even your name.\n\nGood luck."
+    const val ONBOARDING_CONTINUE = "Continue"
+    const val ONBOARDING_SKIP = "Skip tutorial"
+    const val ONBOARDING_BACK_DESC = "Previous step"
+    const val ONBOARDING_STARTER_CHIPS_LABEL = "Stuck? Try one of these:"
+    const val ONBOARDING_STARTER_CHIP_1 = "That 7-book series"
+    const val ONBOARDING_STARTER_CHIP_2 = "The trip you keep postponing"
+    const val ONBOARDING_STARTER_CHIP_3 = "Phone upgrade"
+    const val ONBOARDING_STARTER_CHIP_4 = "Something dumb-but-delightful"
+    const val SETTINGS_REPLAY_TUTORIAL_LABEL = "Replay tutorial"
+    const val SETTINGS_REPLAY_TUTORIAL_SUBTITLE = "See Pugsly's guide to earning your first reward again"
+
     // Widget (Glance) — EarnItWidget.kt
     // Keep short and single-line. The widget box has a fixed, non-scrolling height;
     // on narrow (e.g. 3-column) layouts a wrapped second line overflows the box and
