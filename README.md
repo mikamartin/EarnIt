@@ -1,11 +1,11 @@
 # EarnIt
 
-A local-only productivity app for Android. 
+A productivity app for Android that keeps your data on your phone. 
 
 [![CI](https://github.com/mikamartin/EarnIt/actions/workflows/ci.yml/badge.svg)](https://github.com/mikamartin/EarnIt/actions/workflows/ci.yml)
 [![Play Store](https://img.shields.io/badge/Play%20Store-EarnIt-brightgreen)](https://play.google.com/store/apps/details?id=com.secondmonday.earnit)
-![Unit tests](https://img.shields.io/badge/unit%20tests-190%2B-blue)
-![Instrumented tests](https://img.shields.io/badge/instrumented%20tests-115%2B-blue)
+![Unit tests](https://img.shields.io/badge/unit%20tests-206%2B-blue)
+![Instrumented tests](https://img.shields.io/badge/instrumented%20tests-120%2B-blue)
 
 ---
 
@@ -35,7 +35,8 @@ You've got your wants and a list of tasks you keep putting off. EarnIt connects 
 - **Inactivity nudges**: a gentle notification if you've gone quiet for 48 and again for 96 hours, capped at two per idle streak and reset the moment you log something.
 - **Task organisation**: drag to reorder, or switch to a group view with collapsible sections.
 - **Task Library** with curated templates (Healthy Living, Social, Clean Home) to get started fast.
-- **Export and import** your full data as JSON, or rely on Android's automatic daily Google account backup.
+- **First-launch onboarding tutorial** walks new users through creating their first reward and task.
+- **Export and import** your full data as JSON, or rely on Android's automatic Google account backup — on by default, with an opt-out toggle in Settings.
 - **Themes** Three colour themes (Warm Gold, Ocean Blue, Forest), full light/dark mode, mascots and daily quotes.
 
 ---
@@ -48,7 +49,7 @@ You've got your wants and a list of tasks you keep putting off. EarnIt connects 
 | UI | Jetpack Compose + Material 3 |
 | Architecture | MVVM (ViewModel + StateFlow) |
 | Widget | Jetpack Glance |
-| Storage | Room (SQLite), local only, no cloud sync |
+| Storage | Room (SQLite); nothing leaves the phone except an optional Google account backup, which can be turned off |
 | DI | Hilt |
 | Navigation | Navigation Compose |
 | Settings | DataStore Preferences |
@@ -106,7 +107,7 @@ graph LR
 
 The human product owner drives the project end to end: every feature starts as a decision defined in `EARNIT_SPEC.md` before any code is written, every product, UX, and architectural call is theirs, and every branch is reviewed and approved by them before it merges. The AI works from that spec and direction: drafting first-pass implementations, maintaining documentation, running cleanup passes, and setting up tooling.
 
-Quality is maintained through a documented test strategy: 190+ unit tests and 115+ instrumented tests (including Compose UI tests) plus a manual test plan for flows that cross system boundaries. Structured cleanup passes run after every feature.
+Quality is maintained through a documented test strategy: 206+ unit tests and 120+ instrumented tests (including Compose UI tests) plus a manual test plan for flows that cross system boundaries. Structured cleanup passes run after every feature.
 
 ---
 

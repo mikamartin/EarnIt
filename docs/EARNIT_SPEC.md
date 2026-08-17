@@ -2,7 +2,7 @@
 
 ## Overview
 
-**EarnIt** is a local-only Android app that gamifies productivity. Users earn points by completing tasks and spend them to unlock personal rewards. Each reward tracks its own point balance independently. A mandatory task gatekeeper ensures accountability before any reward can be claimed. Every claimed reward is permanently archived in a History with a full log of the tasks that funded it.
+**EarnIt** is an Android app that gamifies productivity and keeps data on the phone, with an optional opt-out Google account backup (see [Export / Import / Backup](#7-export--import--backup)). Users earn points by completing tasks and spend them to unlock personal rewards. Each reward tracks its own point balance independently. A mandatory task gatekeeper ensures accountability before any reward can be claimed. Every claimed reward is permanently archived in a History with a full log of the tasks that funded it.
 
 ---
 
@@ -14,7 +14,7 @@
 | UI | Jetpack Compose + Material 3 |
 | Theme | 3 colour schemes (Warm Gold, Ocean Blue, Forest) |
 | Widget | Jetpack Glance |
-| Storage | Room (SQLite, schema v1 — launch baseline) — local only, no cloud |
+| Storage | Room (SQLite, schema v1 — launch baseline) — local, with an optional opt-out Google account backup |
 | DI | Hilt |
 | Navigation | Navigation Compose |
 | Settings | DataStore Preferences |
@@ -363,7 +363,7 @@ A background check re-engages users who have stopped logging tasks, via a period
 
 See [TESTING.md](TESTING.md) for the full picture — current coverage, known gaps, and what to write next.
 
-**Summary:** 203 unit tests across 29 test files. 119 instrumented tests across 41 files (requires device/emulator) — including 85 Compose UI tests.
+**Summary:** 206 unit tests across 28 test files. 120 instrumented tests across 32 files (requires device/emulator) — including 85 Compose UI tests.
 
 ---
 
