@@ -129,6 +129,7 @@ class OnboardingAnchors {
     var name by mutableStateOf<Rect?>(null)
     var cost by mutableStateOf<Rect?>(null)
     var tasks by mutableStateOf<Rect?>(null)
+    var taskIcons by mutableStateOf<Rect?>(null)
     var save by mutableStateOf<Rect?>(null)
 }
 
@@ -158,6 +159,7 @@ fun OnboardingOverlay(
     onNameChange: (String) -> Unit,
     cost: String,
     linkedTaskCount: Int,
+    saveBlocked: Boolean = false,
     onIntroFinished: () -> Unit,
     onSpotlightContinue: () -> Unit,
     onOutroFinished: () -> Unit,
@@ -183,7 +185,9 @@ fun OnboardingOverlay(
                 when (step.field) {
                     OnboardingField.NAME -> anchors.name
                     OnboardingField.COST -> anchors.cost
-                    OnboardingField.TASKS -> anchors.tasks
+                    // Once a task is linked, the teaching moment shifts from "tap Add task" to
+                    // the required/repeatable icons on the row that just appeared — spotlight those instead.
+                    OnboardingField.TASKS -> if (linkedTaskCount > 0) anchors.taskIcons ?: anchors.tasks else anchors.tasks
                 }
             is OnboardingStep.AwaitingSave -> anchors.save
             else -> null
@@ -202,9 +206,11 @@ fun OnboardingOverlay(
                 when (step.field) {
                     OnboardingField.NAME -> Strings.ONBOARDING_NAME_LINE
                     OnboardingField.COST -> Strings.ONBOARDING_COST_LINE
-                    OnboardingField.TASKS -> Strings.ONBOARDING_TASK_LINE
+                    OnboardingField.TASKS ->
+                        if (linkedTaskCount > 0) Strings.ONBOARDING_TASK_LINKED_LINE else Strings.ONBOARDING_TASK_LINE
                 }
-            is OnboardingStep.AwaitingSave -> Strings.ONBOARDING_READY_TO_SAVE
+            is OnboardingStep.AwaitingSave ->
+                if (saveBlocked) Strings.ONBOARDING_SAVE_BLOCKED_LINE else Strings.ONBOARDING_READY_TO_SAVE
         }
     // AwaitingSave and Outro have no overlay-owned Continue: AwaitingSave hands off to the real
     // Save button, and Outro's "continue" is the whole flow finishing.
@@ -302,7 +308,7 @@ private fun ColumnScope.OnboardingCoachContent(
             }
         }
     }
-    if (step is OnboardingStep.Spotlight) {
+    if (step is OnboardingStep.Spotlight || step is OnboardingStep.AwaitingSave) {
         OnboardingProgressDots(
             currentIndex = step.index,
             modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 4.dp),

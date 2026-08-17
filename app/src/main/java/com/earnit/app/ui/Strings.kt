@@ -320,19 +320,35 @@ object Strings {
     fun widgetRewardName(name: String) = "Reward: $name"
 
     // Onboarding tutorial ("Pugsly's Quest Scroll")
-    const val ONBOARDING_INTRO_LINE_1 = "So. You want something."
-    const val ONBOARDING_INTRO_LINE_2 = "And some annoying little voice in your head says you haven't earned it yet."
-    const val ONBOARDING_INTRO_LINE_3 = "That voice isn't wrong. It's just... unhelpful. Let's fix that."
+    const val ONBOARDING_INTRO_LINE_1 = "Hi, I'm Pugsly. Let's set up your first reward, together."
+    const val ONBOARDING_INTRO_LINE_2 =
+        "Pick the reward you want but struggle to let yourself go for, then earn your own permission by " +
+            "doing tasks you'd normally put off. Double win."
+    const val ONBOARDING_INTRO_LINE_3 = "You've got this. Let's go."
     const val ONBOARDING_NAME_LINE =
-        "Not a chore. Not a 'should.' A real want, the kind you'd normally talk yourself out of. What's yours?"
+        "First, name what you want. Not a chore, not a 'should.' Just a real want. Type it into the " +
+            "highlighted field."
     const val ONBOARDING_COST_LINE =
-        "Price it too cheap and you're not earning it, you're bribing yourself. Too brutal and you'll just quit. Pick fair."
-    const val ONBOARDING_TASK_LINE = "Pick a task you actually dodge. Link as many as you want, however you like."
-    const val ONBOARDING_READY_TO_SAVE = "That'll do it. Tap Save below to lock it in."
-    const val ONBOARDING_OUTRO_LINE = "You're allowed to want this. Now go earn it, guilt-free."
+        "Now set how many points it costs. Price it fair: too cheap and it won't feel earned, too steep and " +
+            "you'll give up. Enter a number in the highlighted field."
+    const val ONBOARDING_TASK_LINE =
+        "Last step: link a task you'd normally avoid. Tap \"Add task\" below to get started."
+    const val ONBOARDING_TASK_LINKED_LINE =
+        "Nice, it's linked. Use ⭐ to mark it required, and the repeat icon if you'll do it more than once. " +
+            "Then hit Continue."
+    const val ONBOARDING_TASK_NAME_LINE = "Give this task a name."
+    const val ONBOARDING_TASK_POINTS_LINE =
+        "Now set its points, or flip on \"Assign points automatically\" to let the app estimate them. " +
+            "Then tap Save. You'll choose whether it's required back on the reward screen."
+    const val ONBOARDING_READY_TO_SAVE = "Nice work. Tap Save below to lock it in."
+    const val ONBOARDING_SAVE_BLOCKED_LINE = "Looks like that name's taken. Scroll up, tweak it, then tap Save."
+    const val ONBOARDING_OUTRO_LINE =
+        "You're set. Whenever you like, Settings has more ways to make EarnIt feel like yours: themes, " +
+            "mascots, quotes, even your name.\n\nGood luck."
     const val ONBOARDING_CONTINUE = "Continue"
     const val ONBOARDING_SKIP = "Skip tutorial"
     const val ONBOARDING_BACK_DESC = "Previous step"
+    const val ONBOARDING_STARTER_CHIPS_LABEL = "Stuck? Try one of these:"
     const val ONBOARDING_STARTER_CHIP_1 = "That 7-book series"
     const val ONBOARDING_STARTER_CHIP_2 = "The trip you keep postponing"
     const val ONBOARDING_STARTER_CHIP_3 = "Phone upgrade"

@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -267,15 +267,14 @@ fun RewardEditScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item {
-                    Box(modifier = Modifier.captureOnboardingAnchor { onboardingAnchors.name = it }) {
-                        RewardIconAndNameField(
-                            icon = icon,
-                            onIconClick = { showIconPicker = true },
-                            name = name,
-                            onNameChange = { name = it },
-                            nameConflict = nameConflict,
-                        )
-                    }
+                    RewardIconAndNameField(
+                        icon = icon,
+                        onIconClick = { showIconPicker = true },
+                        name = name,
+                        onNameChange = { name = it },
+                        nameConflict = nameConflict,
+                        modifier = Modifier.captureOnboardingAnchor { onboardingAnchors.name = it },
+                    )
                 }
                 item {
                     Box(modifier = Modifier.captureOnboardingAnchor { onboardingAnchors.cost = it }) {
@@ -294,6 +293,7 @@ fun RewardEditScreen(
                     canAddTask = name.isNotBlank(),
                     onAddTaskClick = { showAddTaskDialog = true },
                     onAddTaskButtonPositioned = { onboardingAnchors.tasks = it },
+                    onFirstTaskIconsPositioned = { onboardingAnchors.taskIcons = it },
                 )
             }
 
@@ -328,6 +328,7 @@ fun RewardEditScreen(
                 onNameChange = { name = it },
                 cost = cost,
                 linkedTaskCount = includedTasks.size,
+                saveBlocked = !canSave,
                 onIntroFinished = { viewModel.updateOnboardingStep(OnboardingLogic.next(onboardingStep)) },
                 onSpotlightContinue = { viewModel.updateOnboardingStep(OnboardingLogic.next(onboardingStep)) },
                 onBack = { viewModel.updateOnboardingStep(OnboardingLogic.previous(onboardingStep)) },
@@ -476,46 +477,53 @@ private fun RewardIconAndNameField(
     name: String,
     onNameChange: (String) -> Unit,
     nameConflict: Boolean,
+    modifier: Modifier = Modifier,
 ) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        OutlinedButton(
-            onClick = onIconClick,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.size(56.dp),
-            contentPadding = PaddingValues(0.dp),
+    // Single root Column (rather than emitting the row and the conditional error text as direct
+    // top-level siblings) so a caller can attach one modifier — e.g. an onboarding anchor
+    // capture — without them stacking on top of each other under a plain Box instead of
+    // vertically.
+    Column(modifier = modifier) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                if (icon.isNotEmpty()) icon else "🎯",
-                style = MaterialTheme.typography.titleLarge,
+            OutlinedButton(
+                onClick = onIconClick,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.size(56.dp),
+                contentPadding = PaddingValues(0.dp),
+            ) {
+                Text(
+                    if (icon.isNotEmpty()) icon else "🎯",
+                    style = MaterialTheme.typography.titleLarge,
+                )
+            }
+            OutlinedTextField(
+                value = name,
+                onValueChange = { onNameChange(acceptWithinLimit(name, it, REWARD_NAME_MAX_CHARS)) },
+                label = { Text(Strings.REWARD_NAME_LABEL) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                isError = nameConflict,
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                    ),
             )
         }
-        OutlinedTextField(
-            value = name,
-            onValueChange = { onNameChange(acceptWithinLimit(name, it, REWARD_NAME_MAX_CHARS)) },
-            label = { Text(Strings.REWARD_NAME_LABEL) },
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true,
-            isError = nameConflict,
-            colors =
-                OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                ),
-        )
-    }
-    if (nameConflict) {
-        Text(
-            Strings.rewardDuplicateError(name.trim()),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.padding(start = 4.dp, top = 2.dp),
-        )
+        if (nameConflict) {
+            Text(
+                Strings.rewardDuplicateError(name.trim()),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 4.dp, top = 2.dp),
+            )
+        }
     }
 }
 
@@ -574,6 +582,7 @@ private fun LazyListScope.rewardEditTasksSection(
     canAddTask: Boolean,
     onAddTaskClick: () -> Unit,
     onAddTaskButtonPositioned: ((Rect) -> Unit)? = null,
+    onFirstTaskIconsPositioned: ((Rect) -> Unit)? = null,
 ) {
     if (includedTasks.isNotEmpty()) {
         item {
@@ -583,7 +592,7 @@ private fun LazyListScope.rewardEditTasksSection(
                 color = MaterialTheme.colorScheme.secondary,
             )
         }
-        items(includedTasks, key = { it.id }) { task ->
+        itemsIndexed(includedTasks, key = { _, task -> task.id }) { index, task ->
             val state = taskState[task.id] ?: TaskEditState()
             RewardEditTaskRow(
                 task = task,
@@ -593,6 +602,7 @@ private fun LazyListScope.rewardEditTasksSection(
                 },
                 onToggleMandatory = { taskState[task.id] = state.copy(isMandatory = !state.isMandatory) },
                 onToggleRepeatable = { taskState[task.id] = state.copy(isRepeatable = !state.isRepeatable) },
+                iconsPositioned = if (index == 0) onFirstTaskIconsPositioned else null,
             )
         }
     }
@@ -621,6 +631,7 @@ private fun RewardEditTaskRow(
     onUncheck: () -> Unit,
     onToggleMandatory: () -> Unit,
     onToggleRepeatable: () -> Unit,
+    iconsPositioned: ((Rect) -> Unit)? = null,
 ) {
     EarnItSectionCard(shape = RoundedCornerShape(12.dp)) {
         Row(
@@ -639,31 +650,38 @@ private fun RewardEditTaskRow(
                 modifier = Modifier.semantics { contentDescription = Strings.REWARD_INCLUDED_DESC },
             )
             Text(task.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-            IconButton(onClick = onToggleMandatory) {
-                Icon(
-                    if (state.isMandatory) Icons.Default.Star else Icons.Outlined.Star,
-                    contentDescription = if (state.isMandatory) Strings.REWARD_MANDATORY_DESC else Strings.REWARD_OPTIONAL_DESC,
-                    tint =
-                        if (state.isMandatory) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                        },
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-            IconButton(onClick = onToggleRepeatable) {
-                Icon(
-                    Icons.Default.Refresh,
-                    contentDescription = if (state.isRepeatable) Strings.REWARD_REPEATABLE_DESC else Strings.REWARD_NOT_REPEATABLE_DESC,
-                    tint =
-                        if (state.isRepeatable) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                        },
-                    modifier = Modifier.size(22.dp),
-                )
+            Row(
+                modifier =
+                    Modifier.let { m ->
+                        if (iconsPositioned != null) m.captureOnboardingAnchor(iconsPositioned) else m
+                    },
+            ) {
+                IconButton(onClick = onToggleMandatory) {
+                    Icon(
+                        if (state.isMandatory) Icons.Default.Star else Icons.Outlined.Star,
+                        contentDescription = if (state.isMandatory) Strings.REWARD_MANDATORY_DESC else Strings.REWARD_OPTIONAL_DESC,
+                        tint =
+                            if (state.isMandatory) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                            },
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+                IconButton(onClick = onToggleRepeatable) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = if (state.isRepeatable) Strings.REWARD_REPEATABLE_DESC else Strings.REWARD_NOT_REPEATABLE_DESC,
+                        tint =
+                            if (state.isRepeatable) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                            },
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
             }
         }
     }
