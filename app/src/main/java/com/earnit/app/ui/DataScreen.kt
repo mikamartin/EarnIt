@@ -27,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,10 +40,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.earnit.app.data.AppSettings
 import com.earnit.app.nudge.NudgeDecider
 import com.earnit.app.nudge.NudgeScheduler
 import com.earnit.app.viewmodel.EarnItViewModel
@@ -115,6 +119,8 @@ fun DataScreen(
             modifier = Modifier.padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            CloudBackupCard(viewModel = viewModel, settings = settings)
+
             SettingsCard {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -266,6 +272,34 @@ fun DataScreen(
             }
 
             Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun CloudBackupCard(
+    viewModel: EarnItViewModel,
+    settings: AppSettings,
+) {
+    SettingsCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(Strings.DATA_CLOUD_BACKUP_TITLE, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    Strings.DATA_CLOUD_BACKUP_SUBTITLE,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(
+                checked = settings.cloudBackupEnabled,
+                onCheckedChange = { viewModel.updateCloudBackupEnabled(it) },
+                modifier = Modifier.semantics { contentDescription = Strings.DATA_CLOUD_BACKUP_TITLE },
+            )
         }
     }
 }

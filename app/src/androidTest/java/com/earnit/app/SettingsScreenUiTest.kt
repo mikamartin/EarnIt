@@ -212,12 +212,42 @@ class SettingsScreenUiTest {
     }
 
     @Test
+    fun aboutScreen_doesNotClaimDataNeverLeavesThePhone() {
+        composeTestRule.onNodeWithContentDescription("Settings").performClick()
+        composeTestRule.onNodeWithText(Strings.APP_NAME).performClick()
+
+        // Regression guard for the backup/privacy copy fix: Auto Backup can upload to the
+        // user's Google account, so the About screen must not claim data never leaves the phone.
+        assertEquals(
+            0,
+            composeTestRule.onAllNodesWithText("stays right here", substring = true).fetchSemanticsNodes().size,
+        )
+        composeTestRule.onNodeWithText("Google account", substring = true).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
     fun dataRow_navigatesToDataScreen() {
         composeTestRule.onNodeWithContentDescription("Settings").performClick()
         composeTestRule.onNodeWithText(Strings.SETTINGS_DATA_TITLE).performScrollTo().performClick()
 
         composeTestRule.onNodeWithText(Strings.SETTINGS_DATA_TITLE).assertIsDisplayed()
         composeTestRule.onNodeWithText(Strings.DATA_EXPORT_TITLE).assertIsDisplayed()
+    }
+
+    @Test
+    fun cloudBackupToggle_defaultsOn_turnedOff_persistsAfterRecreate() {
+        composeTestRule.onNodeWithContentDescription("Settings").performClick()
+        composeTestRule.onNodeWithText(Strings.SETTINGS_DATA_TITLE).performScrollTo().performClick()
+
+        val initial = runBlocking { settingsRepository.settings.first() }
+        assertEquals(true, initial.cloudBackupEnabled)
+
+        composeTestRule.onNodeWithContentDescription(Strings.DATA_CLOUD_BACKUP_TITLE).performScrollTo().performClick()
+
+        composeTestRule.activityRule.scenario.recreate()
+
+        val saved = runBlocking { settingsRepository.settings.first() }
+        assertEquals(false, saved.cloudBackupEnabled)
     }
 
     @Test

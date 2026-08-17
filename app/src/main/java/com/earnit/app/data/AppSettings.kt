@@ -18,4 +18,5 @@ data class AppSettings(
     val nudgeStage: Int = 0,
     val nudgeAnchorTimestamp: Long = 0L,
     val onboardingSeen: Boolean = false,
+    val cloudBackupEnabled: Boolean = true,
 )

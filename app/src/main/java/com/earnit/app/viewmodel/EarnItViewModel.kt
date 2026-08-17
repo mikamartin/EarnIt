@@ -401,6 +401,10 @@ class EarnItViewModel
             viewModelScope.launch { settingsRepository.updateUseRandomNickname(use) }
         }
 
+        fun updateCloudBackupEnabled(enabled: Boolean) {
+            viewModelScope.launch { settingsRepository.updateCloudBackupEnabled(enabled) }
+        }
+
         fun toggleTasksGroupView() {
             viewModelScope.launch {
                 settingsRepository.updateTasksGroupView(!settings.value.tasksGroupView)

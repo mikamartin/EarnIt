@@ -256,6 +256,7 @@ Settings are persisted via DataStore Preferences.
 | Tasks Group View | Boolean | false | When true, the Tasks screen shows tasks in collapsible group sections instead of a flat list |
 | Dev Mode Enabled | Boolean | false | Gates developer tools (seed test data on Data & Backup screen, 48H/96H nudge debug buttons); toggled via the secret mascot-tap gesture on the home screen |
 | Onboarding Seen | Boolean | false | Gates the first-launch tutorial (see [§3a](#3a-first-launch-onboarding-tutorial-pugslys-quest-scroll)); reset via Settings → Replay Tutorial |
+| Cloud Backup Enabled | Boolean | true | Opt-out toggle for Android Auto Backup, on Data & Backup (see [§7](#7-export--import--backup)) |
 
 ### Mascot Unlock Notifications
 
@@ -290,7 +291,9 @@ Each scheme has a light and dark variant. Mascot images are a single PNG each �
 
 ### Auto Backup
 
-Android automatically backs up the app's Room database (`earnit.db`) and DataStore preferences to the user's Google account daily (when charging + on Wi-Fi). Configured via `android:dataExtractionRules="@xml/data_extraction_rules"` in the manifest. Restores automatically when the app is installed on a new device with the same Google account — no user action needed.
+Android automatically backs up the app's Room database (`earnit.db`) and DataStore preferences to the user's Google account daily (when charging + on Wi-Fi), scoped via `android:dataExtractionRules="@xml/data_extraction_rules"` in the manifest. Restores automatically when the app is installed on a new device with the same Google account — no user action needed.
+
+This is opt-out: a toggle in Settings > Data & Backup ("Back up to Google account", `SettingsRepository.cloudBackupEnabled`, default `true`) controls it. Because `allowBackup` and `dataExtractionRules` are static manifest attributes the OS reads once at install time, they can't be toggled at runtime — enforcement instead happens in `EarnItBackupAgent` (`android:backupAgent`), which overrides `onFullBackup` to skip the backup pass entirely when the preference is off. This governs both cloud Auto Backup and device-to-device transfer, since both go through `onFullBackup` on API 31+.
 
 ### Export
 
@@ -384,7 +387,7 @@ Main App
     ├── Colour Scheme        — 3 theme chips (Warm Gold, Ocean Blue, Forest)
     ├── Max Rewards          — max count input
     ├── Tasks                — notes required toggle
-    ├── Data & Backup        — export JSON, import JSON (replace or merge)
+    ├── Data & Backup        — cloud backup toggle (Android Auto Backup opt-out), export JSON, import JSON (replace or merge)
     └── Clean Up             — separate cards: clear logs / clear tasks / clear rewards / clear all; each operation shows a snackbar confirmation after completing; "Clear Logs" deletes both completion logs and all history entries
 
 Widget (Glance)
