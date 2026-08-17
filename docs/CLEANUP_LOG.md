@@ -8,36 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 64 — `test/close-manual-test-plan-gaps` branch
-
-Reviewed `MANUAL_TEST_PLAN.md` against the actual code to check whether any journey marked manual-only was really reachable by an instrumented test. Two were: the widget's ADD TASK button (`autoOpenAddTask`/`rewardId` intent extras into `MainActivity`) and `WidgetConfigActivity`'s label field's character cap — both are plain `ComponentActivity`/nav-graph code reachable directly, without a real widget host. Added coverage for both; also trimmed a redundant manual mascot-suppression check from the Export/Import journey (already unit-tested).
-
-#### Duplication ✅ — found and fixed
-First pass added the deep-link test as its own file (`WidgetAddTaskDeepLinkUiTest`, 1 test). Running this checklist's file-threshold item against it surfaced that `SaveNavigationUiTest.homeCardAddTasksButton_opensAddTaskDialogDirectly` already covers the identical downstream nav effect (`autoOpenAddTask`) via a different trigger (in-app click vs. intent extras) — same premise as that file's own stated scope ("shortcut navigation... opens the Add Task dialog directly"), and the new file sat below the "3+ tests for a cohesive new behaviour" guideline. Merged it into `SaveNavigationUiTest` as a 6th test and deleted the standalone file.
-Considered further: the "close the rule's default activity scenario, launch a fresh one with a custom `Intent`" boilerplate (4-5 lines) now appears in 3 places — `ProcessDeathRestoreTest`'s cold-start relaunch, the merged test above, and `MaxLengthUiTest`'s new widget-label test — each launching a different activity/intent shape (same-class relaunch vs. two different activity classes with different extras). Left inline rather than extracting a shared helper; a parameterized version would add more indirection than the handful of lines it'd save across 3 meaningfully different call sites.
-
-#### Decoupling / Complexity & Pattern Health / Hardcoded Values / Accessibility / Deprecated APIs ✅ (n/a)
-No production code touched — test files and docs only.
-
-#### Dead Code & Hygiene ✅ (checked)
-`ktlintCheck` passes. `git status` confirms exactly the intended files changed, including the deletion of the superseded standalone test file.
-
-#### Naming Consistency ✅ (checked)
-New test method names (`widgetAddTaskIntent_navigatesToRewardDetailWithDialogAlreadyOpen`, `widgetLabelInput_isCappedAtMaxChars`) follow the existing `subject_expectedOutcome` convention already used by every sibling test in both files.
-
-#### Spec Review ✅ (checked, no update needed)
-Both new tests cover pre-existing, already-documented behavior — `EARNIT_SPEC.md` already describes `autoOpenAddTask` and the widget label field — no new behavior was introduced.
-
-#### Tests ✅ — found and fixed (see Duplication above for the file-threshold finding)
-- Both new tests run on a connected emulator (API 36, two devices) — 0 failed, 0 skipped, both before and after the merge.
-- `checkInstrumentedTestTags` passes: `SaveNavigationUiTest` and `MaxLengthUiTest` both already carried their required `@UiTest` layer tag; added `@Widget` as an additional optional tag to both since they now cover widget-triggered behavior.
-- No `AppModule`/`TestAppModule` changes — both classes' new `@Inject EarnItRepository` sites reuse an existing binding other test classes already use. Ran `./gradlew assembleDebugAndroidTest` anyway (before and after the merge) to confirm compile.
-- `TESTING.md`: updated per-file counts (`MaxLengthUiTest` 5→6, `SaveNavigationUiTest` 5→6) and descriptions; header/cadence-table aggregate 110→112 (exact, matches actual `@Test` count). `EARNIT_SPEC.md`'s test summary line had pre-existing drift unrelated to this pass (182/25/108/30/74 vs. actual 189/26/112/32/78) — corrected all five figures while already touching that line.
-- `MANUAL_TEST_PLAN.md`: removed the Export/Import mascot-suppression checks (old steps 7 and part of 8) — that behavior is already unit-tested (`MascotNotificationTest`'s "seeds unlocked mascots silently without triggering notification"; confirmed it covers both replace and merge, since `checkAndUnlockMascots(silent = true)` in `importFromFile` isn't gated on the `replace` flag) and isn't a system-boundary concern within the manual plan's own stated scope.
-- `./gradlew ktlintCheck`, `test`, `assembleDebug`, `assembleDebugAndroidTest` all pass sequentially per `CLAUDE.md`.
-
----
-
 ### Pass 65 — `fix/claimed-rewards-earn-again-icon` branch
 
 UX: the Claimed Rewards tab's "Earn Again" button was a solid pill (`secondary` background, bold white text) with the same visual weight as the reward name itself — competing with the "you earned this" moment the tab is for. Replaced it with an icon-only button: `Icons.Default.Refresh` (the app's established "repeat this" glyph, already used the same way on `RewardEditScreen`/`RewardDetailScreen`/`TaskEditScreen`/`SharedDialogs`) inside a small `secondaryContainer`-tinted circle, wrapped in `IconButton` so the actual tap target stays 48dp even though the visible circle is 32dp. Confirmed the direction and the specific subdued-vs-tonal-circle styling with the user before implementing (`AskUserQuestion`, two mocked options) per `CLAUDE.md`'s "confirm before non-trivial changes" rule.
@@ -135,3 +105,49 @@ No new icon-only buttons or tappable targets, no deprecation warnings from this 
 
 #### Dev Seed Data ✅ (checked, n/a)
 Onboarding is specifically a first-launch/clean-state flow — it doesn't read or depend on `TestDataSeeder`'s dev-mode seed data.
+
+---
+
+### Pass 67 — `fix/backup-privacy-opt-out` branch
+
+`allowBackup="true"` plus `data_extraction_rules.xml` meant Android's Auto Backup silently uploaded the Room database and DataStore preferences to the user's Google account, contradicting the About screen's "all your data stays right here on your phone" claim (confirmed by reproducing it: wipe → uninstall → reinstall → old data came back). Added an opt-out toggle (`SettingsRepository.cloudBackupEnabled`, default `true`, so existing users see no behavior change), enforced via a new `EarnItBackupAgent.onFullBackup` override — `allowBackup`/`dataExtractionRules` are static manifest attributes the OS reads once at install time, so they can't be toggled at runtime. Corrected the About screen copy to describe the opt-out instead of claiming an absolute "never leaves the phone."
+
+This checklist was first run mid-branch, before instrumented tests existed, with the Tests section explicitly flagged as deferred pending the user's manual pass. The user asked for the tests to be written immediately instead of waiting; the Tests section below reflects that they're now written and passing, not the original deferred state.
+
+#### Duplication ✅ (checked)
+The new toggle reuses the existing `SettingsCard` + `Switch` + `Modifier.semantics { contentDescription = ... }` pattern already used for `SETTINGS_QUOTE_TOGGLE`/`SETTINGS_NOTES_TOGGLE` — no new pattern introduced. `updateCloudBackupEnabled` follows the exact single-field `context.dataStore.edit { ... }` shape as every other `SettingsRepository` setter (e.g. `updateShowQuote`). New strings (`DATA_CLOUD_BACKUP_TITLE`/`DATA_CLOUD_BACKUP_SUBTITLE`) live only in `Strings.kt`, no inline duplicates at the call site.
+
+#### Decoupling ✅ (checked, one deliberate exception noted)
+`DataScreen.kt`'s new card only reads `settings.cloudBackupEnabled` and calls `viewModel.updateCloudBackupEnabled(it)` — no business logic in the composable. `EarnItBackupAgent` is the one deliberate exception to normal DI: it instantiates `SettingsRepository(applicationContext)` directly rather than via Hilt, because `BackupAgent` is instantiated by the OS via reflection outside the Hilt graph — the same constraint every Android framework-instantiated component in this codebase already works around (documented in the class's own comment and in `EARNIT_SPEC.md` §7).
+
+#### Complexity & Pattern Health ✅ — found and fixed
+`DataScreen`'s top-level composable was already ~215 lines (over the ~150-line guideline) before this branch; inlining the new toggle would have pushed it further without adding to an existing extraction. Since the file already extracts `NudgeDebugCard` as its own private composable for exactly this reason, extracted the new toggle the same way as `CloudBackupCard(viewModel, settings)` instead of leaving it inline in `DataScreen`.
+
+#### Dead Code & Hygiene ✅ (checked)
+`ktlintCheck` passes (one indentation violation from the first draft of the About copy string was caught and fixed before this pass). `git status` shows exactly the 7 intended files changed plus the new `backup/` package — no stray untracked files.
+
+#### Naming Consistency ✅ (checked, one judgment call noted)
+`cloudBackupEnabled`/`updateCloudBackupEnabled`/`CLOUD_BACKUP_ENABLED` follow the existing Boolean-setting naming convention throughout `SettingsRepository`/`AppSettings`. `EarnItBackupAgent.kt` lives in a new `backup/` package rather than `data/` — CLEANUP_RULES.md's package list (`data/`, `di/`, `ui/`, `viewmodel/`, `widget/`) doesn't name this case explicitly, but it mirrors `widget/`'s existing precedent of a dedicated package for Android-framework-instantiated components (receivers, activities) rather than app-layer classes, so a new sibling package was judged more consistent than forcing it into `data/` alongside repositories it isn't one of.
+
+#### Hardcoded Values ✅ (checked, n/a)
+No new colors or magic numbers.
+
+#### Accessibility ✅ (checked)
+The new `Switch` carries `Modifier.semantics { contentDescription = Strings.DATA_CLOUD_BACKUP_TITLE }`, matching every other settings toggle's pattern.
+
+#### Deprecated APIs ✅ (checked, n/a)
+No deprecation warnings from any new code (`assembleDebug`'s one warning, Moshi kapt codegen, is pre-existing and unrelated).
+
+#### Spec Review ✅ — found and fixed
+`EARNIT_SPEC.md` §7 rewritten to describe the toggle, its default, and why enforcement lives in `EarnItBackupAgent` rather than the manifest. Also found and fixed two related gaps while reviewing: §6's App Settings table was missing a row for the new setting (added, matching the `Onboarding Seen` row's style); the Settings screen tree diagram's "Data & Backup" line still only mentioned export/import (updated to mention the toggle too). Checked Deferred Ideas — no existing entry referenced this work, nothing to remove.
+
+#### Tests ✅ — found and closed the gap
+`SettingsRepository` has no unit-test precedent to extend — its DataStore-backed settings are only ever exercised through instrumented tests (e.g. `SettingsUiTest.colorScheme_selectionPersistsAfterRecreate`) — so coverage was added at that layer instead of inventing a new unit-test pattern for one field. Extended `SettingsScreenUiTest.kt` (already the home for the About/Data & Backup nav-row tests this toggle lives alongside) rather than `SettingsUiTest.kt`, since it fit the existing file's stated scope more directly: `cloudBackupToggle_defaultsOn_turnedOff_persistsAfterRecreate` asserts the default is `true` on a fresh install, then that toggling off and recreating the activity persists `false` — same `activityRule.scenario.recreate()` pattern as `selectedMascot_choiceOfUnlockedMascot_persistsAfterRecreate`. Added `aboutScreen_doesNotClaimDataNeverLeavesThePhone` as a regression guard for the actual privacy bug: asserts no rendered node contains "stays right here" and that "Google account" is shown — this fails if the old absolute claim is ever reintroduced, not just that *some* text renders.
+Ran `./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.earnit.app.SettingsScreenUiTest` on the connected emulator (API 36): 14/14 passed, 0 skipped, 0 failed — both new tests confirmed working on a real device, not just compiling.
+`checkInstrumentedTestTags`: `SettingsScreenUiTest` already carries its required `@UiTest` layer tag plus `@Settings` as an optional tag — both new tests fit within its existing scope, no tag changes needed.
+No `AppModule`/`TestAppModule` change or new `@Inject` site (still just `SettingsRepository`'s existing `Context` constructor) — ran `./gradlew assembleDebugAndroidTest` anyway before running on-device, per the Hilt-graph-sanity-check convention; passed.
+`TESTING.md`: `SettingsScreenUiTest` row 12→14 (exact) with both new behaviors described. Pyramid/header aggregate counts recomputed from actual `@Test` counts across `app/src/androidTest/`: UI 85→87 and instrumented total 120→122, both still round to their existing displayed values (85, 120) per the doc's own "nearest 5 or 10, not false precision" convention — left unchanged rather than reprinting the same rounded number.
+`./gradlew ktlintCheck`, `test`, `assembleDebug`, `assembleDebugAndroidTest` all pass sequentially.
+
+#### Dev Seed Data ✅ (checked, n/a)
+`TestDataSeeder` doesn't reference `SettingsRepository` — it seeds database rows (tasks/rewards/history), not DataStore preferences — so the new toggle needs no seed-data changes.
