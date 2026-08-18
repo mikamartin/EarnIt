@@ -41,3 +41,18 @@ fun taskGroupFieldEdit(
     val next = acceptWithinLimit(current, incoming, TASK_GROUP_MAX_CHARS)
     return TaskGroupFieldEdit(next, shouldClearSelectedGroup = next.isNotBlank())
 }
+
+// Shared shape behind TaskEditScreen's and RewardEditScreen's name-conflict check: case- and
+// whitespace-insensitive match against every other item's name, skipped while a save navigation
+// is already pending so the error doesn't flash after a successful save.
+fun isDuplicateName(
+    candidateName: String,
+    existingNames: List<Pair<Long, String>>,
+    selfId: Long,
+    navPending: Boolean,
+): Boolean =
+    !navPending &&
+        candidateName.isNotBlank() &&
+        existingNames.any { (id, existingName) ->
+            existingName.trim().equals(candidateName.trim(), ignoreCase = true) && id != selfId
+        }

@@ -122,8 +122,6 @@ fun RewardDetailScreen(
     val accents = LocalEarnItAccents.current
     val accentColor = accents.gradientStart
     val logEnabled = rp.loggableTasks.isNotEmpty() && !rp.canClaim
-    val showMandatoryHint = !rp.canClaim && rp.totalPoints >= rp.reward.cost
-    val showAllTasksLoggedHint = !rp.canClaim && rp.allTasks.isNotEmpty() && rp.loggableTasks.isEmpty()
 
     val infiniteTransition = rememberInfiniteTransition(label = "claimPulse")
     val claimBorderAlpha by infiniteTransition.animateFloat(
@@ -185,8 +183,6 @@ fun RewardDetailScreen(
                 accents = accents,
                 claimScale = claimScale,
                 logEnabled = logEnabled,
-                showMandatoryHint = showMandatoryHint,
-                showAllTasksLoggedHint = showAllTasksLoggedHint,
                 onClaim = { showClaimDialog = true },
                 onLog = { showLogDialog = true },
             )
@@ -492,8 +488,6 @@ private fun RewardClaimOrLogButton(
     accents: EarnItAccents,
     claimScale: Float,
     logEnabled: Boolean,
-    showMandatoryHint: Boolean,
-    showAllTasksLoggedHint: Boolean,
     onClaim: () -> Unit,
     onLog: () -> Unit,
 ) {
@@ -544,7 +538,7 @@ private fun RewardClaimOrLogButton(
                 onLog()
             },
         )
-        if (showMandatoryHint) {
+        if (rp.showsMandatoryHint) {
             Spacer(Modifier.height(6.dp))
             Text(
                 Strings.REWARD_MANDATORY_TASKS_HINT,
@@ -553,7 +547,7 @@ private fun RewardClaimOrLogButton(
                 color = accents.notification,
                 modifier = Modifier.padding(horizontal = 4.dp),
             )
-        } else if (showAllTasksLoggedHint) {
+        } else if (rp.showsAllTasksLoggedHint) {
             Spacer(Modifier.height(6.dp))
             Text(
                 Strings.REWARD_ALL_TASKS_LOGGED_HINT,

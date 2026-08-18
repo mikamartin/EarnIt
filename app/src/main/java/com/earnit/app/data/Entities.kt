@@ -127,7 +127,9 @@ data class RewardProgress(
     val canClaim: Boolean get() =
         totalPoints >= reward.cost &&
             mandatoryTasks.all { mt -> isTaskLogged(mt.id) }
-    val showsProgressNumbers: Boolean get() = !canClaim && totalPoints < reward.cost
+    val showsProgressNumbers: Boolean get() = totalPoints < reward.cost
+    val showsMandatoryHint: Boolean get() = !canClaim && totalPoints >= reward.cost
+    val showsAllTasksLoggedHint: Boolean get() = !canClaim && allTasks.isNotEmpty() && loggableTasks.isEmpty()
     val progressFraction: Float get() =
         if (reward.cost <= 0) 1f else (totalPoints.toFloat() / reward.cost.toFloat()).coerceIn(0f, 1f)
     val allTasks: List<TaskEntity> get() = mandatoryTasks + optionalTasks

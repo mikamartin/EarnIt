@@ -155,11 +155,12 @@ fun TaskEditScreen(
             !settings.onboardingSeen &&
             (viewModel.onboardingStep as? OnboardingStep.Spotlight)?.field == OnboardingField.TASKS
     val nameConflict =
-        !pendingSaveNav &&
-            name.isNotBlank() &&
-            uiState.tasks.any {
-                it.name.trim().equals(name.trim(), ignoreCase = true) && it.id != taskId
-            }
+        isDuplicateName(
+            candidateName = name,
+            existingNames = uiState.tasks.map { it.id to it.name },
+            selfId = taskId,
+            navPending = pendingSaveNav,
+        )
 
     LaunchedEffect(taskId, uiState.rewardProgressList) {
         uiState.rewardProgressList.forEach { rp ->

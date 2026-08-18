@@ -59,16 +59,7 @@ Utility, 87 UI).
 
 ### 3. `ClearCascadeTest`'s two cross-ref assertions were vacuous, so the FK cascade was never actually verified — fixed on `test/fk-cascade-and-cleanup-assertions`.
 
-### 4. `showsProgressNumbers`' `!canClaim` term is dead code, and its test passes for the wrong reason
-
-`RewardProgress.showsProgressNumbers` is `!canClaim && totalPoints < reward.cost`. Since `canClaim`
-requires `totalPoints >= reward.cost`, `totalPoints < cost` already implies `!canClaim` — the first
-term can never change the result. Deleting it entirely leaves all 21 `RewardProgressTest` tests
-green (verified). No test can catch this, by construction.
-
-The consequence is that `showsProgressNumbers false when points meet cost and mandatory task
-unlogged` — the test that reads as pinning the mandatory-gate interaction — is actually only
-pinning `totalPoints >= cost`. The mandatory-task half of that scenario is unasserted.
+### 4. `showsProgressNumbers`' `!canClaim` term was dead code — fixed on `refactor/reward-progress-derived-state`.
 
 ### 5. The import schema-key check's exactness was untested, which is how Issue 2 stayed invisible — fixed on `fix/import-schema-validation`.
 
@@ -158,23 +149,7 @@ resolving per scheme at draw time from `ColorSchemes.lightColors`/`darkColors`, 
 
 ### 12. `checkInstrumentedTestTags` scanned whole-file text rather than per class, so a missing/duplicate/comment-only tag on one class in a multi-class file could pass — fixed on `chore/ci-release-build-gate`.
 
-### 13. Derived hint state is duplicated across three surfaces with no shared definition
-
-`showMandatoryHint` (`!canClaim && totalPoints >= cost`) is written out independently in
-`HomeScreen.kt:581`, `RewardDetailScreen.kt:125`, and `EarnItWidget.kt:365`.
-`showAllTasksLoggedHint` is written out in `HomeScreen.kt:582` and `RewardDetailScreen.kt:126` as
-`!canClaim && allTasks.isNotEmpty() && loggableTasks.isEmpty()`, while `EarnItWidget.kt:366`
-expresses the same predicate a fourth way as `actionButton == WidgetActionButton.LOG_DISABLED`.
-All are currently equivalent; none of the three UI-layer copies has a unit test (only the widget's
-formulation does, via `WidgetActionButtonTest`/`WidgetContentTest`). This is the same drift shape
-`DragReorder` was extracted to fix — they belong on `RewardProgress` next to
-`showsProgressNumbers`.
-
-Second instance: the duplicate-name check is reimplemented in `TaskEditScreen.kt:157` and
-`RewardEditScreen.kt:197` with the same four-part shape
-(`!pendingSaveNav && name.isNotBlank() && list.any { trim().equals(…, ignoreCase = true) && id != self }`).
-It is pure — no Compose or Android dependency — and currently exercised only through the two
-full-`MainActivity` tests in `DuplicateNameUiTest`.
+### 13. The mandatory-hint/all-tasks-logged-hint predicates and the duplicate-name check were each reimplemented independently at multiple UI call sites — fixed on `refactor/reward-progress-derived-state`.
 
 ### 14. The `RepositoryBehaviourTest` reward-cap mutation was caught by an unstubbed mock, not by its assertion
 
@@ -289,7 +264,7 @@ Checked `EARNIT_SPEC.md`'s documented core mechanics against the corresponding a
 
 ## Work, Grouped by Branch
 
-Seven proposed branches, ordered by severity. Four have landed; the rest have not been started.
+Seven proposed branches, ordered by severity. Five have landed; the rest have not been started.
 
 ### `fix/moshi-crossref-keep-rule` — Issue 1 (done)
 
@@ -353,24 +328,28 @@ keys in `Entities.kt` to `ForeignKey.NO_ACTION` and re-ran `ClearCascadeTest`: i
 real `SQLiteConstraintException`, confirming the assertions are load-bearing; the change was then
 reverted and the suite re-confirmed green.
 
-### `refactor/reward-progress-derived-state` — Issue 13
+### `refactor/reward-progress-derived-state` — Issues 4 and 13 (done)
 
-**Deliverable:** The mandatory-hint and all-tasks-logged predicates have one definition with
-direct unit coverage; the duplicate-name check likewise.
+**Steps (done):** Added `showsMandatoryHint` and `showsAllTasksLoggedHint` to `RewardProgress`
+alongside `showsProgressNumbers`, folding Issue 4's dead `!canClaim` term out of
+`showsProgressNumbers` in the same pass. Pointed `HomeScreen`, `RewardDetailScreen`, and
+`EarnItWidget` at the new properties, removing the pass-through `showMandatoryHint`/
+`showAllTasksLoggedHint` params `RewardClaimOrLogButton` no longer needed. Left
+`WidgetActionButton.kt`'s `when` chain untouched — its `LOG_DISABLED` branch is already provably
+equivalent and answers a different question (which button, not whether to show hint text).
+Extracted the duplicate-name check into `FieldValidation.kt`'s `isDuplicateName(candidateName,
+existingNames, selfId, navPending)`, taking a plain `List<Pair<Long, String>>` rather than the raw
+`TaskEntity`/`RewardProgress` list types, and called it from both `TaskEditScreen` and
+`RewardEditScreen`.
 
-**Steps:**
-1. Add `showsMandatoryHint` and `showsAllTasksLoggedHint` to `RewardProgress` alongside
-   `showsProgressNumbers`, and point `HomeScreen`, `RewardDetailScreen`, and `EarnItWidget` at
-   them. Fold Issue 4's dead `!canClaim` term out of `showsProgressNumbers` in the same pass.
-2. Extract the duplicate-name predicate into a pure function (`FieldValidation.kt` is the
-   established home) taking the candidate name, the existing names, and the self-id, and call it
-   from both `TaskEditScreen` and `RewardEditScreen`.
-
-**Tests:** Add `RewardProgressTest` cases for both new properties at their boundaries, and
-`FieldValidationTest` cases for the name check (case-insensitive match, whitespace-trimmed match,
-self-id excluded, blank name). Give each new function the one-mutation spot check this pass's
-section 2 applied to sampled files before considering it validated. `DuplicateNameUiTest` and
-`RewardProgressBarUiTest`/`RewardAllTasksLoggedHintUiTest` stay as the wiring proof.
+**Tests (done):** Added boundary-case tests to `RewardProgressTest` for both new properties and
+`FieldValidationTest` cases for `isDuplicateName` (case-insensitive, whitespace-trimmed, self-id
+excluded, blank name, nav-pending). One-mutation spot checks on all new logic confirmed each new
+test is load-bearing, then reverted. `DuplicateNameUiTest`, `RewardProgressBarUiTest`, and
+`RewardAllTasksLoggedHintUiTest` passed unmodified as the wiring proof; `WidgetActionButtonTest`
+and `WidgetContentTest` also passed unmodified, confirming the widget's `when` chain needed no
+change. `./gradlew ktlintCheck`, `./gradlew test`, and `./gradlew assembleDebugAndroidTest` all
+pass.
 
 ### `test/settings-persistence-and-assertions` — Issues 6 and 7
 
