@@ -207,20 +207,7 @@ open work". It is no longer true: `EARNIT_SPEC.md` §5's Widget Theme section de
 resolving per scheme at draw time from `ColorSchemes.lightColors`/`darkColors`, and
 `WidgetColorsTest` (4 tests) asserts exactly that across all three schemes plus dark mode.
 
-### 12. `checkInstrumentedTestTags` has latent blind spots
-
-The task reads each file's whole text and checks `text.contains("@UiTest")` etc. That means:
-
-- **Not per-class.** A file holding two test classes where only one is tagged passes.
-- **Comment-satisfiable.** A tag named in a KDoc block satisfies the check with no annotation
-  applied.
-- **Doesn't enforce "exactly one".** `LayerTags.kt`'s own KDoc says "Required on every instrumented
-  test class — exactly one", but a class carrying both `@UiTest` and `@RepositoryTest` passes and
-  then runs only in the UI shard (the `notAnnotation=UiTest` shard excludes it), silently losing
-  its Repository-tier run.
-
-No file currently trips any of these, so this is a latent gap rather than an active miss — but the
-task is the sole mechanism keeping the annotation-filtered CI sharding honest.
+### 12. `checkInstrumentedTestTags` scanned whole-file text rather than per class, so a missing/duplicate/comment-only tag on one class in a multi-class file could pass — fixed on `chore/ci-release-build-gate`.
 
 ### 13. Derived hint state is duplicated across three surfaces with no shared definition
 
@@ -273,13 +260,7 @@ slow to find. Recording it here per the audit rules' weak-pass category.
   tier — but it means the guard is only protected on the emulator job, noted here so the
   dependency is explicit rather than incidental.
 
-### 16. CI never builds the minified release variant
-
-`ci.yml` runs `ktlintCheck`, `checkInstrumentedTestTags`, `test`, and `assembleDebug`.
-`release.yml` runs `bundleRelease` — but only on a `v*.*.*` tag push, with no lint or test gate of
-its own, and by then the release is being cut. Nothing exercises R8 on a PR, which is the tier
-Issue 1 lives in and the reason a shrinker-only defect could ship. `minifyReleaseWithR8` needs no
-keystore and completed locally in ~1 minute, so it is cheap to gate on.
+### 16. CI never built the minified release variant, so a shrinker-only defect like Issue 1 could ship undetected until a tag push — fixed on `chore/ci-release-build-gate`.
 
 ---
 
@@ -493,24 +474,21 @@ except for the dead `TaskEntity.repeatable` field.
 stops being doc-hygiene and needs its own branch with a migration and `./gradlew test` +
 `assembleDebugAndroidTest`.
 
-### `chore/ci-release-build-gate` — Issues 12 and 16
+### `chore/ci-release-build-gate` — Issues 12 and 16 (done)
 
-**Deliverable:** CI exercises the shrinker on every PR, and the tag-triggered release can't build
-from an ungated commit. The tag check makes `checkInstrumentedTestTags` per-class.
+**Steps (done):** Added a `./gradlew :app:minifyReleaseWithR8` step to `ci.yml` — confirmed it
+needs no keystore, so no signing workaround was required. Added `ktlintCheck` and `test` steps to
+`release.yml` before the keystore secrets are touched, so a bad tag fails loudly without ever
+decoding them. Rewrote `checkInstrumentedTestTags` in `app/build.gradle.kts` to strip comments,
+walk each class's own annotation header and brace-matched body, and require exactly one layer tag
+plus at least one optional tag per test-bearing class — kept the existing grouped failure-message
+shape and added a new bucket for the "more than one layer tag" case.
 
-**Steps:**
-1. Add a `./gradlew minifyReleaseWithR8` (or `assembleRelease`) step to `ci.yml`. It needs no
-   keystore for the R8 step itself; if the signing config blocks it, gate on the
-   `keystore.properties`-absent fallback already in `app/build.gradle.kts`.
-2. Have `release.yml` run `ktlintCheck` and `test` before `bundleRelease`, so a tag pushed at an
-   unvalidated commit fails loudly rather than producing a signed AAB.
-3. Rewrite `checkInstrumentedTestTags` to scan per class declaration rather than per file: strip
-   comments first, then require exactly one layer tag on each class that declares `@Test` methods,
-   and at least one optional tag. Keep the existing failure message shape.
-
-**Tests:** Add a deliberately mis-tagged throwaway file locally to confirm each new failure mode
-actually fails (no tag, two layer tags, tag only in a comment, second untagged class in a tagged
-file), then delete it. Confirm the R8 step passes on a PR before merging.
+**Tests (done):** Confirmed a clean pass against the real tree. Added a throwaway mis-tagged file
+covering all four target failure modes (no tag, two layer tags on one class, tag only inside a
+KDoc comment, untagged sibling class sharing a file with a correctly tagged class) — each failed
+as expected — then deleted it. `./gradlew test` and `./gradlew :app:minifyReleaseWithR8` both pass
+locally with no keystore present.
 
 ---
 

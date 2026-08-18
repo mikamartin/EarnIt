@@ -48,3 +48,6 @@ jobs:
 
       - name: Build debug APK
         run: ./gradlew assembleDebug
+
+      - name: Build minified release (R8)
+        run: ./gradlew :app:minifyReleaseWithR8
