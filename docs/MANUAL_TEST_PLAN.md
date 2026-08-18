@@ -10,6 +10,13 @@ These journeys are deliberately never automated, not just temporarily deferred. 
 
 **Cadence:** Once per release candidate, before each Play Store closed-test upload.
 
+**Build variant:** Run this on an installed **signed, minified release build**
+(`./gradlew assembleRelease`), not debug. `ExportImportTest.kt` runs against unminified JVM/Room
+classes, so it can't catch an R8-only regression in the serialised format — the JSON key names
+that Moshi's generated adapters bake in as string literals only get exercised end-to-end once R8
+has actually shrunk and renamed the app's classes. This is the manual backstop for that gap until
+CI gates a minified build on every PR.
+
 **Steps:**
 1. Launch the app with at least one task, one reward, and one completed log/history entry present.
 2. Settings → Data → "Export Backup". Save the file via the system picker; note the filename/location.

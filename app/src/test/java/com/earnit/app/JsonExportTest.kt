@@ -2,6 +2,7 @@ package com.earnit.app
 
 import com.earnit.app.data.CompletionLogEntity
 import com.earnit.app.data.EarnItExport
+import com.earnit.app.data.HistoryEntryEntity
 import com.earnit.app.data.ImportWrongSchemaException
 import com.earnit.app.data.JsonExport
 import com.earnit.app.data.RewardEntity
@@ -128,5 +129,39 @@ class JsonExportTest {
     @Test(expected = ImportWrongSchemaException::class)
     fun `fromJson with empty JSON object throws WrongSchemaException`() {
         JsonExport.fromJson("{}")
+    }
+
+    @Test
+    fun `toJson emits the exact top-level and per-entity key names`() {
+        val export =
+            EarnItExport(
+                tasks = listOf(TaskEntity(id = 1, name = "Run")),
+                rewards = listOf(RewardEntity(id = 1, name = "Coffee", cost = 10)),
+                rewardTaskCrossRefs = listOf(RewardTaskCrossRef(rewardId = 1, taskId = 1)),
+                completionLogs =
+                    listOf(
+                        CompletionLogEntity(id = 1, taskId = 1, rewardId = 1, timestamp = 0, points = 1, historyEntryId = 1),
+                    ),
+                historyEntries = listOf(HistoryEntryEntity(id = 1, rewardId = 1, rewardName = "Coffee", pointCost = 10, claimedAt = 0)),
+            )
+        val json = JsonExport.toJson(export)
+
+        // Top-level keys.
+        listOf("tasks", "rewards", "rewardTaskCrossRefs", "completionLogs", "historyEntries")
+            .forEach { key -> assertTrue("missing top-level key \"$key\"", json.contains("\"$key\":")) }
+
+        // Per-entity keys. RewardTaskCrossRef is the one that falls outside proguard's
+        // *Entity keep-rule glob and had no @JsonClass adapter — pin its keys explicitly
+        // to catch a regression that R8 could silently mangle in the release build.
+        listOf("id", "name", "repeatable", "points", "useAutoPoints", "time", "difficulty", "preparation", "icon", "sortOrder")
+            .forEach { key -> assertTrue("missing TaskEntity key \"$key\"", json.contains("\"$key\":")) }
+        listOf("cost", "isArchived", "createdAt", "description")
+            .forEach { key -> assertTrue("missing RewardEntity key \"$key\"", json.contains("\"$key\":")) }
+        listOf("rewardId", "taskId", "isMandatory", "isRepeatable")
+            .forEach { key -> assertTrue("missing RewardTaskCrossRef key \"$key\"", json.contains("\"$key\":")) }
+        listOf("taskName", "detail", "historyEntryId")
+            .forEach { key -> assertTrue("missing CompletionLogEntity key \"$key\"", json.contains("\"$key\":")) }
+        listOf("rewardName", "rewardIcon", "pointCost", "claimedAt")
+            .forEach { key -> assertTrue("missing HistoryEntryEntity key \"$key\"", json.contains("\"$key\":")) }
     }
 }

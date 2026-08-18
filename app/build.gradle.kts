@@ -103,7 +103,6 @@ dependencies {
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.moshi)
     ksp(libs.moshi.kotlin.codegen)
-    implementation(libs.moshi.kotlin)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.play.review.ktx)

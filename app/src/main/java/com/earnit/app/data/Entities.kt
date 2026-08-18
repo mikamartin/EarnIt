@@ -6,7 +6,9 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
+import com.squareup.moshi.JsonClass
 
+@JsonClass(generateAdapter = true)
 @Entity(tableName = "tasks")
 data class TaskEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -38,6 +40,7 @@ data class TaskEntity(
     }
 }
 
+@JsonClass(generateAdapter = true)
 @Entity(tableName = "completion_logs")
 data class CompletionLogEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -50,6 +53,7 @@ data class CompletionLogEntity(
     val historyEntryId: Long? = null, // set when claimed, null = active
 )
 
+@JsonClass(generateAdapter = true)
 @Entity(tableName = "rewards")
 data class RewardEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -62,6 +66,7 @@ data class RewardEntity(
     val icon: String = "",
 )
 
+@JsonClass(generateAdapter = true)
 @Entity(
     primaryKeys = ["rewardId", "taskId"],
     tableName = "reward_task_cross_ref",
@@ -91,6 +96,7 @@ data class RewardTaskCrossRef(
     val isRepeatable: Boolean = false,
 )
 
+@JsonClass(generateAdapter = true)
 @Entity(tableName = "history_entries")
 data class HistoryEntryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
