@@ -130,7 +130,9 @@ dependencies {
 // alongside unit tests.
 tasks.register("checkInstrumentedTestTags") {
     group = "verification"
-    description = "Fails if any androidTest class is missing a required layer tag or an optional tag."
+    description =
+        "Fails if any androidTest class is missing a required layer tag, carries more than one, " +
+        "or is missing an optional tag."
 
     val testDir = layout.projectDirectory.dir("src/androidTest/java")
     inputs.dir(testDir)
@@ -149,26 +151,82 @@ tasks.register("checkInstrumentedTestTags") {
                 "@CleanUp",
             )
 
+        // Strips comments first so a tag merely named in a KDoc block can't satisfy the check.
+        fun stripComments(text: String): String =
+            text
+                .replace(Regex("""/\*.*?\*/""", RegexOption.DOT_MATCHES_ALL), "")
+                .replace(Regex("""//[^\n]*"""), "")
+
+        val classRegex = Regex("""\bclass\s+(\w+)""")
+        val annotationLineRegex = Regex("""^\s*@[\w.]+(\([^)]*\))?\s*$""")
+
         val missingRequired = mutableListOf<String>()
+        val duplicateRequired = mutableListOf<String>()
         val missingOptional = mutableListOf<String>()
 
         testDir.asFile
             .walkTopDown()
             .filter { it.isFile && it.extension == "kt" }
             .forEach { file ->
-                val text = file.readText()
-                if (!Regex("@Test(?![A-Za-z0-9_])").containsMatchIn(text)) return@forEach
+                val text = stripComments(file.readText())
 
-                if (requiredTags.none { text.contains(it) }) missingRequired += file.name
-                if (optionalTags.none { text.contains(it) }) missingOptional += file.name
+                classRegex.findAll(text).forEach { match ->
+                    val className = match.groupValues[1]
+                    val headerEnd = match.range.first
+
+                    // The class body: from its opening brace to the matching close, so a
+                    // sibling or nested class's text can't leak into this class's checks.
+                    val bodyStart = text.indexOf('{', headerEnd)
+                    if (bodyStart == -1) return@forEach
+                    var depth = 0
+                    var bodyEnd = -1
+                    for (i in bodyStart until text.length) {
+                        when (text[i]) {
+                            '{' -> depth++
+                            '}' -> {
+                                depth--
+                                if (depth == 0) {
+                                    bodyEnd = i
+                                    break
+                                }
+                            }
+                        }
+                    }
+                    if (bodyEnd == -1) return@forEach
+                    val body = text.substring(bodyStart, bodyEnd + 1)
+                    if (!Regex("@Test(?![A-Za-z0-9_])").containsMatchIn(body)) return@forEach
+
+                    // The annotation header: the contiguous run of @Annotation lines directly
+                    // above `class`, e.g. `@UiTest` / `@CleanUp` / `@RunWith(...)` / `class Foo {`.
+                    val linesBefore = text.substring(0, headerEnd).lines().dropLast(1)
+                    val header =
+                        linesBefore
+                            .asReversed()
+                            .takeWhile { it.isBlank() || annotationLineRegex.matches(it) }
+                            .joinToString("\n")
+
+                    val label = "${file.name}: $className"
+                    val matchedRequired = requiredTags.filter { header.contains(it) }
+                    when {
+                        matchedRequired.isEmpty() -> missingRequired += label
+                        matchedRequired.size > 1 -> duplicateRequired += label
+                    }
+                    if (optionalTags.none { header.contains(it) }) missingOptional += label
+                }
             }
 
-        if (missingRequired.isNotEmpty() || missingOptional.isNotEmpty()) {
+        if (missingRequired.isNotEmpty() || duplicateRequired.isNotEmpty() || missingOptional.isNotEmpty()) {
             val message = StringBuilder("Instrumented test tag check failed.\n")
             if (missingRequired.isNotEmpty()) {
                 message.append(
                     "Missing a required layer tag (@RepositoryTest / @UtilityTest / @UiTest): " +
                         "${missingRequired.joinToString()}\n",
+                )
+            }
+            if (duplicateRequired.isNotEmpty()) {
+                message.append(
+                    "More than one required layer tag (@RepositoryTest / @UtilityTest / @UiTest — " +
+                        "exactly one allowed): ${duplicateRequired.joinToString()}\n",
                 )
             }
             if (missingOptional.isNotEmpty()) {
