@@ -3,6 +3,7 @@ package com.earnit.app.data
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.JsonDataException
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
 import java.io.IOException
 
 class ImportFileTooLargeException : Exception()
@@ -27,18 +28,29 @@ data class EarnItExport(
 object JsonExport {
     private val moshi = Moshi.Builder().build()
     private val adapter = moshi.adapter(EarnItExport::class.java)
+    private val mapType = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
+    private val mapAdapter = moshi.adapter<Map<String, Any?>>(mapType)
     private val earnItKeys = setOf("tasks", "rewards", "rewardTaskCrossRefs", "completionLogs", "historyEntries")
 
     fun toJson(export: EarnItExport): String = adapter.indent("  ").toJson(export)
 
     fun fromJson(json: String): EarnItExport {
-        if (earnItKeys.none { key -> json.contains("\"$key\"") }) throw ImportWrongSchemaException()
+        val topLevel =
+            try {
+                mapAdapter.fromJson(json)
+            } catch (e: JsonDataException) {
+                throw ImportWrongSchemaException()
+            } catch (e: IOException) {
+                throw ImportInvalidJsonException()
+            }
+        if (topLevel == null || !earnItKeys.all { topLevel.containsKey(it) }) throw ImportWrongSchemaException()
+
         return try {
             adapter.fromJson(json) ?: throw ImportWrongSchemaException()
         } catch (e: JsonDataException) {
-            throw ImportInvalidJsonException()
+            throw ImportWrongSchemaException()
         } catch (e: IOException) {
-            throw ImportInvalidJsonException()
+            throw ImportWrongSchemaException()
         }
     }
 }

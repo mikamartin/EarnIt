@@ -322,8 +322,8 @@ User picks a `.json` file via `ActivityResultContracts.GetContent`. Two modes:
 
 1. **MIME type** — images, video, and audio are rejected immediately (`ImportWrongFileTypeException`)
 2. **File size** — files larger than 10 MB are rejected (`ImportFileTooLargeException`)
-3. **Schema check** — text containing none of the expected top-level keys (`tasks`, `rewards`, `rewardTaskCrossRefs`, `completionLogs`, `historyEntries`) is rejected as `ImportWrongSchemaException` before parsing is attempted; this catches both wrong-shape JSON (an unrelated object, a JSON array) and unrecognizable malformed text with one check, and prevents a wrong file from silently wiping user data in Replace mode
-4. **JSON validity** — for text that does contain a recognizable key, Moshi parse failures surface as `ImportInvalidJsonException`
+3. **JSON validity** — text that isn't syntactically valid JSON (malformed, truncated, non-JSON content) is rejected as `ImportInvalidJsonException`
+4. **Schema check** — the parsed JSON is required to contain all five top-level keys (`tasks`, `rewards`, `rewardTaskCrossRefs`, `completionLogs`, `historyEntries`); anything else — missing keys, a JSON array or other non-object top level, or a recognized key holding wrong-shaped elements — is rejected as `ImportWrongSchemaException` before any data is touched, which is what prevents a wrong file from silently wiping user data in Replace mode
 
 Each failure shows a specific inline error message beneath the import buttons (in error colour). Success shows "Replaced ✓" or "Merged ✓" in primary colour.
 

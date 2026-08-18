@@ -192,6 +192,19 @@ class ExportImportTest : RoomIntegrationBase() {
         }
 
     @Test
+    fun importReplace_withForeignKeyMatchingSchema_doesNotWipeExistingData() =
+        runBlocking {
+            repository.upsertTask(TaskEntity(name = "Existing", points = 5))
+            try {
+                repository.importFromJson("{\"tasks\":[],\"projects\":[{\"title\":\"x\"}]}", replace = true)
+            } catch (_: ImportWrongSchemaException) {
+            }
+            val tasks = repository.observeUiState().first().tasks
+            assertEquals("Existing data must survive a foreign file that reuses one EarnIt key", 1, tasks.size)
+            assertEquals("Existing", tasks[0].name)
+        }
+
+    @Test
     fun importMerge_preservesExistingRecords_andAddsNewOnes() =
         runBlocking {
             // Seed one task and export it
