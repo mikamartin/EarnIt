@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -633,7 +634,7 @@ private fun ThemeChip(
                     width = if (selected) 2.dp else 1.dp,
                     color = if (selected) primary else MaterialTheme.colorScheme.surfaceVariant,
                     shape = RoundedCornerShape(12.dp),
-                ).clickable { onSelect(scheme) }
+                ).selectable(selected = selected, onClick = { onSelect(scheme) })
                 .padding(horizontal = 10.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),

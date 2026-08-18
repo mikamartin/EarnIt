@@ -1,6 +1,14 @@
 package com.earnit.app
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -89,13 +97,18 @@ class SettingsScreenUiTest {
         composeTestRule.onNodeWithContentDescription("Random name").performScrollTo().performClick()
 
         composeTestRule.onNodeWithContentDescription("Prizes").performClick()
+        composeTestRule.onNodeWithText("Earn It, Zorro!").assertDoesNotExist()
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.onAllNodesWithText("Earn It, Zorro!").fetchSemanticsNodes().isEmpty()
+            composeTestRule
+                .onAllNodes(
+                    SemanticsMatcher("greeting shows a random, non-Zorro nickname") { node ->
+                        node.config.getOrNull(SemanticsProperties.Text)?.any {
+                            it.text.startsWith("Earn It, ") && it.text != "Earn It, Zorro!"
+                        } == true
+                    },
+                ).fetchSemanticsNodes()
+                .isNotEmpty()
         }
-        assertEquals(
-            0,
-            composeTestRule.onAllNodesWithText("Earn It, Zorro!").fetchSemanticsNodes().size,
-        )
     }
 
     @Test
@@ -161,13 +174,15 @@ class SettingsScreenUiTest {
         composeTestRule.onNodeWithContentDescription("Settings").performClick()
         composeTestRule.onNodeWithText(Strings.MASCOT_SECTION_TITLE).performScrollTo().performClick()
 
-        // The row behind the dialog also shows the current mascot's name ("Pugsly"), so match
-        // within all nodes rather than onNodeWithText, which requires a single unique match.
-        assertEquals(true, composeTestRule.onAllNodesWithText("Pugsly").fetchSemanticsNodes().isNotEmpty())
-        assertEquals(true, composeTestRule.onAllNodesWithText("Tabby").fetchSemanticsNodes().isNotEmpty())
-        // Panda is the first locked mascot, so its unlock hint is shown; further-locked mascots
-        // (e.g. Penguin) show neither a name nor a hint per the "only the next slot" reveal rule.
+        // The row behind the dialog also shows the current mascot's name ("Pugsly"), so scope
+        // lookups to the dialog's own window via isDialog(), mirroring CancelDismissAssertions.
+        composeTestRule.onNode(hasAnyAncestor(isDialog()) and hasText("Pugsly")).assertHasClickAction()
+        composeTestRule.onNode(hasAnyAncestor(isDialog()) and hasText("Tabby")).assertHasClickAction()
+        // Panda is the first locked mascot, so its unlock hint is shown but its name is hidden;
+        // further-locked mascots (e.g. Penguin) show neither a name nor a hint per the
+        // "only the next slot" reveal rule.
         composeTestRule.onNodeWithText("Claim your 1st reward").assertIsDisplayed()
+        composeTestRule.onNode(hasAnyAncestor(isDialog()) and hasText("Panda")).assertDoesNotExist()
         assertEquals(
             0,
             composeTestRule.onAllNodesWithText("Penguin").fetchSemanticsNodes().size,
@@ -183,6 +198,9 @@ class SettingsScreenUiTest {
         composeTestRule.onNodeWithText(Strings.MASCOT_PICKER_TITLE).assertDoesNotExist()
 
         composeTestRule.activityRule.scenario.recreate()
+
+        composeTestRule.onNodeWithContentDescription("Settings").performClick()
+        composeTestRule.onNodeWithText("Tabby").assertIsDisplayed()
 
         val saved = runBlocking { settingsRepository.settings.first() }
         assertEquals(MascotId.TABBY, saved.selectedMascotId)
@@ -245,6 +263,10 @@ class SettingsScreenUiTest {
         composeTestRule.onNodeWithContentDescription(Strings.DATA_CLOUD_BACKUP_TITLE).performScrollTo().performClick()
 
         composeTestRule.activityRule.scenario.recreate()
+
+        composeTestRule.onNodeWithContentDescription("Settings").performClick()
+        composeTestRule.onNodeWithText(Strings.SETTINGS_DATA_TITLE).performScrollTo().performClick()
+        composeTestRule.onNodeWithContentDescription(Strings.DATA_CLOUD_BACKUP_TITLE).assertIsOff()
 
         val saved = runBlocking { settingsRepository.settings.first() }
         assertEquals(false, saved.cloudBackupEnabled)
