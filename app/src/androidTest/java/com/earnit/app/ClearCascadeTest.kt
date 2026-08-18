@@ -57,6 +57,7 @@ class ClearCascadeTest : RoomIntegrationBase() {
 
             val allLogs = repository.observeUiState().first().allLogs
             assertEquals("All logs (active and archived) should be deleted", 0, allLogs.size)
+            assertEquals("History entries should be deleted", 0, database.historyDao().getAllEntries().size)
         }
 
     @Test
@@ -69,8 +70,8 @@ class ClearCascadeTest : RoomIntegrationBase() {
             val state = repository.observeUiState().first()
             assertEquals("Tasks should be empty", 0, state.tasks.size)
             assertNotNull("Reward should still exist", repository.getRewardOrNull(rewardId))
-            val progress = state.rewardProgressList.find { it.reward.id == rewardId }!!
-            assertEquals("Cross refs should be cleared — reward has no tasks", 0, progress.allTasks.size)
+            val crossRefs = database.rewardTaskCrossRefDao().getAllCrossRefs()
+            assertEquals("Cross refs should be cleared — reward has no tasks", 0, crossRefs.size)
         }
 
     @Test
@@ -94,10 +95,9 @@ class ClearCascadeTest : RoomIntegrationBase() {
 
             repository.deleteTask(taskId)
 
-            val state = repository.observeUiState().first()
             assertNull("Task should be deleted", repository.getTaskOrNull(taskId))
-            val progress = state.rewardProgressList.find { it.reward.id == rewardId }!!
-            assertEquals("Cross ref should be removed after task deletion", 0, progress.allTasks.size)
+            val crossRefs = database.rewardTaskCrossRefDao().getTaskRefsForReward(rewardId)
+            assertEquals("Cross ref row should be removed by the FK cascade after task deletion", 0, crossRefs.size)
         }
 
     @Test
@@ -112,5 +112,7 @@ class ClearCascadeTest : RoomIntegrationBase() {
             assertNotNull("Task should still exist", repository.getTaskOrNull(taskId))
             val logsForDeletedReward = state.allLogs.filter { it.rewardId == rewardId }
             assertEquals("Active logs for deleted reward should be removed", 0, logsForDeletedReward.size)
+            val crossRefs = database.rewardTaskCrossRefDao().getAllCrossRefs()
+            assertEquals("Cross ref row should be removed by the FK cascade after reward deletion", 0, crossRefs.size)
         }
 }

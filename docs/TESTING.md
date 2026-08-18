@@ -241,6 +241,3 @@ Collapse/expand state, "Other" section behaviour, select-all checkbox logic, and
 
 **Transaction rollback on partial failure**
 `EarnItRepository`'s multi-step mutations (`importFromJson`, `deleteReward`, `clearAllTasks`/`clearAllRewards`/`clearAllLogs`, `importTemplate`, `copyRewardFromEntry`, `claimReward`, `saveRewardTasks`, `updateTaskRewards`) are wrapped in `database.withTransaction { }` so a crash mid-sequence can't leave the DB half-mutated. The unit tests (MockK-mocked database) verify DAO call sequencing, not real rollback — MockK can't simulate Room's actual transaction/rollback behaviour. An instrumented test against a real in-memory Room database, forcing one DAO call in a wrapped sequence to throw and asserting the rest never committed, would close this gap. Not yet written.
-
-**FK cascade delete behaviour**
-`deleteTask`/`deleteReward` rely on the `RewardTaskCrossRef` FK cascade (see `Entities.kt`) to remove cross-ref rows instead of an explicit DAO call. `DeleteCascadeTest` (MockK-mocked database) only asserts the repository no longer clears cross-refs manually — it cannot verify SQLite actually cascades the delete. An instrumented test against a real in-memory Room database would close this gap. Not yet written.

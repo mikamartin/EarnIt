@@ -86,7 +86,24 @@ class CleanUpScreenUiTest {
 
     @Test
     fun clearLogsDialog_cancel_clearsNothing() {
+        runBlocking {
+            val rewardId =
+                repository
+                    .observeUiState()
+                    .first()
+                    .rewardProgressList[0]
+                    .reward.id
+            repository.claimReward(rewardId, startOver = true)
+        }
         assertCancelClearsNothing(Strings.CLEANUP_BTN_LOGS, Strings.CLEANUP_DIALOG_LOGS_TITLE)
+        val historyCount =
+            runBlocking {
+                repository
+                    .observeUiState()
+                    .first()
+                    .historyEntries.size
+            }
+        assertEquals("History should survive a cancelled Clear Logs dialog", 1, historyCount)
     }
 
     @Test
@@ -112,6 +129,7 @@ class CleanUpScreenUiTest {
             settingsRepository.enableDevMode()
             settingsRepository.updateUnlockedMascots(setOf(MascotId.PUGSLY, MascotId.TABBY, MascotId.MASCOT_3))
             settingsRepository.updateCloudBackupEnabled(false)
+            settingsRepository.markOnboardingSeen()
         }
 
         composeTestRule.onNodeWithText(Strings.CLEANUP_BTN_ALL, ignoreCase = true).performScrollTo().performClick()
@@ -138,5 +156,6 @@ class CleanUpScreenUiTest {
         assertEquals(setOf(MascotId.PUGSLY, MascotId.TABBY), settings.unlockedMascotIds)
         // The cloud backup opt-out is a privacy choice, not app data — it must survive the wipe.
         assertFalse(settings.cloudBackupEnabled)
+        assertFalse("Onboarding should be reset so the tutorial reappears", settings.onboardingSeen)
     }
 }
