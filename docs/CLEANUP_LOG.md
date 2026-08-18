@@ -8,47 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 68 — Wipe Everything settings reset
-
-User asked whether Wipe Everything left anything behind (theme, dev mode, unlocked mascots, other DataStore settings). It did: `EarnItRepository.clearAll()` only called `database.clearAllTables()` — every `SettingsRepository`-backed preference survived untouched, so "wipe everything" wasn't actually everything. Confirmed the fix direction with the user (`AskUserQuestion`): reset the whole DataStore on Wipe Everything, with one deliberate exception — `cloudBackupEnabled` (the Auto Backup opt-out added in Pass 67) is a privacy choice, not app data, and silently flipping it back to its default-`true` on a "clean slate" wipe would be the opposite of what a privacy toggle should do. Mid-task the user also asked to remove the Settings screen's dismissible discoverability tip banner ("Tip: personalize your name, quote, and color theme below.") — unrelated to the wipe behavior itself, bundled into this branch/PR at the user's request, given as "it isn't really helpful and just adds noise."
-
-#### Duplication ✅ (checked)
-`resetForWipeEverything()` is a new `SettingsRepository` method, not a duplicate of `resetToDefaults()` — see Complexity below for why the two need to stay separate rather than being parameterised into one.
-
-#### Decoupling ✅ (checked, n/a)
-`EarnItRepository` still knows nothing about settings; the reset is orchestrated from `EarnItViewModel.clearAll()`, which already held both `repository` and `settingsRepository` references for unrelated reasons — no new coupling introduced.
-
-#### Complexity & Pattern Health ✅ — considered and rejected one simplification
-Considered making `resetForWipeEverything()` the *only* reset method and having `TestStateReset.resetAppState()` (instrumented test isolation) call it instead of `resetToDefaults()`. Rejected: `SettingsScreenUiTest.cloudBackupToggle_defaultsOn_turnedOff_persistsAfterRecreate` toggles cloud backup off and relies on the *next* test's `resetAppState()` clearing it back to the default `true` — if reset preserved the previous value like the Wipe Everything path does, that would leak `false` into whichever test runs next in the same instrumentation process instead of isolating it. Kept `resetToDefaults()` (full clear, used only by test setup) and `resetForWipeEverything()` (full clear except one key, used only by the real UI action) as two distinct methods rather than one parameterised one, since collapsing them would either break test isolation or need a boolean flag threaded through test-only code for a one-off production concern.
-
-#### Dead Code & Hygiene ✅ — found and removed a full feature, not just its usage
-Removed `settingsTipDismissed` (`AppSettings`), `SETTINGS_TIP_DISMISSED` (`SettingsRepository` key + read + `dismissSettingsTip()` setter), `dismissSettingsTip()` (`EarnItViewModel`), `SETTINGS_TIP`/`SETTINGS_TIP_DISMISS_DESC` (`Strings.kt`), the banner call site (`SettingsScreen.kt`), and `SettingsTipUiTest.kt` outright — grepped the repo afterward for every removed symbol name to confirm nothing was left dangling. `DismissibleTipBanner` itself (`EarnItButtons.kt`) is left in place since `RewardDetailScreen`'s widget-linking nudge still uses it. `ktlintCheck` caught one real violation on the first pass — the new `CLEANUP_DIALOG_ALL_BODY` string exceeded the 180-char line limit — fixed by wrapping it as a `+`-concatenated multi-line string, the pattern already used elsewhere in the codebase for long constants.
-
-#### Naming Consistency ✅ (checked)
-`resetForWipeEverything()` sits next to `resetToDefaults()`/`resetOnboarding()` and follows their existing `reset*` naming. `WipeEverythingViewModelTest` follows the `<Subject>Test` convention.
-
-#### Hardcoded Values ✅ (checked, n/a)
-
-#### Accessibility ✅ (checked, n/a)
-No new tappable elements. The tip banner's dismiss `IconButton` (and its `contentDescription`) was removed along with the whole feature, not left orphaned.
-
-#### Deprecated APIs ✅ (checked, n/a)
-
-#### Spec Review ✅ — found and fixed
-`EARNIT_SPEC.md` §6: removed the "Discoverability Tip" subsection (feature deleted); updated the "Unlocked Mascots" and "Onboarding Seen" table rows to note Wipe Everything as an additional reset path (the former's "never shrinks" claim was no longer accurate without the caveat); added an explicit sentence stating Wipe Everything resets every setting in the table except Cloud Backup Enabled, and why. Updated the App Structure diagram's Clean Up line to mention the settings reset and the backup-choice exception.
-
-#### Tests ✅ — added coverage at both layers, one judgment call noted
-- `WipeEverythingViewModelTest` (new file, 1 test): mockk-based, verifies `EarnItViewModel.clearAll()` calls `repository.clearAll()` then `settingsRepository.resetForWipeEverything()` in that order before `onComplete`. This is a single-test file, under `CLEANUP_RULES.md`'s "3+ tests to warrant a new file" guideline — considered folding it into `ImportViewModelErrorTest.kt` (the only existing file with a matching mockk-based `EarnItViewModel` test setup) but kept it separate since that file's own scope (documented by name and in `TESTING.md`) is import error mapping specifically, and `CleanupTest.kt` uses a different base (`RepositoryTestBase`, DAO-level mocks) that doesn't fit a ViewModel-level test. Judged a small clearly-named file clearer than either fit.
-- `CleanUpScreenUiTest.kt`: added `clearAllDialog_confirm_wipesDataAndResetsSettingsExceptBackupChoice` (4→5 tests) — the file previously only covered the Cancel path for all four dialogs. Seeds non-default theme/nickname/dev-mode/mascot/backup-toggle values, confirms Wipe Everything, and asserts data is empty, settings are back to default, and the backup choice specifically survived. Hit one real snag writing it: `DangerButton` uppercases its label at render time, so the dialog's confirm button and the card's open button both render the literal text "WIPE EVERYTHING" — `onNodeWithText` can't disambiguate. First fix attempt used `SemanticsNodeInteractionCollection.onLast()`, which doesn't exist in this project's compose-ui-test version — caught by `assembleDebugAndroidTest` failing to compile, not by a passing-for-the-wrong-reason test. Fixed by indexing into `onAllNodesWithText(...)` directly instead.
-- Deleted `SettingsTipUiTest.kt` (1 test) rather than leaving it to fail against removed strings — the feature is gone, not just untested.
-- Ran `./gradlew ktlintCheck`, `test`, `assembleDebugAndroidTest` (Hilt/DI graph sanity check — no `AppModule`/`TestAppModule` change, but `SettingsRepository`'s public surface changed), and `assembleDebug` sequentially — all pass. Ran `connectedDebugAndroidTest` pinned to the emulator (`ANDROID_SERIAL=emulator-5554`) for both affected classes: `CleanUpScreenUiTest` 5/5 and `SettingsScreenUiTest` 14/14 (checking the tip banner's removal didn't disturb the rest of the Settings screen) — 0 failed on a real device, not just compiling.
-- `TESTING.md`: Unit Tests header 205→206; added the `WipeEverythingViewModelTest` row; `CleanUpScreenUiTest` row 4→5 with the new behavior described; removed the `SettingsTipUiTest` row (Instrumented Tests count stays at 120 — one row removed, one test added elsewhere, net zero); rewrote the "Onboarding nudge dismissal persists" edge case to drop the tip-banner half (now just the widget nudge) and added a new "Wipe Everything resets settings except the backup choice" edge case describing the behavior and its tests.
-
-#### Dev Seed Data ✅ (checked, n/a)
-`TestDataSeeder` seeds database rows only; Wipe Everything's settings-reset path and the tip-banner removal don't touch it.
-
----
-
 ### Pass 69 — `chore/release-v1.3.0-prep` branch (doc sync ahead of the v1.3.0 release cut)
 
 User asked to confirm README.md and EARNIT_SPEC.md were current before cutting the v1.3.0 release. Pass 66–68 had each done a spec review, so EARNIT_SPEC.md's feature coverage was accurate, but README.md was never touched by any of the three preceding feature branches and had drifted; both docs also carried one shared stale claim and a stale test-count line.
@@ -114,3 +73,21 @@ No `AppModule`/`TestAppModule` change or new `@Inject` site — ran `./gradlew a
 
 #### Dev Seed Data ✅ (checked, n/a)
 No `TestDataSeeder` changes — this branch touches only DataStore-backed settings already covered by existing seed data.
+
+---
+
+### Pass 71 — `chore/qa-audit-doc-fixes` branch
+
+QA audit Issues 8, 9, 10, and 11: dangling `CLEANUP_BACKLOG.md` doc references and stale bug-history comments in `RewardEditScreenUiTest.kt`, `CleanUpScreenUiTest.kt`'s KDoc not covering its fifth (confirm) test, `TestStateReset.kt`'s KDoc describing removed cold-start navigation, a dead `TaskEntity.repeatable` field documented in the spec as functional, drifted test-count figures, and a stale "Widget colors hardcoded warm-gold" Known Limitation. While re-checking README beyond the audit's original scope, also found the opening tagline still carried the same unqualified "local only" claim Pass 69 already fixed elsewhere in the same file.
+
+#### Duplication / Decoupling / Complexity & Pattern Health / Naming Consistency / Hardcoded Values / Accessibility / Deprecated APIs / Dev Seed Data — n/a
+Doc/comment fixes plus one one-line Kotlin default-value change; no structural code touched.
+
+#### Dead Code & Hygiene ✅ (checked)
+`git status` shows only the 10 intended files changed. Removed both `CLEANUP_BACKLOG.md` references (a file that doesn't exist in `docs/`) and rewrote the comments around them to describe current, working behaviour instead of a fixed historical bug.
+
+#### Spec Review ✅ — found and fixed
+`EARNIT_SPEC.md` §1's Task Fields table and §10's Screen Map both documented `TaskEntity.repeatable` as functional (a "repeatable toggle" on Task Edit); confirmed dead in production — `TaskEditScreen.kt` only round-trips the field, nothing reads it, and repeatability is governed entirely by `RewardTaskCrossRef.isRepeatable` instead. Removed both. Kept the column itself rather than deleting it — the app is at Room schema v1 with a hard "every version bump ships a real migration" rule and no existing migration to pattern off, not worth it for a field with zero behavioural payoff. Separately, `RewardTaskCrossRef`'s own constructor default (`isRepeatable = false`) contradicted the documented default (`true`, matching `addTaskToReward`'s own default) — aligned it; confirmed low risk first, since only `GatekeeperTest`/`JsonExportTest` relied on the old default and neither asserts on the value itself.
+
+#### Tests ✅ — counts corrected, no test behaviour changed
+The audit's own baseline (204 unit / 121 instrumented) and even `TESTING.md`'s live headers (207/120) were both already stale — three since-merged branches had added tests without updating every count. Recomputed against a fresh `@Test` grep: 220 unit tests / 122 instrumented (87 UI-tagged, 35 Repository/Utility-tagged). Updated `TESTING.md`'s pyramid, headers, and two per-file rows (`FieldValidationTest` 14→20, `RewardProgressTest` 21→28), `EARNIT_SPEC.md` §9, `README.md`'s badge and prose, and `MANUAL_TEST_PLAN.md`'s `ExportImportTest` count (5→11). `./gradlew ktlintCheck`, `test` (220/220), and `assembleDebugAndroidTest` (run specifically because `Entities.kt` changed) all pass sequentially.

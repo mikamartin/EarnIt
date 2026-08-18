@@ -30,9 +30,8 @@ import org.junit.runner.RunWith
  * behavior (including isolation across multiple rows), editing an existing reward's fields,
  * task-link pre-population on an already-linked reward, selecting an existing task through
  * AddTaskToRewardDialog's own checkbox list (as opposed to the "create new" shortcut), and
- * the Browse Library entry point. Also pins a known pre-existing bug (see CLEANUP_BACKLOG.md):
- * adding two new tasks in a row via "Create your own" on an unsaved reward silently drops the
- * first one's inclusion.
+ * the Browse Library entry point. Also pins that adding two new tasks in a row via
+ * "Create your own" on an unsaved reward keeps both included across the round-trips.
  */
 @UiTest
 @Reward
@@ -194,11 +193,10 @@ class RewardEditScreenUiTest {
     @Test
     fun taskRows_multipleTasksToggleAndRemoveIndependently() {
         // Create two standalone tasks first, then add both in a single dialog session via the
-        // existing-task checkbox list. Adding them one at a time via "Create your own" instead
-        // would round-trip through TaskEditScreen twice, which currently drops the first task's
-        // inclusion when the second one lands (see sequentialCreateNewTasks_... below and
-        // CLEANUP_BACKLOG.md) — an unrelated, pre-existing bug this test intentionally avoids so
-        // it can isolate what it's actually testing: per-row toggle independence.
+        // existing-task checkbox list — the natural way to add two pre-existing tasks, and it
+        // isolates what this test actually checks: per-row toggle independence. Adding tasks one
+        // at a time via "Create your own" instead is covered separately by
+        // sequentialCreateNewTasks_onUnsavedReward_bothStayIncluded below.
         composeTestRule.createTask("Vacuum")
         composeTestRule.waitForTaskDetail()
 

@@ -31,9 +31,11 @@ import org.junit.runner.RunWith
 import javax.inject.Inject
 
 /**
- * CleanUpScreen's four destructive-action confirmation dialogs had no automated coverage at any
- * level before this — each test seeds a task, reward, and log, cancels the dialog, and confirms
- * via the repository directly that nothing was actually cleared.
+ * Covers CleanUpScreen's four destructive-action confirmation dialogs (Clear Logs / Clear Tasks /
+ * Clear Rewards / Wipe Everything). Four tests seed a task, reward, and log, cancel the dialog,
+ * and confirm via the repository directly that nothing was actually cleared. The fifth confirms
+ * Wipe Everything: wipes all data and resets DataStore settings to default except the cloud
+ * backup opt-out.
  */
 @UiTest
 @CleanUp

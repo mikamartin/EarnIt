@@ -36,7 +36,6 @@ git push origin --delete v0.0.1-test
 
 Permanent, accepted constraints — not open work, nothing here gets checked off. Document in release notes or the store listing if relevant. For testing gaps that are manual by design rather than a temporary environment issue, see [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) instead — this section is for product/code constraints, not test strategy.
 
-- Widget colors hardcoded warm-gold — Glance limitation.
 - Progress bar track backgrounds (`Color(0xFFFFFBF0)`, `Color(0xFFFFF5DC)`), disabled LOG button fill and border, detail dividers (`Color(0xFFD5C9B0)`), the activity-log task name color (`Color(0xFF8E7CC3)`), and the reward target cost label (`Color(0xFFB06000)`) are hardcoded hex values that do not adapt to Ocean Blue or Forest themes — intentional design choices, not bugs.
 - `rewardLinkState` (TaskEditScreen) loses checkbox state on rotation — would require a custom `Saver`.
 - `InfoIconButton` (`EarnItButtons.kt`) uses a 24dp touch target, below the 48dp accessibility minimum — accepted trade-off for a small, low-frequency toggle. Restoring the full 48dp visibly grows the row (Compose's `minimumInteractiveComponentSize()` reports the enlarged size to the parent layout, not just the touch system) and adds noticeable extra spacing above the note it reveals on `SettingsScreen`'s name/rewards/tasks toggles, confirmed via manual testing. Comparable to the `AddTaskToRewardDialog` 32dp exception, but permanent rather than pending revisit.
