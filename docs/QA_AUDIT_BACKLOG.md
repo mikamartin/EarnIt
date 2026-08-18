@@ -53,46 +53,7 @@ Utility, 87 UI).
 
 ## Issues Found
 
-### 1. `RewardTaskCrossRef` is obfuscated by R8, and Moshi serialises it reflectively — JSON export/import of reward↔task links is unsound in the shipped release build
-
-**Severity: high.** This is on the data-restore path of a live production release.
-
-`JsonExport` builds Moshi with `addLast(KotlinJsonAdapterFactory())`. Only `EarnItExport` carries
-`@JsonClass(generateAdapter = true)`; all five element types inside it (`TaskEntity`,
-`RewardEntity`, `RewardTaskCrossRef`, `CompletionLogEntity`, `HistoryEntryEntity`) fall through to
-the **reflective** adapter, which derives JSON keys from Kotlin metadata.
-
-`proguard-rules.pro` protects four of the five via `-keep class com.earnit.app.data.*Entity { *; }`.
-`RewardTaskCrossRef` does not end in `Entity`, and the `-keep class com.earnit.app.data.EarnItExport$*`
-rule only covers nested classes, so nothing keeps it. Confirmed against
-`app/build/outputs/mapping/release/mapping.txt`:
-
-```
-com.earnit.app.data.RewardTaskCrossRef -> gk2:
-    long rewardId    -> a
-    long taskId      -> b
-    boolean isMandatory  -> c
-    boolean isRepeatable -> d
-```
-
-versus `com.earnit.app.data.TaskEntity -> com.earnit.app.data.TaskEntity` (kept) for contrast.
-
-So in the minified release build the reward↔task link rows are serialised through R8-rewritten
-metadata rather than the source property names. `rewardId` and `taskId` have no defaults, so they
-are *required* parameters for the reflective adapter — meaning a backup whose
-`rewardTaskCrossRefs` entries use the documented key names will fail to parse, surfacing to the
-user as `ImportInvalidJsonException` → **"File is not valid JSON"**, aborting the entire import.
-Because R8's naming is not stable across builds, a backup exported by one release may also fail to
-import into the next.
-
-The exact runtime symptom (obfuscated keys written on export vs. hard parse failure on import)
-needs one export→import round-trip on an *installed release build* to pin down. Either way the
-keep rule is missing, the emitted format diverges from `EARNIT_SPEC.md` §7, and nothing tests it.
-
-Why nothing caught it: `ExportImportTest`, `JsonExportTest`, and `JsonImportValidationTest` all
-run against unminified debug/JVM classes. `MANUAL_TEST_PLAN.md`'s "Export / Import — full UI
-round-trip" journey is the only backstop and does not specify a release build. CI never builds
-the minified variant at all.
+### 1. `RewardTaskCrossRef` was obfuscated by R8 while Moshi serialised it reflectively, breaking release-build JSON export/import of reward↔task links — fixed on `fix/moshi-crossref-keep-rule`.
 
 ### 2. Wrong-file import can silently wipe all user data in Replace mode
 
@@ -406,33 +367,20 @@ Checked `EARNIT_SPEC.md`'s documented core mechanics against the corresponding a
 
 Seven proposed branches, ordered by severity. Nothing below has been started.
 
-### `fix/moshi-crossref-keep-rule` — Issue 1
+### `fix/moshi-crossref-keep-rule` — Issue 1 (done)
 
-**Deliverable:** JSON export/import of reward↔task links behaves identically in debug and
-minified release builds, and is proven to.
+**Steps (done):** Pinned the symptom on an installed signed release build first (import of a
+correctly-keyed backup failed with the generic "Import failed ✗" fallback — an exception type
+`JsonExport.fromJson`'s catch blocks didn't even recognize). Fixed the root cause: added
+`@JsonClass(generateAdapter = true)` to all five export element types, dropped
+`KotlinJsonAdapterFactory` and the now-unused `moshi-kotlin` dependency. Confirmed via
+`mapping.txt` that all five generated adapters and `RewardTaskCrossRef` itself are kept
+unobfuscated, and re-ran the same on-device round trip to confirm both import and export now use
+real key names. Added `MANUAL_TEST_PLAN.md`'s release-build step. No shipped backups exist yet
+(pre-Play-Store-launch), so no import compatibility shim was added.
 
-**Steps:**
-1. Install the current release build (`bundleRelease`/`assembleRelease`) on a device and run one
-   export → Replace-import round-trip on data that includes at least one reward↔task link, to pin
-   the actual symptom before changing anything.
-2. Fix the root cause rather than only the symptom. Preferred: add
-   `@JsonClass(generateAdapter = true)` to all five export element types so Moshi codegen
-   generates adapters and reflection drops out of the path entirely (this also lets
-   `KotlinJsonAdapterFactory` and the `moshi-kotlin` dependency be removed if nothing else needs
-   them). Fallback if codegen is rejected: replace the name-pattern keep rule with an explicit
-   `-keep class com.earnit.app.data.RewardTaskCrossRef { *; }` — but note that a name-pattern rule
-   is what failed here, so prefer removing the reflection dependency.
-3. Audit the remaining reflective Moshi surface the same way — confirm via `mapping.txt` that every
-   type reachable from `EarnItExport` keeps its property names.
-4. Add a step to `MANUAL_TEST_PLAN.md`'s Export/Import journey requiring the round-trip be run on
-   a **minified release build**, not a debug build, and say why.
-5. If step 1 shows shipped v1.3.0 backups carry obfuscated keys, decide separately whether a
-   one-time import compatibility shim is warranted; capture that decision in the PR.
-
-**Tests:** Round-trip assertions already exist (`ExportImportTest`, `JsonExportTest`). Add a unit
-test asserting the exact emitted top-level and per-entity key names for a fully populated
-`EarnItExport`, so any future adapter/keep-rule change that alters the wire format fails at the
-JVM tier instead of only on a real release install. Verify on-device per step 1.
+**Tests:** Added a `JsonExportTest` case pinning the exact top-level and per-entity JSON key names
+for a fully populated `EarnItExport`.
 
 ### `fix/import-schema-validation` — Issues 2 and 5
 

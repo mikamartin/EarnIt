@@ -3,7 +3,6 @@ package com.earnit.app.data
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.JsonDataException
 import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import java.io.IOException
 
 class ImportFileTooLargeException : Exception()
@@ -26,7 +25,7 @@ data class EarnItExport(
 )
 
 object JsonExport {
-    private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
+    private val moshi = Moshi.Builder().build()
     private val adapter = moshi.adapter(EarnItExport::class.java)
     private val earnItKeys = setOf("tasks", "rewards", "rewardTaskCrossRefs", "completionLogs", "historyEntries")
 
