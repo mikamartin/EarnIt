@@ -55,34 +55,7 @@ Utility, 87 UI).
 
 ### 1. `RewardTaskCrossRef` was obfuscated by R8 while Moshi serialised it reflectively, breaking release-build JSON export/import of reward↔task links — fixed on `fix/moshi-crossref-keep-rule`.
 
-### 2. Wrong-file import can silently wipe all user data in Replace mode
-
-**Severity: high.** Also a live data-loss path.
-
-`JsonExport.fromJson` gates on a raw substring search — `earnItKeys.none { json.contains("\"$key\"") }`
-— then parses with Moshi, which ignores unknown top-level keys. A foreign JSON file that merely
-contains one of the five key names as a real top-level key with an empty array passes both stages
-and yields an all-empty `EarnItExport`. In Replace mode `importFromJson` then runs
-`database.clearAllTables()` and inserts nothing.
-
-Verified with a throwaway probe against the real `JsonExport` (since reverted, tree clean):
-
-| Input | Result |
-|---|---|
-| `{"tasks":[],"projects":[{"title":"x"}]}` | **`Success(EarnItExport(all empty))`** → Replace wipes everything, reports "Replaced ✓" |
-| `{"tasks":["buy milk","walk dog"]}` | `ImportInvalidJsonException` — data safe, but the message ("File is not valid JSON") misdescribes a schema mismatch |
-| `{"note":"my \"tasks\" for today"}` | `ImportWrongSchemaException` — correctly rejected (the escaped quote defeats the substring match) |
-
-An all-empty export is legitimately valid (a backup from a fresh install), so the fix isn't to
-reject emptiness. `JsonExport.toJson` always emits all five top-level keys, so requiring **all
-five** to be present at the parsed top level would accept every genuine EarnIt backup and reject
-the probe case above.
-
-This also makes `EARNIT_SPEC.md` §7's validation claim inaccurate: step 3 says the key check
-"catches both wrong-shape JSON (an unrelated object, a JSON array) and unrecognizable malformed
-text with one check, and prevents a wrong file from silently wiping user data in Replace mode."
-The first and last clauses do not hold for an unrelated object that happens to use one of the five
-key names.
+### 2. Wrong-file import could silently wipe all user data in Replace mode — fixed on `fix/import-schema-validation`.
 
 ### 3. `ClearCascadeTest`'s two cross-ref assertions are vacuous — the FK cascade is not actually verified
 
@@ -116,12 +89,7 @@ The consequence is that `showsProgressNumbers false when points meet cost and ma
 unlogged` — the test that reads as pinning the mandatory-gate interaction — is actually only
 pinning `totalPoints >= cost`. The mandatory-task half of that scenario is unasserted.
 
-### 5. The import schema-key check's exactness is untested
-
-Weakening `json.contains("\"$key\"")` to `json.contains(key)` leaves both
-`JsonImportValidationTest` (8 tests) and `JsonExportTest` (5 tests) green. The check that stands
-between a wrong file and `clearAllTables()` has no test pinning the part that makes it discriminate
-— which is how Issue 2 stayed invisible.
+### 5. The import schema-key check's exactness was untested, which is how Issue 2 stayed invisible — fixed on `fix/import-schema-validation`.
 
 ### 6. Two "persistsAfterRecreate" tests don't actually test persistence across recreate
 
@@ -324,7 +292,7 @@ Checked `EARNIT_SPEC.md`'s documented core mechanics against the corresponding a
 
 **Mismatches flagged (detail in Issues Found):**
 
-- **§7 validation step 3** overstates what the schema check catches — Issue 2.
+- **§7 validation step 3** overstated what the schema check caught — Issue 2 (fixed; wording corrected).
 - **§1 Task Fields `Repeatable`** documents a field with no effect; **§10** lists a Task Edit
   repeatable toggle that doesn't exist — Issue 9.
 - **§5 Widget Theme** is correct, but `DEV_PLAYBOOK.md`'s Known Limitations contradicts it —
@@ -346,7 +314,7 @@ Checked `EARNIT_SPEC.md`'s documented core mechanics against the corresponding a
 
 ## Work, Grouped by Branch
 
-Seven proposed branches, ordered by severity. Nothing below has been started.
+Seven proposed branches, ordered by severity. Three have landed; the rest have not been started.
 
 ### `fix/moshi-crossref-keep-rule` — Issue 1 (done)
 
@@ -363,26 +331,27 @@ real key names. Added `MANUAL_TEST_PLAN.md`'s release-build step. No shipped bac
 **Tests:** Added a `JsonExportTest` case pinning the exact top-level and per-entity JSON key names
 for a fully populated `EarnItExport`.
 
-### `fix/import-schema-validation` — Issues 2 and 5
+### `fix/import-schema-validation` — Issues 2 and 5 (done)
 
-**Deliverable:** A wrong file can no longer wipe user data in Replace mode, and the guard is
-pinned by tests.
+**Steps (done):** Replaced the substring gate in `JsonExport.fromJson` with a two-stage parse: the
+top level is first parsed into a `Map<String, Any?>` and required to contain all five expected keys
+(`tasks`, `rewards`, `rewardTaskCrossRefs`, `completionLogs`, `historyEntries`), since
+`JsonExport.toJson` always emits all five; only then is the typed `EarnItExport` parse attempted.
+Genuine JSON syntax errors (caught during the generic parse) throw `ImportInvalidJsonException`;
+anything syntactically valid but the wrong shape — missing keys, a non-object top level, or a
+recognized key holding wrong-shaped elements — throws `ImportWrongSchemaException`, fixing the case
+where a recognizably-EarnIt-shaped file with a wrong element type was mislabeled as invalid JSON.
+`ImportWrongSchemaException`/`ImportInvalidJsonException` stayed the thrown types, so the existing
+ViewModel mapping and UI strings were unaffected. Updated `EARNIT_SPEC.md` §7's validation list to
+describe what the check actually guarantees.
 
-**Steps:**
-1. Replace the substring gate in `JsonExport.fromJson` with a parsed top-level key check —
-   read the JSON into a `Map<String, Any?>` and require all five expected keys, since
-   `JsonExport.toJson` always emits all five. Keep `ImportWrongSchemaException` as the thrown type
-   so the existing ViewModel mapping and UI strings are unaffected.
-2. Distinguish the "recognisable EarnIt keys but wrong element shape" case from genuine syntax
-   errors so `{"tasks":["buy milk"]}` reports a schema problem rather than "File is not valid
-   JSON".
-3. Update `EARNIT_SPEC.md` §7's validation list to describe what the check actually guarantees.
-
-**Tests:** Extend `JsonImportValidationTest` with the three probe cases from Issue 2 (all-empty
-foreign object with a `tasks` key, foreign `tasks` array of wrong shape, escaped-quote text) and a
-case pinning that a genuine all-empty EarnIt export still succeeds. Add an `ExportImportTest` case
-proving a Replace attempt with a foreign-but-key-matching file leaves existing rows intact —
-mirroring the existing `importReplace_withWrongSchema_doesNotWipeExistingData`.
+**Tests (done):** Extended `JsonImportValidationTest` with the Issue 2 probe (a foreign object
+reusing one EarnIt key) and a case pinning the wrong-element-shape distinction; updated the
+single-key-present test to expect `ImportWrongSchemaException` instead of success. Added
+`ExportImportTest.importReplace_withForeignKeyMatchingSchema_doesNotWipeExistingData`, mirroring
+the existing `importReplace_withWrongSchema_doesNotWipeExistingData`. `./gradlew test`,
+`ktlintCheck`, `assembleDebugAndroidTest`, and `:app:minifyReleaseWithR8` all pass; the full
+`ExportImportTest` class (11/11) confirmed passing via `connectedDebugAndroidTest` on-device.
 
 ### `test/fk-cascade-and-cleanup-assertions` — Issues 3 and 15
 
