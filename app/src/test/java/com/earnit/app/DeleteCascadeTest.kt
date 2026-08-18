@@ -11,7 +11,9 @@ import org.junit.Test
 // Cross-ref cleanup for both deleteTask and deleteReward is handled declaratively by the FK
 // cascade on RewardTaskCrossRef (see Entities.kt), not by an explicit repository call — MockK
 // can't simulate SQLite cascade behaviour, so these tests only assert the repository no longer
-// does it manually. Real cascade behaviour is covered by MANUAL_TEST_PLAN.md / TESTING.md.
+// does it manually. Real cascade behaviour is verified against a live in-memory Room database in
+// ClearCascadeTest (deleteTask_removesCrossRefs_rewardHasNoTasks and
+// deleteReward_removesActiveLogsAndCrossRefs_taskStillExists).
 class DeleteCascadeTest : RepositoryTestBase() {
     @Test
     fun `deleteTask deletes the task`() =

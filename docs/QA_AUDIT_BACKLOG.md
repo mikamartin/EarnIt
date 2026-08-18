@@ -57,26 +57,7 @@ Utility, 87 UI).
 
 ### 2. Wrong-file import could silently wipe all user data in Replace mode — fixed on `fix/import-schema-validation`.
 
-### 3. `ClearCascadeTest`'s two cross-ref assertions are vacuous — the FK cascade is not actually verified
-
-`deleteTask_removesCrossRefs_rewardHasNoTasks` and
-`clearAllTasks_removesTasksAndCrossRefs_rewardStillExists` both assert
-`progress.allTasks.size == 0`. But `allTasks` is built in `observeUiState` as
-`crossRefs.filter { … }.mapNotNull { taskMap[it.taskId] }`, and `taskMap` comes from live tasks —
-so once the task row is deleted the cross-ref is dropped from `allTasks` **whether or not the
-cross-ref row still exists**. Both assertions would pass with the FK cascade disabled entirely.
-`deleteReward_removesActiveLogsAndCrossRefs_taskStillExists` names cross-refs in its title and
-asserts nothing about them at all.
-
-This reconciles a documentation contradiction: `TESTING.md`'s Deferrals section is correct that FK
-cascade behaviour is not verified ("An instrumented test … would close this gap. Not yet
-written"), while its instrumented table row for `ClearCascadeTest` claims "`deleteTask` /
-`deleteReward` cascade" and `DeleteCascadeTest.kt`'s header comment claims "Real cascade behaviour
-is covered by `MANUAL_TEST_PLAN.md` / `TESTING.md`" — neither is true.
-
-Cascade enforcement itself *is* on: the generated `EarnItDatabase_Impl.onOpen` emits
-`PRAGMA foreign_keys = ON`, so the production behaviour is correct. The gap is purely that no test
-would notice if it regressed.
+### 3. `ClearCascadeTest`'s two cross-ref assertions were vacuous, so the FK cascade was never actually verified — fixed on `test/fk-cascade-and-cleanup-assertions`.
 
 ### 4. `showsProgressNumbers`' `!canClaim` term is dead code, and its test passes for the wrong reason
 
@@ -210,18 +191,12 @@ slow to find. Recording it here per the audit rules' weak-pass category.
 
 ### 15. Smaller test-quality notes
 
-- **`clearAllLogs_removesActiveAndArchivedLogs`** (`ClearCascadeTest`) asserts only
-  `allLogs.size == 0`; it never asserts history entries were deleted, though `clearAllLogs` deletes
-  both and `TESTING.md` describes the test as covering "active + archived logs **and** history
-  entries". The DAO-call half is covered by `CleanupTest`, so this is a description accuracy issue
-  more than a coverage one.
-- **`clearAllDialog_confirm_wipesDataAndResetsSettingsExceptBackupChoice`** asserts theme,
-  nickname, dev mode, mascots, and the backup toggle, but not `onboardingSeen` — which
-  `resetForWipeEverything()` also resets, and which `EARNIT_SPEC.md` §6 calls out as a Wipe
-  Everything reset path. The user-visible consequence (the first-launch tutorial reappearing on
-  Home after a wipe) is spec-sanctioned but has no coverage at any layer.
-- **`assertCancelClearsNothing`** (`CleanUpScreenUiTest`) checks task, reward, and log counts but
-  not history entries, so the Clear Logs cancel path doesn't prove history survived.
+- **`clearAllLogs_removesActiveAndArchivedLogs`** now also asserts history entries are deleted —
+  fixed on `test/fk-cascade-and-cleanup-assertions`.
+- **`clearAllDialog_confirm_wipesDataAndResetsSettingsExceptBackupChoice`** now also asserts
+  `onboardingSeen` resets — fixed on `test/fk-cascade-and-cleanup-assertions`.
+- **`assertCancelClearsNothing`**'s Clear Logs cancel path now also asserts history survives —
+  fixed on `test/fk-cascade-and-cleanup-assertions`.
 - **The `logCompletion` archived-reward guard has no JVM-tier coverage.** Deleting
   `if (reward.isArchived) return@withTransaction` leaves the *entire* 204-test unit suite green.
   This is by design — `LogAgainstArchivedRewardTest` covers it at the instrumented Repository
@@ -314,7 +289,7 @@ Checked `EARNIT_SPEC.md`'s documented core mechanics against the corresponding a
 
 ## Work, Grouped by Branch
 
-Seven proposed branches, ordered by severity. Three have landed; the rest have not been started.
+Seven proposed branches, ordered by severity. Four have landed; the rest have not been started.
 
 ### `fix/moshi-crossref-keep-rule` — Issue 1 (done)
 
@@ -353,27 +328,30 @@ the existing `importReplace_withWrongSchema_doesNotWipeExistingData`. `./gradlew
 `ktlintCheck`, `assembleDebugAndroidTest`, and `:app:minifyReleaseWithR8` all pass; the full
 `ExportImportTest` class (11/11) confirmed passing via `connectedDebugAndroidTest` on-device.
 
-### `test/fk-cascade-and-cleanup-assertions` — Issues 3 and 15
+### `test/fk-cascade-and-cleanup-assertions` — Issues 3 and 15 (done)
 
-**Deliverable:** The FK cascade is actually verified, and the cleanup tests assert everything
-their names claim.
+**Steps (done):** Gave `ClearCascadeTest` direct cross-ref reads via `RoomIntegrationBase`'s
+`database.rewardTaskCrossRefDao()` and replaced the vacuous `progress.allTasks`-based assertions in
+`deleteTask_…`, `clearAllTasks_…`, and `deleteReward_…` with direct row-count checks. Added a
+history-entry row-count assertion to `clearAllLogs_removesActiveAndArchivedLogs`
+(`database.historyDao().getAllEntries()`). In `CleanUpScreenUiTest`, seeded a history entry ahead
+of the Clear Logs cancel test specifically (via `claimReward(startOver = true)`) and asserted it
+survives cancel, rather than adding an always-trivially-passing history check to the shared
+`assertCancelClearsNothing` helper. Added an `onboardingSeen` assertion to
+`clearAllDialog_confirm_wipesDataAndResetsSettingsExceptBackupChoice` — scoped to the
+settings-level check only, not a UI-level assertion that the tutorial re-renders on Home (would
+require modeling `viewModel.onboardingStep`'s state machine, judged out of scope for this "smaller
+note"). Removed the "FK cascade delete behaviour" entry from `TESTING.md`'s Deferrals, and
+corrected `DeleteCascadeTest.kt`'s header comment to point at the new `ClearCascadeTest` assertions
+instead of the false `MANUAL_TEST_PLAN.md`/`TESTING.md` claim.
 
-**Steps:**
-1. Give `ClearCascadeTest` direct cross-ref reads (`RoomIntegrationBase` already exposes
-   `database`, so `database.rewardTaskCrossRefDao().getAllCrossRefs()` is available) and assert row
-   counts directly in `deleteTask_…`, `clearAllTasks_…`, and `deleteReward_…` instead of relying on
-   `allTasks`.
-2. Add history-entry assertions to `clearAllLogs_removesActiveAndArchivedLogs` and to
-   `CleanUpScreenUiTest.assertCancelClearsNothing`.
-3. Add the `onboardingSeen` assertion to
-   `clearAllDialog_confirm_wipesDataAndResetsSettingsExceptBackupChoice`, and decide whether the
-   tutorial reappearing on Home after a wipe warrants its own assertion.
-4. Move FK cascade delete out of `TESTING.md`'s Deferrals, and correct `DeleteCascadeTest.kt`'s
-   header comment to say where real cascade behaviour is verified.
-
-**Tests:** This branch *is* tests. Run `connectedDebugAndroidTest` pinned to
-`com.earnit.app.ClearCascadeTest` and `com.earnit.app.CleanUpScreenUiTest` on a device — a
-strengthened assertion that was never executed proves nothing.
+**Tests (done):** `./gradlew ktlintCheck` and `./gradlew test` (204/204) both pass.
+`connectedDebugAndroidTest` pinned to `com.earnit.app.ClearCascadeTest` and
+`com.earnit.app.CleanUpScreenUiTest` (10/10) confirmed passing on-device. As a sanity check that
+the new assertions aren't themselves vacuous, temporarily set both `RewardTaskCrossRef` foreign
+keys in `Entities.kt` to `ForeignKey.NO_ACTION` and re-ran `ClearCascadeTest`: it failed with a
+real `SQLiteConstraintException`, confirming the assertions are load-bearing; the change was then
+reverted and the suite re-confirmed green.
 
 ### `refactor/reward-progress-derived-state` — Issue 13
 
