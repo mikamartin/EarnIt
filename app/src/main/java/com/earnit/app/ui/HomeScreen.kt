@@ -578,8 +578,6 @@ fun RewardProgressCard(
     onAddTask: (() -> Unit)? = null,
 ) {
     val accents = LocalEarnItAccents.current
-    val showMandatoryHint = !rp.canClaim && rp.totalPoints >= rp.reward.cost
-    val showAllTasksLoggedHint = !rp.canClaim && rp.allTasks.isNotEmpty() && rp.loggableTasks.isEmpty()
     val rawProgress = rp.progressFraction
     val progress by animateFloatAsState(rawProgress, tween(500, easing = FastOutSlowInEasing), label = "barProgress")
     val scale by animateFloatAsState(if (isBeingDragged) 1.03f else 1f, label = "scale")
@@ -733,14 +731,14 @@ fun RewardProgressCard(
                         )
                     }
                 }
-                if (showMandatoryHint) {
+                if (rp.showsMandatoryHint) {
                     Text(
                         Strings.REWARD_MANDATORY_TASKS_HINT,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = accents.notification,
                     )
-                } else if (showAllTasksLoggedHint) {
+                } else if (rp.showsAllTasksLoggedHint) {
                     Text(
                         Strings.REWARD_ALL_TASKS_LOGGED_HINT,
                         style = MaterialTheme.typography.bodyMedium,

@@ -103,4 +103,82 @@ class FieldValidationTest {
         assertFalse(result.isMandatory)
         assertFalse(result.isRepeatable)
     }
+
+    @Test
+    fun `isDuplicateName true for a case-insensitive match against another item`() {
+        val result =
+            isDuplicateName(
+                candidateName = "Chores",
+                existingNames = listOf(5L to "chores"),
+                selfId = 1L,
+                navPending = false,
+            )
+
+        assertTrue(result)
+    }
+
+    @Test
+    fun `isDuplicateName true for a whitespace-trimmed match`() {
+        val result =
+            isDuplicateName(
+                candidateName = "  Chores  ",
+                existingNames = listOf(5L to "Chores"),
+                selfId = 1L,
+                navPending = false,
+            )
+
+        assertTrue(result)
+    }
+
+    @Test
+    fun `isDuplicateName false when the only match is the item's own id`() {
+        val result =
+            isDuplicateName(
+                candidateName = "Chores",
+                existingNames = listOf(1L to "Chores"),
+                selfId = 1L,
+                navPending = false,
+            )
+
+        assertFalse(result)
+    }
+
+    @Test
+    fun `isDuplicateName false for a blank candidate name`() {
+        val result =
+            isDuplicateName(
+                candidateName = "   ",
+                existingNames = listOf(5L to "Chores"),
+                selfId = 1L,
+                navPending = false,
+            )
+
+        assertFalse(result)
+    }
+
+    @Test
+    fun `isDuplicateName false when a save navigation is already pending`() {
+        val result =
+            isDuplicateName(
+                candidateName = "Chores",
+                existingNames = listOf(5L to "chores"),
+                selfId = 1L,
+                navPending = true,
+            )
+
+        assertFalse(result)
+    }
+
+    @Test
+    fun `isDuplicateName false when no existing name matches`() {
+        val result =
+            isDuplicateName(
+                candidateName = "Chores",
+                existingNames = listOf(5L to "Errands"),
+                selfId = 1L,
+                navPending = false,
+            )
+
+        assertFalse(result)
+    }
 }

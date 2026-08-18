@@ -195,14 +195,12 @@ fun RewardEditScreen(
 
     val includedTasks = uiState.tasks.filter { taskState[it.id]?.included == true }
     val nameConflict =
-        !pendingRewardSaveNav &&
-            name.isNotBlank() &&
-            uiState.rewardProgressList.any {
-                it.reward.name
-                    .trim()
-                    .equals(name.trim(), ignoreCase = true) &&
-                    it.reward.id != rewardId
-            }
+        isDuplicateName(
+            candidateName = name,
+            existingNames = uiState.rewardProgressList.map { it.reward.id to it.reward.name },
+            selfId = rewardId,
+            navPending = pendingRewardSaveNav,
+        )
     val canSave = name.isNotBlank() && !nameConflict
     val rewardNameForDelete =
         uiState.rewardProgressList

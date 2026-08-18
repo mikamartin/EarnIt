@@ -362,8 +362,8 @@ internal fun StandardContent(
     val fraction = progress.progressFraction
 
     val actionButton = widgetActionButtonFor(progress)
-    val showMandatoryHint = !progress.canClaim && progress.totalPoints >= progress.reward.cost
-    val showAllTasksLoggedHint = actionButton == WidgetActionButton.LOG_DISABLED
+    val showMandatoryHint = progress.showsMandatoryHint
+    val showAllTasksLoggedHint = progress.showsAllTasksLoggedHint
 
     val logIntent =
         Intent(context, WidgetTaskLogActivity::class.java).apply {

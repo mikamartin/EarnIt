@@ -160,6 +160,102 @@ class RewardProgressTest {
     }
 
     @Test
+    fun `showsMandatoryHint true when points meet cost exactly but a mandatory task is unlogged`() {
+        val mandatory = task(1L)
+        val progress =
+            RewardProgress(
+                reward = reward(10),
+                taskRefs = listOf(ref(1L, isMandatory = true)),
+                mandatoryTasks = listOf(mandatory),
+                optionalTasks = emptyList(),
+                activeLogs = listOf(log(2L, 10)),
+            )
+        assertTrue(progress.showsMandatoryHint)
+    }
+
+    @Test
+    fun `showsMandatoryHint false when reward can be claimed`() {
+        val mandatory = task(1L)
+        val progress =
+            RewardProgress(
+                reward = reward(5),
+                taskRefs = listOf(ref(1L, isMandatory = true)),
+                mandatoryTasks = listOf(mandatory),
+                optionalTasks = emptyList(),
+                activeLogs = listOf(log(1L, 10)),
+            )
+        assertFalse(progress.showsMandatoryHint)
+    }
+
+    @Test
+    fun `showsMandatoryHint false when points are below cost`() {
+        val progress =
+            RewardProgress(
+                reward = reward(20),
+                taskRefs = emptyList(),
+                mandatoryTasks = emptyList(),
+                optionalTasks = emptyList(),
+                activeLogs = listOf(log(1L, 5)),
+            )
+        assertFalse(progress.showsMandatoryHint)
+    }
+
+    @Test
+    fun `showsAllTasksLoggedHint true when cannot claim and every task is logged and non-repeatable`() {
+        val t1 = task(1L)
+        val progress =
+            RewardProgress(
+                reward = reward(20),
+                taskRefs = listOf(ref(1L, isRepeatable = false)),
+                mandatoryTasks = emptyList(),
+                optionalTasks = listOf(t1),
+                activeLogs = listOf(log(1L, 5)),
+            )
+        assertTrue(progress.showsAllTasksLoggedHint)
+    }
+
+    @Test
+    fun `showsAllTasksLoggedHint false when a task is still loggable`() {
+        val t1 = task(1L)
+        val progress =
+            RewardProgress(
+                reward = reward(20),
+                taskRefs = listOf(ref(1L, isRepeatable = true)),
+                mandatoryTasks = emptyList(),
+                optionalTasks = listOf(t1),
+                activeLogs = listOf(log(1L, 5)),
+            )
+        assertFalse(progress.showsAllTasksLoggedHint)
+    }
+
+    @Test
+    fun `showsAllTasksLoggedHint false when reward can be claimed`() {
+        val mandatory = task(1L)
+        val progress =
+            RewardProgress(
+                reward = reward(5),
+                taskRefs = listOf(ref(1L, isMandatory = true)),
+                mandatoryTasks = listOf(mandatory),
+                optionalTasks = emptyList(),
+                activeLogs = listOf(log(1L, 10)),
+            )
+        assertFalse(progress.showsAllTasksLoggedHint)
+    }
+
+    @Test
+    fun `showsAllTasksLoggedHint false when there are no linked tasks at all`() {
+        val progress =
+            RewardProgress(
+                reward = reward(20),
+                taskRefs = emptyList(),
+                mandatoryTasks = emptyList(),
+                optionalTasks = emptyList(),
+                activeLogs = emptyList(),
+            )
+        assertFalse(progress.showsAllTasksLoggedHint)
+    }
+
+    @Test
     fun `loggableTasks includes task not yet logged`() {
         val t1 = task(1L)
         val progress =
