@@ -1,10 +1,10 @@
 # EarnIt
 
-A productivity app for Android that keeps your data on your phone. 
+A productivity app for Android that keeps your data local — with an optional, opt-out Google account backup.
 
 [![CI](https://github.com/mikamartin/EarnIt/actions/workflows/ci.yml/badge.svg)](https://github.com/mikamartin/EarnIt/actions/workflows/ci.yml)
 [![Play Store](https://img.shields.io/badge/Play%20Store-EarnIt-brightgreen)](https://play.google.com/store/apps/details?id=com.secondmonday.earnit)
-![Unit tests](https://img.shields.io/badge/unit%20tests-206%2B-blue)
+![Unit tests](https://img.shields.io/badge/unit%20tests-220%2B-blue)
 ![Instrumented tests](https://img.shields.io/badge/instrumented%20tests-120%2B-blue)
 
 ---
@@ -76,7 +76,7 @@ graph LR
     subgraph data["Data Layer"]
         Repo["EarnItRepository\n(combine → EarnItUiState)"]
         DAOs["Room DAOs"]
-        DB[("SQLite\nlocal only")]
+        DB[("SQLite\n+ optional Google backup")]
     end
 
     Screens --> ViewModels
@@ -99,6 +99,7 @@ graph LR
 | [`docs/CLEANUP_RULES.md`](docs/CLEANUP_RULES.md) | Post-work cleanup checklist and log retention rule |
 | [`docs/CLEANUP_LOG.md`](docs/CLEANUP_LOG.md) | The 3 most recent cleanup passes and what was found |
 | [`docs/QA_AUDIT_RULES.md`](docs/QA_AUDIT_RULES.md) | Periodic whole-suite QA audit checklist |
+| [`docs/QA_AUDIT_BACKLOG.md`](docs/QA_AUDIT_BACKLOG.md) | Open findings from the most recent QA audit |
 | [`docs/CLOSED_TESTING_GUIDE.md`](docs/CLOSED_TESTING_GUIDE.md) | Plain-language testing guide for Play closed testing recruits |
 
 ---
@@ -107,7 +108,7 @@ graph LR
 
 The human product owner drives the project end to end: every feature starts as a decision defined in `EARNIT_SPEC.md` before any code is written, every product, UX, and architectural call is theirs, and every branch is reviewed and approved by them before it merges. The AI works from that spec and direction: drafting first-pass implementations, maintaining documentation, running cleanup passes, and setting up tooling.
 
-Quality is maintained through a documented test strategy: 206+ unit tests and 120+ instrumented tests (including Compose UI tests) plus a manual test plan for flows that cross system boundaries. Structured cleanup passes run after every feature.
+Quality is maintained through a documented test strategy: 220+ unit tests and 120+ instrumented tests (including Compose UI tests) plus a manual test plan for flows that cross system boundaries. Structured cleanup passes run after every feature.
 
 ---
 

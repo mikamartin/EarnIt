@@ -6,7 +6,7 @@ These journeys are deliberately never automated, not just temporarily deferred. 
 
 ## Export / Import — full UI round-trip
 
-**Why manual:** Export and import are launched via Android's Storage Access Framework (`ActivityResultContracts.CreateDocument` / `OpenDocument` in `DataScreen.kt`), which hands control to a separate system file-picker Activity outside the app's process. Compose UI tests operate on the semantics tree of the app under test; they have no visibility into the picker's UI, and that UI varies by Android version and OEM skin. The actual round-trip data correctness — the real risk — is already fully covered by `ExportImportTest.kt` (5 tests, real in-memory Room, including file-based variants through a temp `Uri`). What's left untested by automation is purely the screen wiring: button tap → picker → callback → status text.
+**Why manual:** Export and import are launched via Android's Storage Access Framework (`ActivityResultContracts.CreateDocument` / `OpenDocument` in `DataScreen.kt`), which hands control to a separate system file-picker Activity outside the app's process. Compose UI tests operate on the semantics tree of the app under test; they have no visibility into the picker's UI, and that UI varies by Android version and OEM skin. The actual round-trip data correctness — the real risk — is already fully covered by `ExportImportTest.kt` (11 tests, real in-memory Room, including file-based variants through a temp `Uri`). What's left untested by automation is purely the screen wiring: button tap → picker → callback → status text.
 
 **Cadence:** Once per release candidate, before each Play Store closed-test upload.
 

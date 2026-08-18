@@ -24,9 +24,9 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ```
                  [ Manual — 4 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
-            [ UI — 85 tests ]           ComposeTestRule + Hilt, real DataStore
-       [ Integration — 34 tests ]       Real in-memory Room, no mocks
-     [ Unit — 205 tests ]               JVM, MockK DAOs, fast
+            [ UI — 87 tests ]           ComposeTestRule + Hilt, real DataStore
+       [ Integration — 35 tests ]       Real in-memory Room, no mocks
+     [ Unit — 220 tests ]               JVM, MockK DAOs, fast
 ```
 
 **Run unit tests** (JVM, no device needed)
@@ -43,7 +43,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ---
 
-## Unit Tests — `app/src/test/` (207 tests)
+## Unit Tests — `app/src/test/` (220 tests)
 
 | File | What it covers |
 |---|---|
@@ -52,7 +52,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `LogAttributionTest` (5) | `logCompletion` — auto-points formula applied, manual points respected, task name snapshotted at log time, `rewardId` + detail recorded, `historyEntryId` null on new log |
 | `RepositoryBehaviourTest` (15) | `claimReward` (archives / no-archive / not-found), `saveRewardTasks` (correct flags, clears existing before insert), `copyRewardFromEntry` (flags/icon/description preserved, appended to end of list, skips creating a duplicate when an active reward already has the name, allows it when only an archived reward does, blocked at the active-reward-count cap), `importTemplate` (append / clean-slate / sortOrder / group assignment), `updateTaskRewards` (removes delinked / inserts with correct flags) |
 | `ImportDedupTest` (7) | `importTemplate` dedup — exact match, case-insensitive, whitespace-trimmed; non-conflicting tasks inserted; sort order continuous across skips; skipped list preserves template casing |
-| `RewardProgressTest` (21) | `totalPoints`, `canClaim` (points gate / mandatory gate / combined / no mandatory), `showsProgressNumbers` (below cost / cost met but mandatory task unlogged / claimable / zero-cost with no mandatory tasks), `progressFraction` (below cap, clamped to 1 above cost, 1 for zero-cost regardless of points), `allTasks` ordering, `isTaskLogged` (match found / no match / distinguishes between tasks with multiple logs present), `loggableTasks` (unlogged / non-repeatable already logged / repeatable re-loggable / mixed set) |
+| `RewardProgressTest` (28) | `totalPoints`, `canClaim` (points gate / mandatory gate / combined / no mandatory), `showsProgressNumbers` (below cost / cost met but mandatory task unlogged / claimable / zero-cost with no mandatory tasks), `progressFraction` (below cap, clamped to 1 above cost, 1 for zero-cost regardless of points), `allTasks` ordering, `isTaskLogged` (match found / no match / distinguishes between tasks with multiple logs present), `loggableTasks` (unlogged / non-repeatable already logged / repeatable re-loggable / mixed set) |
 | `ClaimRewardStartOverTest` (3) | `startOver=true` — history entry created, logs archived, reward name/icon/cost snapshotted |
 | `DeleteCascadeTest` (2) | `deleteTask` deletes the task; `deleteReward` clears active logs before deleting the reward — cross-ref cleanup for both is handled by the `RewardTaskCrossRef` FK cascade, not a manual repository call, which the test verifies negatively for `deleteReward` |
 | `CleanupTest` (3) | `clearAllLogs` deletes all logs (active + archived) **and** all history entries; `clearAllTasks` removes cross-refs then tasks; `clearAllRewards` removes cross-refs + active logs only (history preserved) |
@@ -73,7 +73,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `NudgeDebugToolsTest` (3) | `EarnItViewModel.debugGetLastLogIdleHours` — whole-hour idle time from a real timestamp, null when nothing's ever been logged; `debugBackdateLastLog` writes to the repository and invokes its completion callback exactly once (the ordering the "48H"/"96H" dev buttons rely on to avoid racing `NudgeWorker` against an in-flight write) |
 | `PugslyGestureTest` (10) | `PugslyGesture.nextState`/`isComplete` — the tap-timing state machine behind the secret mascot gesture: group-gap boundary (exact pass, one ms over resets), pause-window boundaries (one ms short/over resets, exact min/max accepted), full 7-tap success path, and mid-pattern resets (extra tap before the pause, a slow tap mid-second-burst) |
 | `DragReorderTest` (9) | `DragReorder.targetIndex`/`reordered` — the hover-target math and list-move step shared by Home's reward-list and Tasks' task-list long-press-drag reorder gestures: no target while still over the dragged item's own slot, correct target over another slot, dragged item excluded even if the center falls back inside its own bounds, leading/trailing edge boundaries (exclusive), moving an item down/up shifts the in-between items correctly, and a multi-step sequence (drag down twice, up once) ends at the correct final order |
-| `FieldValidationTest` (14) | `acceptWithinLimit`/`digitsOnly`/`nicknameFieldEdit`/`taskGroupFieldEdit`/`TaskEditState.withIncludedSetTo` — the character-cap, digit-only, cap-then-conditionally-reset-a-sibling-toggle, and task-link uncheck-reset transforms shared by every field that caps length, filters to digits, or resets other state on edit: under/at/over the character-cap boundary, a same-length replacement at the cap, digit-filtering of mixed/all-digit/no-digit input, the Settings nickname field disabling "random nickname" only on an accepted (non-overflow) edit, the Task group field clearing an existing-group selection only when the typed text is non-blank, and uncheck resetting both mandatory/repeatable flags regardless of prior state vs. checking leaving them untouched |
+| `FieldValidationTest` (20) | `acceptWithinLimit`/`digitsOnly`/`nicknameFieldEdit`/`taskGroupFieldEdit`/`TaskEditState.withIncludedSetTo` — the character-cap, digit-only, cap-then-conditionally-reset-a-sibling-toggle, and task-link uncheck-reset transforms shared by every field that caps length, filters to digits, or resets other state on edit: under/at/over the character-cap boundary, a same-length replacement at the cap, digit-filtering of mixed/all-digit/no-digit input, the Settings nickname field disabling "random nickname" only on an accepted (non-overflow) edit, the Task group field clearing an existing-group selection only when the typed text is non-blank, and uncheck resetting both mandatory/repeatable flags regardless of prior state vs. checking leaving them untouched |
 | `OnboardingStepTest` (11) | `OnboardingLogic`/`OnboardingStep` — pure state-machine logic behind the onboarding tutorial: per-step `canAdvance` gating (name non-blank, cost positive, ≥1 task linked; Intro/AwaitingSave/Outro always advance), `next`/`previous` step ordering, Outro as a terminal state for both directions, `next`/`previous` inverse for every non-terminal step, `fromIndex` round-trips every step's index |
 
 ---
@@ -217,7 +217,7 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
-| Unit (205 tests) | Every build/push | `./gradlew test` |
+| Unit (220 tests) | Every build/push | `./gradlew test` |
 | Integration + UI, instrumented (120 tests) | Every push/PR via CI (two parallel API 36 emulator jobs, Workflow 2 — sharded by layer); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (4) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 

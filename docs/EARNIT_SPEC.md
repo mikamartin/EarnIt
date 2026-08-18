@@ -363,7 +363,7 @@ A background check re-engages users who have stopped logging tasks, via a period
 
 See [TESTING.md](TESTING.md) for the full picture — current coverage, known gaps, and what to write next.
 
-**Summary:** 206 unit tests across 28 test files. 120 instrumented tests across 32 files (requires device/emulator) — including 85 Compose UI tests.
+**Summary:** 220 unit tests across 28 test files. 120 instrumented tests across 32 files (requires device/emulator) — including 87 Compose UI tests.
 
 ---
 
