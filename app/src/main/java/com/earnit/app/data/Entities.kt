@@ -93,7 +93,7 @@ data class RewardTaskCrossRef(
     val rewardId: Long,
     val taskId: Long,
     val isMandatory: Boolean = false,
-    val isRepeatable: Boolean = false,
+    val isRepeatable: Boolean = true,
 )
 
 @JsonClass(generateAdapter = true)
