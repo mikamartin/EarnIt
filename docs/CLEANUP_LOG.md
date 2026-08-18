@@ -8,52 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 67 — `fix/backup-privacy-opt-out` branch
-
-`allowBackup="true"` plus `data_extraction_rules.xml` meant Android's Auto Backup silently uploaded the Room database and DataStore preferences to the user's Google account, contradicting the About screen's "all your data stays right here on your phone" claim (confirmed by reproducing it: wipe → uninstall → reinstall → old data came back). Added an opt-out toggle (`SettingsRepository.cloudBackupEnabled`, default `true`, so existing users see no behavior change), enforced via a new `EarnItBackupAgent.onFullBackup` override — `allowBackup`/`dataExtractionRules` are static manifest attributes the OS reads once at install time, so they can't be toggled at runtime. Corrected the About screen copy to describe the opt-out instead of claiming an absolute "never leaves the phone."
-
-This checklist was first run mid-branch, before instrumented tests existed, with the Tests section explicitly flagged as deferred pending the user's manual pass. The user asked for the tests to be written immediately instead of waiting; the Tests section below reflects that they're now written and passing, not the original deferred state.
-
-#### Duplication ✅ (checked)
-The new toggle reuses the existing `SettingsCard` + `Switch` + `Modifier.semantics { contentDescription = ... }` pattern already used for `SETTINGS_QUOTE_TOGGLE`/`SETTINGS_NOTES_TOGGLE` — no new pattern introduced. `updateCloudBackupEnabled` follows the exact single-field `context.dataStore.edit { ... }` shape as every other `SettingsRepository` setter (e.g. `updateShowQuote`). New strings (`DATA_CLOUD_BACKUP_TITLE`/`DATA_CLOUD_BACKUP_SUBTITLE`) live only in `Strings.kt`, no inline duplicates at the call site.
-
-#### Decoupling ✅ (checked, one deliberate exception noted)
-`DataScreen.kt`'s new card only reads `settings.cloudBackupEnabled` and calls `viewModel.updateCloudBackupEnabled(it)` — no business logic in the composable. `EarnItBackupAgent` is the one deliberate exception to normal DI: it instantiates `SettingsRepository(applicationContext)` directly rather than via Hilt, because `BackupAgent` is instantiated by the OS via reflection outside the Hilt graph — the same constraint every Android framework-instantiated component in this codebase already works around (documented in the class's own comment and in `EARNIT_SPEC.md` §7).
-
-#### Complexity & Pattern Health ✅ — found and fixed
-`DataScreen`'s top-level composable was already ~215 lines (over the ~150-line guideline) before this branch; inlining the new toggle would have pushed it further without adding to an existing extraction. Since the file already extracts `NudgeDebugCard` as its own private composable for exactly this reason, extracted the new toggle the same way as `CloudBackupCard(viewModel, settings)` instead of leaving it inline in `DataScreen`.
-
-#### Dead Code & Hygiene ✅ (checked)
-`ktlintCheck` passes (one indentation violation from the first draft of the About copy string was caught and fixed before this pass). `git status` shows exactly the 7 intended files changed plus the new `backup/` package — no stray untracked files.
-
-#### Naming Consistency ✅ (checked, one judgment call noted)
-`cloudBackupEnabled`/`updateCloudBackupEnabled`/`CLOUD_BACKUP_ENABLED` follow the existing Boolean-setting naming convention throughout `SettingsRepository`/`AppSettings`. `EarnItBackupAgent.kt` lives in a new `backup/` package rather than `data/` — CLEANUP_RULES.md's package list (`data/`, `di/`, `ui/`, `viewmodel/`, `widget/`) doesn't name this case explicitly, but it mirrors `widget/`'s existing precedent of a dedicated package for Android-framework-instantiated components (receivers, activities) rather than app-layer classes, so a new sibling package was judged more consistent than forcing it into `data/` alongside repositories it isn't one of.
-
-#### Hardcoded Values ✅ (checked, n/a)
-No new colors or magic numbers.
-
-#### Accessibility ✅ (checked)
-The new `Switch` carries `Modifier.semantics { contentDescription = Strings.DATA_CLOUD_BACKUP_TITLE }`, matching every other settings toggle's pattern.
-
-#### Deprecated APIs ✅ (checked, n/a)
-No deprecation warnings from any new code (`assembleDebug`'s one warning, Moshi kapt codegen, is pre-existing and unrelated).
-
-#### Spec Review ✅ — found and fixed
-`EARNIT_SPEC.md` §7 rewritten to describe the toggle, its default, and why enforcement lives in `EarnItBackupAgent` rather than the manifest. Also found and fixed two related gaps while reviewing: §6's App Settings table was missing a row for the new setting (added, matching the `Onboarding Seen` row's style); the Settings screen tree diagram's "Data & Backup" line still only mentioned export/import (updated to mention the toggle too). Checked Deferred Ideas — no existing entry referenced this work, nothing to remove.
-
-#### Tests ✅ — found and closed the gap
-`SettingsRepository` has no unit-test precedent to extend — its DataStore-backed settings are only ever exercised through instrumented tests (e.g. `SettingsUiTest.colorScheme_selectionPersistsAfterRecreate`) — so coverage was added at that layer instead of inventing a new unit-test pattern for one field. Extended `SettingsScreenUiTest.kt` (already the home for the About/Data & Backup nav-row tests this toggle lives alongside) rather than `SettingsUiTest.kt`, since it fit the existing file's stated scope more directly: `cloudBackupToggle_defaultsOn_turnedOff_persistsAfterRecreate` asserts the default is `true` on a fresh install, then that toggling off and recreating the activity persists `false` — same `activityRule.scenario.recreate()` pattern as `selectedMascot_choiceOfUnlockedMascot_persistsAfterRecreate`. Added `aboutScreen_doesNotClaimDataNeverLeavesThePhone` as a regression guard for the actual privacy bug: asserts no rendered node contains "stays right here" and that "Google account" is shown — this fails if the old absolute claim is ever reintroduced, not just that *some* text renders.
-Ran `./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.earnit.app.SettingsScreenUiTest` on the connected emulator (API 36): 14/14 passed, 0 skipped, 0 failed — both new tests confirmed working on a real device, not just compiling.
-`checkInstrumentedTestTags`: `SettingsScreenUiTest` already carries its required `@UiTest` layer tag plus `@Settings` as an optional tag — both new tests fit within its existing scope, no tag changes needed.
-No `AppModule`/`TestAppModule` change or new `@Inject` site (still just `SettingsRepository`'s existing `Context` constructor) — ran `./gradlew assembleDebugAndroidTest` anyway before running on-device, per the Hilt-graph-sanity-check convention; passed.
-`TESTING.md`: `SettingsScreenUiTest` row 12→14 (exact) with both new behaviors described. Pyramid/header aggregate counts recomputed from actual `@Test` counts across `app/src/androidTest/`: UI 85→87 and instrumented total 120→122, both still round to their existing displayed values (85, 120) per the doc's own "nearest 5 or 10, not false precision" convention — left unchanged rather than reprinting the same rounded number.
-`./gradlew ktlintCheck`, `test`, `assembleDebug`, `assembleDebugAndroidTest` all pass sequentially.
-
-#### Dev Seed Data ✅ (checked, n/a)
-`TestDataSeeder` doesn't reference `SettingsRepository` — it seeds database rows (tasks/rewards/history), not DataStore preferences — so the new toggle needs no seed-data changes.
-
----
-
 ### Pass 68 — Wipe Everything settings reset
 
 User asked whether Wipe Everything left anything behind (theme, dev mode, unlocked mascots, other DataStore settings). It did: `EarnItRepository.clearAll()` only called `database.clearAllTables()` — every `SettingsRepository`-backed preference survived untouched, so "wipe everything" wasn't actually everything. Confirmed the fix direction with the user (`AskUserQuestion`): reset the whole DataStore on Wipe Everything, with one deliberate exception — `cloudBackupEnabled` (the Auto Backup opt-out added in Pass 67) is a privacy choice, not app data, and silently flipping it back to its default-`true` on a "clean slate" wipe would be the opposite of what a privacy toggle should do. Mid-task the user also asked to remove the Settings screen's dismissible discoverability tip banner ("Tip: personalize your name, quote, and color theme below.") — unrelated to the wipe behavior itself, bundled into this branch/PR at the user's request, given as "it isn't really helpful and just adds noise."
@@ -118,3 +72,45 @@ No test files changed.
 
 #### Release
 Version bump for the v1.3.0 cut: `app/build.gradle.kts` `versionCode` 3→4, `versionName` "1.2.0"→"1.3.0", per `DEV_PLAYBOOK.md`'s release process.
+
+---
+
+### Pass 70 — `test/settings-persistence-and-assertions` branch
+
+QA audit Issues 6 and 7: two `SettingsScreenUiTest` `...persistsAfterRecreate` tests only re-read the DataStore-backed repository after `activityRule.scenario.recreate()`, which was already written before the recreate — they'd pass identically with the `recreate()` line deleted. `useRandomNickname_enabled_overridesTypedNicknameOnHomeGreeting` only asserted the *old* nickname was gone, never that a random one actually appeared, and `mascotPicker_defaultUnlockedSet_onlyPugslyAndTabbySelectable` matched text anywhere on screen instead of scoping to the dialog. While fixing these, found that the audit's own cited counter-example, `SettingsUiTest.colorScheme_selectionPersistsAfterRecreate`, had the identical repo-only bug — not on the backlog list, fixed anyway for consistency, confirmed with the user first since it needed a small production change (see Accessibility below).
+
+#### Duplication ✅ (checked, n/a)
+The "re-navigate to Settings and assert rendered state" snippet now appears in three tests (colorScheme, mascot, cloud backup); each is 1–3 lines with a different target node, not worth extracting into a shared helper at this size.
+
+#### Decoupling ✅ (checked, n/a)
+Test-only changes plus one one-line production modifier swap in `ThemeChip` (`.clickable` → `.selectable`) — no logic moved between layers.
+
+#### Complexity & Pattern Health ✅ (checked)
+`Modifier.selectable(selected =, onClick =)` is the standard Compose replacement for a manually-tracked `selected` boolean plus `.clickable` — not a custom reimplementation of M3 selection behavior. `ThemeChip` is unchanged in size and structure.
+
+#### Dead Code & Hygiene ✅ (checked)
+`ktlintCheck` clean. Confirmed `clickable` (the import) is still used elsewhere in `SettingsScreen.kt` before leaving it in place. `git status` shows exactly the 5 intended files changed.
+
+#### Naming Consistency ✅ (checked, n/a)
+
+#### Hardcoded Values ✅ (checked, n/a)
+
+#### Accessibility ✅ — found and fixed
+`ThemeChip`'s selected state was previously conveyed only through border color/width and font weight — invisible to the semantics tree, so TalkBack couldn't announce which color scheme was selected. Exposing it via `Modifier.selectable`'s standard `selected` semantics fixes that alongside making the state testable; confirmed with the user before making the production change since it was outside the branch's original test-only scope.
+
+#### Deprecated APIs ✅ (checked, n/a)
+
+#### Spec Review ✅ (checked, n/a)
+No behavior change — `EARNIT_SPEC.md` doesn't document test/UI semantics at this level of detail.
+
+#### Tests ✅ — this branch's entire purpose
+Rewrote `selectedMascot_choiceOfUnlockedMascot_persistsAfterRecreate` and `cloudBackupToggle_defaultsOn_turnedOff_persistsAfterRecreate` to assert against rendered UI after recreate (Settings mascot row text; cloud-backup Switch `assertIsOff()`), keeping the repository check as a secondary assertion. Fixed `colorScheme_selectionPersistsAfterRecreate` the same way via the new `selected` semantics. Made `useRandomNickname_enabled_overridesTypedNicknameOnHomeGreeting` assert a random-nickname-shaped greeting actually renders (`SemanticsMatcher` on text starting with `"Earn It, "` and not equal to the old value) and dropped its one redundant `assertEquals`. Scoped `mascotPicker_defaultUnlockedSet_onlyPugslyAndTabbySelectable`'s Pugsly/Tabby lookups to the dialog via `hasAnyAncestor(isDialog())` (mirroring `CancelDismissAssertions`), asserted both carry a click action, and added a check that Panda's name is hidden.
+Load-bearing check: temporarily reverted the `ThemeChip` `.selectable(...)` change and re-ran `SettingsUiTest` — `colorScheme_selectionPersistsAfterRecreate` failed with a real `AssertionError` on `assertIsSelected()`, confirming the new assertion isn't vacuous; reverted the revert and re-confirmed green.
+Ran `./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.earnit.app.SettingsScreenUiTest,com.earnit.app.SettingsUiTest` on the connected emulator (API 36): 16/16 passed, 0 skipped, 0 failed.
+No `AppModule`/`TestAppModule` change or new `@Inject` site — ran `./gradlew assembleDebugAndroidTest` anyway per the Hilt-graph-sanity-check convention; passed.
+`checkInstrumentedTestTags`: both files already carry their required layer tags; no new test classes added, no tag changes needed.
+`TESTING.md`: `SettingsUiTest` and `SettingsScreenUiTest` row descriptions updated to state the recreate tests now confirm rendered UI, the nickname test asserts a positive outcome, and the mascot-picker checks are dialog-scoped. No aggregate counts changed — same number of tests, no new files.
+`./gradlew ktlintCheck`, `test` (204/204), `assembleDebugAndroidTest` all pass sequentially.
+
+#### Dev Seed Data ✅ (checked, n/a)
+No `TestDataSeeder` changes — this branch touches only DataStore-backed settings already covered by existing seed data.

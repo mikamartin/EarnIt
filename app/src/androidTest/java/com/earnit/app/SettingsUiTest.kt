@@ -2,6 +2,7 @@ package com.earnit.app
 
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.filterToOne
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -57,6 +58,9 @@ class SettingsUiTest {
         composeTestRule.onNodeWithText("Ocean Blue").performScrollTo().performClick()
 
         composeTestRule.activityRule.scenario.recreate()
+
+        composeTestRule.onNodeWithContentDescription("Settings").performClick()
+        composeTestRule.onNodeWithText("Ocean Blue").assertIsSelected()
 
         val saved = runBlocking { settingsRepository.settings.first() }
         assertEquals(AppColorScheme.OCEAN_BLUE, saved.colorScheme)

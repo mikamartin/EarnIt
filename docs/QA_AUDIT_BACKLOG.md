@@ -63,32 +63,9 @@ Utility, 87 UI).
 
 ### 5. The import schema-key check's exactness was untested, which is how Issue 2 stayed invisible — fixed on `fix/import-schema-validation`.
 
-### 6. Two "persistsAfterRecreate" tests don't actually test persistence across recreate
+### 6. Two "persistsAfterRecreate" tests didn't actually test persistence across recreate — fixed on `test/settings-persistence-and-assertions`.
 
-`SettingsScreenUiTest.selectedMascot_choiceOfUnlockedMascot_persistsAfterRecreate` and
-`cloudBackupToggle_defaultsOn_turnedOff_persistsAfterRecreate` both call
-`activityRule.scenario.recreate()` and then assert against `settingsRepository.settings.first()`.
-DataStore was already written before the recreate, so both tests pass identically with the
-`recreate()` line deleted. What they claim to cover — that the UI re-reads the persisted value
-after the activity is rebuilt — is not asserted. Contrast
-`SettingsUiTest.colorScheme_selectionPersistsAfterRecreate`, which checks the rendered result.
-
-### 7. `useRandomNickname` test under-asserts its own claim
-
-`SettingsScreenUiTest.useRandomNickname_enabled_overridesTypedNicknameOnHomeGreeting` only asserts
-that `"Earn It, Zorro!"` is *absent* after enabling the toggle. A regression that made the greeting
-render `"Earn It!"` with no name at all — or dropped the greeting entirely — would pass. Nothing
-asserts a random nickname actually appears. `TESTING.md` repeats the overstated claim
-("overrides the typed name on the greeting").
-
-The same test also asserts the same condition twice: a `waitUntil { … isEmpty() }` immediately
-followed by an `assertEquals(0, … .size)` that the wait already guaranteed.
-
-Adjacent, smaller: `mascotPicker_defaultUnlockedSet_onlyPugslyAndTabbySelectable` claims the
-unlocked set is "exactly" Pugsly and Tabby but only checks that both names appear *somewhere*
-(the row behind the dialog also renders "Pugsly", so the dialog's own cell is not isolated), that
-Panda's hint shows, and that "Penguin" is absent. It never asserts the two are selectable, nor
-that Panda's *name* is hidden.
+### 7. `useRandomNickname` and mascot-picker tests under-asserted their own claims — fixed on `test/settings-persistence-and-assertions`.
 
 ### 8. Stale comments and a dangling doc reference in `RewardEditScreenUiTest`
 
@@ -351,28 +328,32 @@ and `WidgetContentTest` also passed unmodified, confirming the widget's `when` c
 change. `./gradlew ktlintCheck`, `./gradlew test`, and `./gradlew assembleDebugAndroidTest` all
 pass.
 
-### `test/settings-persistence-and-assertions` — Issues 6 and 7
+### `test/settings-persistence-and-assertions` — Issues 6 and 7 (done)
 
-**Deliverable:** The recreate-persistence tests prove what their names claim, and the random-nickname
-test asserts a positive outcome.
+**Steps (done):** Rewrote `selectedMascot_choiceOfUnlockedMascot_persistsAfterRecreate` and
+`cloudBackupToggle_defaultsOn_turnedOff_persistsAfterRecreate` to re-navigate and assert against
+rendered UI after `recreate()` — the Settings mascot row's text and the cloud-backup Switch's
+`assertIsOff()` state — rather than only the repository, which is kept as a secondary check.
+While implementing this, found that the backlog's own cited counter-example,
+`SettingsUiTest.colorScheme_selectionPersistsAfterRecreate`, had the identical repo-only bug and
+fixed it too: exposed `ThemeChip`'s existing `selected` boolean through the semantics tree (swapped
+`.clickable` for `.selectable(selected = selected, onClick = …)`), then asserted
+`onNodeWithText("Ocean Blue").assertIsSelected()` after recreate. Made
+`useRandomNickname_enabled_overridesTypedNicknameOnHomeGreeting` assert a random-nickname-shaped
+greeting actually appears (`SemanticsMatcher` on text starting with `"Earn It, "` and not equal to
+the old `"Earn It, Zorro!"`) instead of only the old name's absence, and dropped the redundant
+`assertEquals` after the `waitUntil`. Scoped `mascotPicker_defaultUnlockedSet_onlyPugslyAndTabbySelectable`'s
+Pugsly/Tabby lookups to the dialog via `hasAnyAncestor(isDialog())` (mirroring
+`CancelDismissAssertions`), asserted both carry a click action, and added a check that Panda's name
+is hidden. Updated `TESTING.md`'s `SettingsUiTest` and `SettingsScreenUiTest` rows to match.
 
-**Steps:**
-1. Rewrite `selectedMascot_choiceOfUnlockedMascot_persistsAfterRecreate` and
-   `cloudBackupToggle_defaultsOn_turnedOff_persistsAfterRecreate` to assert against the rendered UI
-   after `recreate()` (the mascot shown on Home / the toggle's rendered state), following
-   `SettingsUiTest.colorScheme_selectionPersistsAfterRecreate`. Keep the repository assertion as a
-   secondary check if useful, but the UI assertion is the point.
-2. Make `useRandomNickname_enabled_overridesTypedNicknameOnHomeGreeting` assert a random nickname
-   is actually displayed — the greeting matches `Strings.appTitle(<some non-blank name>)` and is
-   not the no-address form — rather than only that "Zorro" is gone. Drop the redundant
-   `assertEquals` after the `waitUntil`.
-3. Tighten `mascotPicker_defaultUnlockedSet_onlyPugslyAndTabbySelectable` to scope its Pugsly/Tabby
-   lookups to the dialog (`isDialog()`, as `CancelDismissAssertions` already does) and to assert
-   Panda's name is hidden.
-4. Correct the corresponding `TESTING.md` row descriptions to match what the tests assert.
-
-**Tests:** Run `connectedDebugAndroidTest` pinned to `com.earnit.app.SettingsScreenUiTest` on a
-device.
+**Tests (done):** `./gradlew ktlintCheck`, `./gradlew test` (204/204), and
+`./gradlew assembleDebugAndroidTest` all pass. `connectedDebugAndroidTest` pinned to
+`com.earnit.app.SettingsScreenUiTest` and `com.earnit.app.SettingsUiTest` (16/16) confirmed passing
+on-device. As a load-bearing check, temporarily reverted the `ThemeChip` `.selectable(...)` change
+and re-ran `SettingsUiTest`: `colorScheme_selectionPersistsAfterRecreate` failed with a real
+`AssertionError` on `assertIsSelected()`, confirming the new assertion isn't vacuous; the change
+was then restored and the suite re-confirmed green.
 
 ### `chore/qa-audit-doc-fixes` — Issues 8, 9, 10, 11
 
