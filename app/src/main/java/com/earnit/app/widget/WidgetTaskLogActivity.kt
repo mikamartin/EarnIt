@@ -6,6 +6,7 @@ import android.os.Vibrator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -70,6 +71,7 @@ class WidgetTaskLogActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         val rewardId = intent?.getLongExtra("rewardId", 0L) ?: 0L
 
         // Clear any stale flash from a prior process that never got to revert it.
