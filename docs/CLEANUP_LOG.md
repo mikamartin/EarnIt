@@ -8,32 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 69 — `chore/release-v1.3.0-prep` branch (doc sync ahead of the v1.3.0 release cut)
-
-User asked to confirm README.md and EARNIT_SPEC.md were current before cutting the v1.3.0 release. Pass 66–68 had each done a spec review, so EARNIT_SPEC.md's feature coverage was accurate, but README.md was never touched by any of the three preceding feature branches and had drifted; both docs also carried one shared stale claim and a stale test-count line.
-
-Most checklist sections are n/a — this is a documentation-only pass, no source changes.
-
-#### Duplication / Decoupling / Complexity & Pattern Health / Naming Consistency / Hardcoded Values / Accessibility / Deprecated APIs / Dev Seed Data — n/a
-No source code touched this pass.
-
-#### Dead Code & Hygiene ✅ (checked)
-`git status` shows only the intended doc + `app/build.gradle.kts` changes.
-
-#### Spec Review ✅ — found and fixed
-- `README.md`: missing the first-launch onboarding tutorial from the feature list entirely; the backup bullet didn't mention it's opt-out; the intro line and Tech Stack table both claimed an absolute "local only, no cloud sync" that contradicts the Auto Backup opt-out shipped in Pass 67 (the same class of inaccuracy Pass 67 already fixed in the in-app About copy, just missed in README). Fixed all three.
-- `EARNIT_SPEC.md`: the Overview and Stack table carried the same absolute "local only, no cloud" wording as README, inconsistent with §7's own accurate description of the opt-out backup. Fixed both to match §7, with a cross-reference link from the Overview.
-- `EARNIT_SPEC.md`'s test-summary line (§ Tests) was stale on two axes: test counts (203/119/85 vs. actual 206/120/85 per `TESTING.md`'s current headers) and file counts (claimed 29/41, actual 28/32 — verified against both the filesystem and `TESTING.md`'s own table row counts). Corrected to 206 unit tests / 28 files, 120 instrumented / 32 files, 85 Compose UI tests.
-- Did not touch `TESTING.md`'s test pyramid (`Unit — 205 tests` / `UI — 85 tests` / `Integration — 34 tests`, which sums to 119 against the section header's 120) — that's a pre-existing internal inconsistency predating this branch, out of scope for a doc-sync pass; flagging here rather than silently leaving it for the next person to rediscover.
-
-#### Tests — n/a
-No test files changed.
-
-#### Release
-Version bump for the v1.3.0 cut: `app/build.gradle.kts` `versionCode` 3→4, `versionName` "1.2.0"→"1.3.0", per `DEV_PLAYBOOK.md`'s release process.
-
----
-
 ### Pass 70 — `test/settings-persistence-and-assertions` branch
 
 QA audit Issues 6 and 7: two `SettingsScreenUiTest` `...persistsAfterRecreate` tests only re-read the DataStore-backed repository after `activityRule.scenario.recreate()`, which was already written before the recreate — they'd pass identically with the `recreate()` line deleted. `useRandomNickname_enabled_overridesTypedNicknameOnHomeGreeting` only asserted the *old* nickname was gone, never that a random one actually appeared, and `mascotPicker_defaultUnlockedSet_onlyPugslyAndTabbySelectable` matched text anywhere on screen instead of scoping to the dialog. While fixing these, found that the audit's own cited counter-example, `SettingsUiTest.colorScheme_selectionPersistsAfterRecreate`, had the identical repo-only bug — not on the backlog list, fixed anyway for consistency, confirmed with the user first since it needed a small production change (see Accessibility below).
@@ -91,3 +65,30 @@ Doc/comment fixes plus one one-line Kotlin default-value change; no structural c
 
 #### Tests ✅ — counts corrected, no test behaviour changed
 The audit's own baseline (204 unit / 121 instrumented) and even `TESTING.md`'s live headers (207/120) were both already stale — three since-merged branches had added tests without updating every count. Recomputed against a fresh `@Test` grep: 220 unit tests / 122 instrumented (87 UI-tagged, 35 Repository/Utility-tagged). Updated `TESTING.md`'s pyramid, headers, and two per-file rows (`FieldValidationTest` 14→20, `RewardProgressTest` 21→28), `EARNIT_SPEC.md` §9, `README.md`'s badge and prose, and `MANUAL_TEST_PLAN.md`'s `ExportImportTest` count (5→11). `./gradlew ktlintCheck`, `test` (220/220), and `assembleDebugAndroidTest` (run specifically because `Entities.kt` changed) all pass sequentially.
+
+---
+
+### Pass 72 — `fix/widget-edge-to-edge` branch
+
+Play Console's pre-launch report on the shipped `v1.3.0` build flagged edge-to-edge issues. Investigation found `MainActivity` already correctly calls `enableEdgeToEdge()`; the real gap was `WidgetConfigActivity` and `WidgetTaskLogActivity` never calling it, unlike `MainActivity`, despite both already padding content with `Modifier.windowInsetsPadding(WindowInsets.safeDrawing)`.
+
+#### Duplication / Decoupling / Complexity & Pattern Health / Naming Consistency / Hardcoded Values — n/a
+Two-line diff (one import, one call) in each of two files, mirroring `MainActivity.kt`'s existing pattern exactly. No new logic, no new abstraction.
+
+#### Dead Code & Hygiene ✅ (checked)
+`git status` shows only the two intended widget-activity files changed. `ktlintCheck` clean.
+
+#### Accessibility ✅ (checked, n/a)
+No new touch targets or content descriptions introduced.
+
+#### Deprecated APIs ✅ — investigated, documented as not actionable
+The report's second warning (`setStatusBarColor`/`setNavigationBarColor`/`LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES`) traces to obfuscated AndroidX classes, not app code — confirmed via full-codebase search (no direct calls, no Accompanist dependency). These are `androidx.activity`'s own `enableEdgeToEdge()` fallback on API 31–34 (`minSdk` 31, OS-native edge-to-edge only from API 35) — not fixable without dropping support for Android 12–14. Documented as a permanent constraint in `DEV_PLAYBOOK.md`'s Known Limitations so it isn't re-investigated on the next pre-launch report.
+
+#### Spec Review ✅ (checked, n/a)
+`EARNIT_SPEC.md` doesn't document edge-to-edge/window-inset handling at this level of detail for the widget activities — nothing to update.
+
+#### Tests ✅ (checked, n/a)
+Window-flag-only change with no new business logic; no new unit test warranted. Ran the full suite as the pre-release gate this branch feeds into: `./gradlew test` 220/220, `./gradlew connectedDebugAndroidTest` on the API 36 emulator 122/122 (0 skipped, 0 failed), `./gradlew assembleDebugAndroidTest` (Hilt graph, run as routine gate — no `AppModule`/`TestAppModule`/`@Inject` change). Manually verified both activities render with correct status-bar icon contrast and no content overlap (screenshots on the API 36 emulator), per `MANUAL_TEST_PLAN.md`'s widget-cadence step 13.
+
+#### Dev Seed Data ✅ (checked, n/a)
+No `TestDataSeeder` changes — visual-only fix, not data-shape-dependent.
