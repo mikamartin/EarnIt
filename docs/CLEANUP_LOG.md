@@ -8,48 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 70 — `test/settings-persistence-and-assertions` branch
-
-QA audit Issues 6 and 7: two `SettingsScreenUiTest` `...persistsAfterRecreate` tests only re-read the DataStore-backed repository after `activityRule.scenario.recreate()`, which was already written before the recreate — they'd pass identically with the `recreate()` line deleted. `useRandomNickname_enabled_overridesTypedNicknameOnHomeGreeting` only asserted the *old* nickname was gone, never that a random one actually appeared, and `mascotPicker_defaultUnlockedSet_onlyPugslyAndTabbySelectable` matched text anywhere on screen instead of scoping to the dialog. While fixing these, found that the audit's own cited counter-example, `SettingsUiTest.colorScheme_selectionPersistsAfterRecreate`, had the identical repo-only bug — not on the backlog list, fixed anyway for consistency, confirmed with the user first since it needed a small production change (see Accessibility below).
-
-#### Duplication ✅ (checked, n/a)
-The "re-navigate to Settings and assert rendered state" snippet now appears in three tests (colorScheme, mascot, cloud backup); each is 1–3 lines with a different target node, not worth extracting into a shared helper at this size.
-
-#### Decoupling ✅ (checked, n/a)
-Test-only changes plus one one-line production modifier swap in `ThemeChip` (`.clickable` → `.selectable`) — no logic moved between layers.
-
-#### Complexity & Pattern Health ✅ (checked)
-`Modifier.selectable(selected =, onClick =)` is the standard Compose replacement for a manually-tracked `selected` boolean plus `.clickable` — not a custom reimplementation of M3 selection behavior. `ThemeChip` is unchanged in size and structure.
-
-#### Dead Code & Hygiene ✅ (checked)
-`ktlintCheck` clean. Confirmed `clickable` (the import) is still used elsewhere in `SettingsScreen.kt` before leaving it in place. `git status` shows exactly the 5 intended files changed.
-
-#### Naming Consistency ✅ (checked, n/a)
-
-#### Hardcoded Values ✅ (checked, n/a)
-
-#### Accessibility ✅ — found and fixed
-`ThemeChip`'s selected state was previously conveyed only through border color/width and font weight — invisible to the semantics tree, so TalkBack couldn't announce which color scheme was selected. Exposing it via `Modifier.selectable`'s standard `selected` semantics fixes that alongside making the state testable; confirmed with the user before making the production change since it was outside the branch's original test-only scope.
-
-#### Deprecated APIs ✅ (checked, n/a)
-
-#### Spec Review ✅ (checked, n/a)
-No behavior change — `EARNIT_SPEC.md` doesn't document test/UI semantics at this level of detail.
-
-#### Tests ✅ — this branch's entire purpose
-Rewrote `selectedMascot_choiceOfUnlockedMascot_persistsAfterRecreate` and `cloudBackupToggle_defaultsOn_turnedOff_persistsAfterRecreate` to assert against rendered UI after recreate (Settings mascot row text; cloud-backup Switch `assertIsOff()`), keeping the repository check as a secondary assertion. Fixed `colorScheme_selectionPersistsAfterRecreate` the same way via the new `selected` semantics. Made `useRandomNickname_enabled_overridesTypedNicknameOnHomeGreeting` assert a random-nickname-shaped greeting actually renders (`SemanticsMatcher` on text starting with `"Earn It, "` and not equal to the old value) and dropped its one redundant `assertEquals`. Scoped `mascotPicker_defaultUnlockedSet_onlyPugslyAndTabbySelectable`'s Pugsly/Tabby lookups to the dialog via `hasAnyAncestor(isDialog())` (mirroring `CancelDismissAssertions`), asserted both carry a click action, and added a check that Panda's name is hidden.
-Load-bearing check: temporarily reverted the `ThemeChip` `.selectable(...)` change and re-ran `SettingsUiTest` — `colorScheme_selectionPersistsAfterRecreate` failed with a real `AssertionError` on `assertIsSelected()`, confirming the new assertion isn't vacuous; reverted the revert and re-confirmed green.
-Ran `./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.earnit.app.SettingsScreenUiTest,com.earnit.app.SettingsUiTest` on the connected emulator (API 36): 16/16 passed, 0 skipped, 0 failed.
-No `AppModule`/`TestAppModule` change or new `@Inject` site — ran `./gradlew assembleDebugAndroidTest` anyway per the Hilt-graph-sanity-check convention; passed.
-`checkInstrumentedTestTags`: both files already carry their required layer tags; no new test classes added, no tag changes needed.
-`TESTING.md`: `SettingsUiTest` and `SettingsScreenUiTest` row descriptions updated to state the recreate tests now confirm rendered UI, the nickname test asserts a positive outcome, and the mascot-picker checks are dialog-scoped. No aggregate counts changed — same number of tests, no new files.
-`./gradlew ktlintCheck`, `test` (204/204), `assembleDebugAndroidTest` all pass sequentially.
-
-#### Dev Seed Data ✅ (checked, n/a)
-No `TestDataSeeder` changes — this branch touches only DataStore-backed settings already covered by existing seed data.
-
----
-
 ### Pass 71 — `chore/qa-audit-doc-fixes` branch
 
 QA audit Issues 8, 9, 10, and 11: dangling `CLEANUP_BACKLOG.md` doc references and stale bug-history comments in `RewardEditScreenUiTest.kt`, `CleanUpScreenUiTest.kt`'s KDoc not covering its fifth (confirm) test, `TestStateReset.kt`'s KDoc describing removed cold-start navigation, a dead `TaskEntity.repeatable` field documented in the spec as functional, drifted test-count figures, and a stale "Widget colors hardcoded warm-gold" Known Limitation. While re-checking README beyond the audit's original scope, also found the opening tagline still carried the same unqualified "local only" claim Pass 69 already fixed elsewhere in the same file.
@@ -92,3 +50,26 @@ Window-flag-only change with no new business logic; no new unit test warranted. 
 
 #### Dev Seed Data ✅ (checked, n/a)
 No `TestDataSeeder` changes — visual-only fix, not data-shape-dependent.
+
+---
+
+### Pass 73 — `chore/release-v1.3.1-prep` branch (doc sync ahead of the v1.3.1 release cut)
+
+Version bump for the v1.3.1 patch release (fixes since `v1.3.0`: #78 Moshi export serialization, #80 import schema validation, #85 widget edge-to-edge). Confirmed `README.md` and `EARNIT_SPEC.md` were current before cutting, per the `chore/release-vX.Y.Z-prep` pattern established in Pass 69.
+
+Most checklist sections are n/a — this is a version-bump-and-doc-check pass, no source changes beyond `app/build.gradle.kts`.
+
+#### Duplication / Decoupling / Complexity & Pattern Health / Naming Consistency / Hardcoded Values / Accessibility / Deprecated APIs / Dev Seed Data — n/a
+No source code touched this pass.
+
+#### Dead Code & Hygiene ✅ (checked)
+`git status` shows only `app/build.gradle.kts` and this log changed.
+
+#### Spec Review ✅ (checked, no drift found)
+Recomputed test counts against a fresh `@Test` grep, filtering the one false-positive substring match (`@TestInstallIn` in `TestAppModule.kt`): 220 unit tests / 28 files, 122 instrumented tests / 32 files. Matches `EARNIT_SPEC.md`'s documented "220 unit tests across 28 test files. 120 instrumented tests across 32 files" (120 is `TESTING.md`'s intentional round-to-nearest-10 for the instrumented aggregate, not staleness) and `README.md`'s "220+ / 120+" badge and prose. No feature-list or SDK-version drift found in either doc. Nothing to fix.
+
+#### Tests — n/a
+No test files changed. Pre-release gate already run on the merged `fix/widget-edge-to-edge` branch (Pass 72): `test` 220/220, `connectedDebugAndroidTest` 122/122.
+
+#### Release
+Version bump for the v1.3.1 cut: `app/build.gradle.kts` `versionCode` 4→5, `versionName` "1.3.0"→"1.3.1", per `DEV_PLAYBOOK.md`'s release process.
