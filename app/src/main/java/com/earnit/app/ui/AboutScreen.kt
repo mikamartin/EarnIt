@@ -196,6 +196,22 @@ fun AboutScreen(
                     },
                 )
 
+                HorizontalDivider()
+
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        Strings.ABOUT_DISCLAIMER_TITLE,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        Strings.ABOUT_DISCLAIMER_BODY,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+
                 if (FeatureFlags.TIP_JAR_ENABLED) {
                     HorizontalDivider()
 

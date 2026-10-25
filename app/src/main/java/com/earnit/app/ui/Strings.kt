@@ -81,6 +81,10 @@ object Strings {
     const val ABOUT_PRIVACY_LABEL = "Privacy policy"
     const val ABOUT_PRIVACY_SUBTITLE = "How your data is handled (it isn't)."
     const val ABOUT_PRIVACY_URL = "https://secondmondaystudios.com/privacy/earnit.html"
+    const val ABOUT_DISCLAIMER_TITLE = "Disclaimer"
+    const val ABOUT_DISCLAIMER_BODY =
+        "This app is provided \"as is,\" without warranty of any kind, express or implied. " +
+            "In no event shall the developer be liable for any damages, including loss of data, arising from the use of this app."
     const val ABOUT_TIP_TITLE = "Support the developer"
     const val ABOUT_TIP_COPY =
         "EarnIt is free and ad-free. If it's been useful, a tip keeps the coffee flowing and the updates coming."
