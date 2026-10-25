@@ -379,7 +379,7 @@ Main App
 │   └── Task Library         — 3 collapsible template cards with per-task checkboxes; imported tasks auto-assigned to template group; tasks with duplicate names are skipped and listed in a post-import dialog
 ├── History                  — claimed rewards tab + completed tasks tab
 └── Settings                 — nav tab shows a `!` badge when a mascot is newly unlocked and the user has not yet opened Settings
-    ├── About                — app name, version, "The idea" copy; Rate the app (opens Play Store); Get in touch (email); Support the developer (Tip Jar — two price buttons, loading state, thank-you snackbar; mock until RevenueCat integrated)
+    ├── About                — app name, version, "The idea" copy; Rate the app (opens Play Store); Get in touch (email); Privacy policy (external link); Disclaimer ("as is", no liability for data loss/damages); Support the developer (Tip Jar — two price buttons, loading state, thank-you snackbar; mock until RevenueCat integrated)
     ├── Appearance           — nickname input + random-nickname toggle, Mascot picker, Show Quote toggle
     ├── Colour Scheme        — 3 theme chips (Warm Gold, Ocean Blue, Forest)
     ├── Max Rewards          — max count input

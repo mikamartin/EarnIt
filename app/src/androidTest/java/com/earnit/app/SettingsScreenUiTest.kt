@@ -244,6 +244,14 @@ class SettingsScreenUiTest {
     }
 
     @Test
+    fun aboutScreen_displaysDisclaimer() {
+        composeTestRule.onNodeWithContentDescription("Settings").performClick()
+        composeTestRule.onNodeWithText(Strings.APP_NAME).performClick()
+
+        composeTestRule.onNodeWithText(Strings.ABOUT_DISCLAIMER_TITLE).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
     fun dataRow_navigatesToDataScreen() {
         composeTestRule.onNodeWithContentDescription("Settings").performClick()
         composeTestRule.onNodeWithText(Strings.SETTINGS_DATA_TITLE).performScrollTo().performClick()

@@ -8,24 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 71 — `chore/qa-audit-doc-fixes` branch
-
-QA audit Issues 8, 9, 10, and 11: dangling `CLEANUP_BACKLOG.md` doc references and stale bug-history comments in `RewardEditScreenUiTest.kt`, `CleanUpScreenUiTest.kt`'s KDoc not covering its fifth (confirm) test, `TestStateReset.kt`'s KDoc describing removed cold-start navigation, a dead `TaskEntity.repeatable` field documented in the spec as functional, drifted test-count figures, and a stale "Widget colors hardcoded warm-gold" Known Limitation. While re-checking README beyond the audit's original scope, also found the opening tagline still carried the same unqualified "local only" claim Pass 69 already fixed elsewhere in the same file.
-
-#### Duplication / Decoupling / Complexity & Pattern Health / Naming Consistency / Hardcoded Values / Accessibility / Deprecated APIs / Dev Seed Data — n/a
-Doc/comment fixes plus one one-line Kotlin default-value change; no structural code touched.
-
-#### Dead Code & Hygiene ✅ (checked)
-`git status` shows only the 10 intended files changed. Removed both `CLEANUP_BACKLOG.md` references (a file that doesn't exist in `docs/`) and rewrote the comments around them to describe current, working behaviour instead of a fixed historical bug.
-
-#### Spec Review ✅ — found and fixed
-`EARNIT_SPEC.md` §1's Task Fields table and §10's Screen Map both documented `TaskEntity.repeatable` as functional (a "repeatable toggle" on Task Edit); confirmed dead in production — `TaskEditScreen.kt` only round-trips the field, nothing reads it, and repeatability is governed entirely by `RewardTaskCrossRef.isRepeatable` instead. Removed both. Kept the column itself rather than deleting it — the app is at Room schema v1 with a hard "every version bump ships a real migration" rule and no existing migration to pattern off, not worth it for a field with zero behavioural payoff. Separately, `RewardTaskCrossRef`'s own constructor default (`isRepeatable = false`) contradicted the documented default (`true`, matching `addTaskToReward`'s own default) — aligned it; confirmed low risk first, since only `GatekeeperTest`/`JsonExportTest` relied on the old default and neither asserts on the value itself.
-
-#### Tests ✅ — counts corrected, no test behaviour changed
-The audit's own baseline (204 unit / 121 instrumented) and even `TESTING.md`'s live headers (207/120) were both already stale — three since-merged branches had added tests without updating every count. Recomputed against a fresh `@Test` grep: 220 unit tests / 122 instrumented (87 UI-tagged, 35 Repository/Utility-tagged). Updated `TESTING.md`'s pyramid, headers, and two per-file rows (`FieldValidationTest` 14→20, `RewardProgressTest` 21→28), `EARNIT_SPEC.md` §9, `README.md`'s badge and prose, and `MANUAL_TEST_PLAN.md`'s `ExportImportTest` count (5→11). `./gradlew ktlintCheck`, `test` (220/220), and `assembleDebugAndroidTest` (run specifically because `Entities.kt` changed) all pass sequentially.
-
----
-
 ### Pass 72 — `fix/widget-edge-to-edge` branch
 
 Play Console's pre-launch report on the shipped `v1.3.0` build flagged edge-to-edge issues. Investigation found `MainActivity` already correctly calls `enableEdgeToEdge()`; the real gap was `WidgetConfigActivity` and `WidgetTaskLogActivity` never calling it, unlike `MainActivity`, despite both already padding content with `Modifier.windowInsetsPadding(WindowInsets.safeDrawing)`.
@@ -73,3 +55,30 @@ No test files changed. Pre-release gate already run on the merged `fix/widget-ed
 
 #### Release
 Version bump for the v1.3.1 cut: `app/build.gradle.kts` `versionCode` 4→5, `versionName` "1.3.0"→"1.3.1", per `DEV_PLAYBOOK.md`'s release process.
+
+---
+
+### Pass 74 — `feat/about-disclaimer` branch
+
+Added a short liability disclaimer ("as is," no warranty, not liable for data loss/damages) to the About screen, directly below the Privacy policy row, so the app carries the same baseline protection bigger free apps ship with.
+
+#### Duplication / Decoupling / Hardcoded Values / Deprecated APIs / Dev Seed Data — n/a
+Two new `Strings.kt` constants and one new static text `Column`, copied structurally from the existing "The idea" section (same `Column`/`Text` pattern, `HorizontalDivider()` separator) — no new abstraction, no business logic, no colors/durations introduced.
+
+#### Complexity & Pattern Health ✅ (checked, pre-existing issue noted, not fixed)
+`AboutScreen`'s top-level composable was already ~200 lines before this change (over the ~150-line split guideline) — this pass adds 16 lines to it rather than introducing the overage. Not restructured here: splitting it is a separate refactor with its own blast radius, out of scope for a copy-only addition.
+
+#### Dead Code & Hygiene ✅ (checked)
+`git status` shows only the 5 intended files changed. No unused imports — the new code reuses `Column`/`Text`/`HorizontalDivider`/`MaterialTheme` already imported in the file.
+
+#### Naming Consistency ✅ (checked)
+`ABOUT_DISCLAIMER_TITLE`/`ABOUT_DISCLAIMER_BODY` follow the existing `ABOUT_*` naming and sit next to `ABOUT_PRIVACY_*` in `Strings.kt`.
+
+#### Accessibility ✅ (checked, n/a)
+Static text, not tappable — no content description or touch-target sizing applies.
+
+#### Spec Review ✅ — updated
+`EARNIT_SPEC.md`'s About screen tree line didn't mention the Privacy policy link either; added both Privacy policy and Disclaimer to that line so it now matches the actual screen contents.
+
+#### Tests ✅ — added, ran on device
+Added `aboutScreen_displaysDisclaimer` to `SettingsScreenUiTest.kt`, mirroring the existing `aboutScreen_doesNotClaimDataNeverLeavesThePhone` regression-style assertion. Ran the full file on a connected emulator before committing: 15/15 passed. `TESTING.md`'s `SettingsScreenUiTest` row count (14→15) and its UI-layer pyramid figure (87→88) updated to match; the instrumented-aggregate "120 tests" headers stay as-is (already an intentional round-to-nearest-10, per Pass 73). No `AppModule`/`TestAppModule`/`@Inject` change, so `assembleDebugAndroidTest` wasn't required beyond the `connectedDebugAndroidTest` run. `./gradlew ktlintCheck` and `assembleDebug` both pass.
