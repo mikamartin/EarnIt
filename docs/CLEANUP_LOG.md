@@ -8,33 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 72 — `fix/widget-edge-to-edge` branch
-
-Play Console's pre-launch report on the shipped `v1.3.0` build flagged edge-to-edge issues. Investigation found `MainActivity` already correctly calls `enableEdgeToEdge()`; the real gap was `WidgetConfigActivity` and `WidgetTaskLogActivity` never calling it, unlike `MainActivity`, despite both already padding content with `Modifier.windowInsetsPadding(WindowInsets.safeDrawing)`.
-
-#### Duplication / Decoupling / Complexity & Pattern Health / Naming Consistency / Hardcoded Values — n/a
-Two-line diff (one import, one call) in each of two files, mirroring `MainActivity.kt`'s existing pattern exactly. No new logic, no new abstraction.
-
-#### Dead Code & Hygiene ✅ (checked)
-`git status` shows only the two intended widget-activity files changed. `ktlintCheck` clean.
-
-#### Accessibility ✅ (checked, n/a)
-No new touch targets or content descriptions introduced.
-
-#### Deprecated APIs ✅ — investigated, documented as not actionable
-The report's second warning (`setStatusBarColor`/`setNavigationBarColor`/`LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES`) traces to obfuscated AndroidX classes, not app code — confirmed via full-codebase search (no direct calls, no Accompanist dependency). These are `androidx.activity`'s own `enableEdgeToEdge()` fallback on API 31–34 (`minSdk` 31, OS-native edge-to-edge only from API 35) — not fixable without dropping support for Android 12–14. Documented as a permanent constraint in `DEV_PLAYBOOK.md`'s Known Limitations so it isn't re-investigated on the next pre-launch report.
-
-#### Spec Review ✅ (checked, n/a)
-`EARNIT_SPEC.md` doesn't document edge-to-edge/window-inset handling at this level of detail for the widget activities — nothing to update.
-
-#### Tests ✅ (checked, n/a)
-Window-flag-only change with no new business logic; no new unit test warranted. Ran the full suite as the pre-release gate this branch feeds into: `./gradlew test` 220/220, `./gradlew connectedDebugAndroidTest` on the API 36 emulator 122/122 (0 skipped, 0 failed), `./gradlew assembleDebugAndroidTest` (Hilt graph, run as routine gate — no `AppModule`/`TestAppModule`/`@Inject` change). Manually verified both activities render with correct status-bar icon contrast and no content overlap (screenshots on the API 36 emulator), per `MANUAL_TEST_PLAN.md`'s widget-cadence step 13.
-
-#### Dev Seed Data ✅ (checked, n/a)
-No `TestDataSeeder` changes — visual-only fix, not data-shape-dependent.
-
----
-
 ### Pass 73 — `chore/release-v1.3.1-prep` branch (doc sync ahead of the v1.3.1 release cut)
 
 Version bump for the v1.3.1 patch release (fixes since `v1.3.0`: #78 Moshi export serialization, #80 import schema validation, #85 widget edge-to-edge). Confirmed `README.md` and `EARNIT_SPEC.md` were current before cutting, per the `chore/release-vX.Y.Z-prep` pattern established in Pass 69.
@@ -82,3 +55,24 @@ Static text, not tappable — no content description or touch-target sizing appl
 
 #### Tests ✅ — added, ran on device
 Added `aboutScreen_displaysDisclaimer` to `SettingsScreenUiTest.kt`, mirroring the existing `aboutScreen_doesNotClaimDataNeverLeavesThePhone` regression-style assertion. Ran the full file on a connected emulator before committing: 15/15 passed. `TESTING.md`'s `SettingsScreenUiTest` row count (14→15) and its UI-layer pyramid figure (87→88) updated to match; the instrumented-aggregate "120 tests" headers stay as-is (already an intentional round-to-nearest-10, per Pass 73). No `AppModule`/`TestAppModule`/`@Inject` change, so `assembleDebugAndroidTest` wasn't required beyond the `connectedDebugAndroidTest` run. `./gradlew ktlintCheck` and `assembleDebug` both pass.
+
+---
+
+### Pass 75 — `chore/dependency-version-bump` branch
+
+Google Play compliance/upgrade audit found `androidx.lifecycle` (2.6.2) and `androidx.navigation:navigation-compose` (2.7.3) in `gradle/libs.versions.toml` several versions behind the rest of the catalog. Bumped `lifecycle` → 2.10.0, `navigationCompose` → 2.9.8, and `work` → 2.12.0 (this last one wasn't stale, just one minor release behind — bumped while touching the file).
+
+#### Duplication / Decoupling / Complexity & Pattern Health / Naming Consistency / Hardcoded Values / Accessibility / Dev Seed Data — n/a
+Version-catalog-only change, no source code touched.
+
+#### Dead Code & Hygiene ✅ (checked)
+`git status` shows only `gradle/libs.versions.toml` and docs changed.
+
+#### Deprecated APIs ✅ — investigated, documented as a version ceiling
+Latest stable `lifecycle` (2.11.0) and `navigation-compose` (2.10.2) both require `compileSdk 37`, which fails `checkDebugAarMetadata` against this project's `compileSdk 36`. Took the highest versions still compatible with `compileSdk 36` (2.10.0 and 2.9.8 respectively) instead, mirroring the existing `core-ktx` 1.18.x constraint. Documented as a new gotcha (#7) in `DEV_PLAYBOOK.md`'s Tooling Upgrade Reference so the next bump doesn't rediscover it by trial and error.
+
+#### Spec Review ✅ (checked, n/a)
+No behavior change — `EARNIT_SPEC.md` doesn't document dependency versions.
+
+#### Tests ✅ (checked, n/a)
+No source change, so no new test warranted. Ran the full pre-merge gate sequentially (never in parallel, per `CLAUDE.md`'s Windows Kotlin-daemon note): `./gradlew ktlintCheck`, `./gradlew test` (passed), `./gradlew assembleDebug` (passed), `./gradlew assembleDebugAndroidTest` (passed — confirms the Hilt graph still resolves against the bumped `hilt-navigation-compose`/`hilt-work` transitive deps).
