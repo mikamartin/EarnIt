@@ -66,6 +66,9 @@ Update this section each upgrade cycle. The version matrix and gotchas below ref
 | androidx.core:core-ktx | 1.18.0 | 1.19.0+ requires `compileSdk 37`; stay on 1.18.x until `compileSdk` is bumped |
 | androidx.activity:activity-compose | 1.13.0 | |
 | com.google.android.material:material | 1.14.0 | Backs the `Theme.Material3.DayNight.NoActionBar` XML theme parent even though the app has no direct View-based Material usage |
+| androidx.lifecycle | 2.10.0 | 2.11.0+ requires `compileSdk 37`; stay on 2.10.x until `compileSdk` is bumped |
+| androidx.navigation:navigation-compose | 2.9.8 | 2.10.0+ requires `compileSdk 37`; stay on 2.9.x until `compileSdk` is bumped |
+| androidx.work:work-runtime-ktx | 2.12.0 | |
 
 ### Gotchas
 
@@ -91,6 +94,9 @@ Hilt 2.51.1–2.58 fail with AGP 9. Hilt 2.59.x is the first release that suppor
 
 **6. Compose API removals**
 `animateItemPlacement()` was removed from Compose Foundation — replace with `animateItem()` in all `LazyColumn`/`LazyRow` item scopes. Check BOM release notes for other removals when bumping.
+
+**7. `compileSdk 37` ceiling on Compose-adjacent AndroidX libraries**
+Several AndroidX libraries (core-ktx 1.19+, lifecycle 2.11.0+, navigation-compose 2.10.0+) bumped their own Compose `compileSdk` to 37, which fails `checkDebugAarMetadata` while this project's `compileSdk` is 36. Check the release notes of any Compose-related AndroidX library for a `compileSdk` bump before taking its latest stable version — stay one line below it until `compileSdk` is bumped project-wide.
 
 ### Next upgrade checklist
 - [ ] Check AGP ↔ Gradle compatibility matrix before changing either
