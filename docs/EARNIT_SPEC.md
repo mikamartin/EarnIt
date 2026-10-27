@@ -145,10 +145,6 @@ Reward progress cards (home screen and Reward Detail) include live animated feed
    - **Archive** — reward is marked archived and removed from active view
 3. All active logs for that reward are archived into a History entry.
 
-### Widget Nudge
-
-A dismissible banner appears on the Reward Detail screen the first time a reward has a task linked to it (i.e. right after "Add task" is used, before any log needs to happen), prompting the user to add a home screen widget for that reward. The action triggers the OS "add to home screen" flow via `AppWidgetManager.requestPinAppWidget()`; the user still picks the reward in `WidgetConfigActivity` as usual — the nudge doesn't pre-select it. The banner is suppressed once the user already has any EarnIt widget pinned, and hides permanently once dismissed (`widgetNudgeDismissed` in DataStore).
-
 ---
 
 ## 3a. First-Launch Onboarding Tutorial ("Pugsly's Quest Scroll")
@@ -206,7 +202,8 @@ One entry in the home screen widget picker:
 - **Mandatory tasks blocking claim:** Active state with an exclamation icon (!) inline next to the reward name, tinted with the same `notification` accent as the equivalent hint on Reward Detail — shown when point goal is reached but not all mandatory (★) tasks are logged. The explanation ("Finish mandatory tasks to claim") lives in the icon's content description rather than visible text, since a second text line here has twice caused the progress bar below it to clip on short/resized widgets (see `DEV_PLAYBOOK.md`'s known limitations)
 - **All tasks done, points still short:** reward name, progress bar, the same inline exclamation icon (content description: "All tasks done, add more"), and a disabled + LOG button (muted, non-interactive)
 - **Claimed / archived:** reward name + "Earned and Claimed" subtitle; tapping opens the app
-- **Empty:** "Long-press to configure" — reward not yet selected
+- **Reward removed:** the tracked reward was deleted (not claimed) — "Reward removed" / "Remove and re-add this widget"
+- **Empty:** "EarnIt" / "Remove and re-add this widget" — reward not yet selected
 - Tapping anywhere on the widget body (outside buttons) opens the app to the tracked reward
 
 ### Configuration
@@ -362,7 +359,7 @@ A background check re-engages users who have stopped logging tasks, via a period
 
 See [TESTING.md](TESTING.md) for the full picture — current coverage, known gaps, and what to write next.
 
-**Summary:** 220 unit tests across 28 test files. 120 instrumented tests across 32 files (requires device/emulator) — including 87 Compose UI tests.
+**Summary:** 225 unit tests across 29 test files. 120 instrumented tests across 32 files (requires device/emulator) — including 87 Compose UI tests.
 
 ---
 

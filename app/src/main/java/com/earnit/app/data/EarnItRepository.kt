@@ -7,6 +7,7 @@ import androidx.room.withTransaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -82,6 +83,8 @@ class EarnItRepository
         }
 
         suspend fun getRewardOrNull(id: Long) = rewardDao.getReward(id)
+
+        fun observeRewardExists(rewardId: Long): Flow<Boolean> = rewardDao.observeReward(rewardId).map { it != null }
 
         // Cross-ref rows for this reward are removed by the FK cascade on RewardTaskCrossRef.rewardId.
         suspend fun deleteReward(rewardId: Long) =

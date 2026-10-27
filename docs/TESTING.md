@@ -24,9 +24,9 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ```
                  [ Manual — 4 journeys ]   System-boundary flows; see MANUAL_TEST_PLAN.md
-            [ UI — 88 tests ]           ComposeTestRule + Hilt, real DataStore
+            [ UI — 85 tests ]           ComposeTestRule + Hilt, real DataStore
        [ Integration — 35 tests ]       Real in-memory Room, no mocks
-     [ Unit — 220 tests ]               JVM, MockK DAOs, fast
+     [ Unit — 225 tests ]               JVM, MockK DAOs, fast
 ```
 
 **Run unit tests** (JVM, no device needed)
@@ -43,7 +43,7 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 
 ---
 
-## Unit Tests — `app/src/test/` (220 tests)
+## Unit Tests — `app/src/test/` (225 tests)
 
 | File | What it covers |
 |---|---|
@@ -66,7 +66,8 @@ Group-view collapse state and dialog checkbox behaviour are pure UI concerns wit
 | `MascotNotificationTest` (3) | `claimReward` sets `hasNewMascot` when a mascot is newly unlocked; does not set it when all already unlocked; `importFromFile` silently seeds unlocked mascots without emitting a notification or setting the badge |
 | `PendingRewardIdTest` (3) | `saveReward` sets `pendingRewardId` to the upserted id when creating a new reward; leaves it null when editing an existing reward; `consumePendingRewardId` clears the value |
 | `WidgetActionButtonTest` (6) | `widgetActionButtonFor` — no tasks → `ADD_TASK`; unlogged task → `LOG`; repeatable task already logged → still `LOG`; non-repeatable task already logged and below cost → `LOG_DISABLED`; `canClaim` → `CLAIM` even with a loggable task; unlogged mandatory task blocks `CLAIM` despite points met |
-| `WidgetContentTest` (12) | Renders `StandardContent`/`FlashContent`/`EmptyState`/`ClaimedState` via `glance-testing` + Robolectric (JVM, no device) — correct button shown/hidden per state with click action wired, disabled non-clickable `LOG_DISABLED` button plus its hint icon (and content description) when all one-time tasks are done, reward name/points/custom-label text, mandatory-hint icon shown/hidden with correct content description, flash and empty/claimed state text |
+| `WidgetContentTest` (14) | Renders `StandardContent`/`FlashContent`/`EmptyState`/`ClaimedState` via `glance-testing` + Robolectric (JVM, no device) — correct button shown/hidden per state with click action wired, disabled non-clickable `LOG_DISABLED` button plus its hint icon (and content description) when all one-time tasks are done, reward name/points/custom-label text, mandatory-hint icon shown/hidden with correct content description, flash and empty/claimed state text, `EmptyState`'s `title` param overriding its default text |
+| `WidgetViewStateTest` (5) | `resolveWidgetViewState` — the widget's state-selection logic as a pure function: flash vs. standard vs. claimed vs. reward-removed vs. empty, in particular distinguishing a claimed reward (`rewardExists = true`) from one deleted without being claimed (`rewardExists = false`), which otherwise look identical (`progress == null`, non-zero `rewardId`) |
 | `WidgetColorsTest` (4) | `widgetColors()` — `notification` accent matches `ColorSchemes.accents()` for Warm Gold and Forest (red), diverges to amber for Ocean Blue; dark mode changes `primary` from its light-mode value for the same scheme (validates the light/dark branch itself runs), via Robolectric `RuntimeEnvironment.setQualifiers` |
 | `NudgeDeciderTest` (10) | `NudgeDecider.decide` — never-logged and no-active-reward guardrails; idle under/at/over the 48h and 96h thresholds; stage 2 never re-sends (two-nudge cap); a new log after stage 1 or stage 2 resets the streak |
 | `NudgeWorkerTest` (8) | `NudgeWorker.doWork()` via `androidx.work:work-testing`'s `TestListenableWorkerBuilder` + Robolectric — real notification posted with correct title/body per stage (asserted via `NotificationManager` shadow) and correct `SettingsRepository.updateNudgeState` call for each `NudgeDecider` outcome (first nudge, second nudge, no-op under threshold, no active reward, never logged, stage-2 cap, streak reset), plus the `POST_NOTIFICATIONS`-denied path (state still recorded, no notification shown) |
@@ -115,7 +116,6 @@ check`) fails the build if any class is missing its required layer tag or has no
 | `SaveNavigationUiTest` (6) | UI | Post-save navigation: new task → TaskDetailScreen; new reward → RewardDetailScreen; task created from new-reward form → pops back to reward form (task auto-included), both saved and linked on reward save; Add task button disabled until reward name is entered; home card's "+ ADD TASKS" shortcut and the widget's ADD TASK intent extras both open the Add Task dialog directly on Reward Detail, not Reward Edit |
 | `ImportErrorUiTest` (2) | UI | Import error messages appear on Data & Backup screen: invalid JSON file shows "File is not valid JSON"; wrong-schema JSON shows "This doesn't look like an EarnIt backup" |
 | `MaxLengthUiTest` (6) | UI | Reward name, task name, reward description, task group name, nickname, and widget label fields each accept input up to their character cap and silently reject one character past it |
-| `WidgetNudgeUiTest` (1) | UI | Widget nudge banner on Reward Detail: hidden while a reward has no tasks, appears once the first task is linked, dismiss hides it and persists across `activityRule.scenario.recreate()` |
 | `DuplicateNameUiTest` (2) | UI | Duplicate-name error shown and SAVE disabled when a task or reward name conflicts with an existing one, case-insensitive |
 | `RewardLimitUiTest` (1) | UI | Tapping the reward FAB at `maxRewardCount` shows the max-limit tooltip instead of navigating to Reward Edit |
 | `RewardProgressBarUiTest` (1) | UI | Reward Detail progress bar hides its point/cost number overlay once points meet the cost but a mandatory task is still unlogged (`RewardProgress.showsProgressNumbers` wiring; boundary cases unit-tested in `RewardProgressTest`) |
@@ -176,9 +176,6 @@ Full UI path: Tasks tab → Library → expand a template → add all tasks → 
 **Post-save navigation** (`SaveNavigationUiTest`)
 Saving a new task navigates to TaskDetailScreen; saving a new reward navigates to RewardDetailScreen. Creating a task from a new-reward edit form pops back to the reward form (not forward to TaskDetailScreen), auto-includes the task in the form's task list, and persists both entities linked when the reward is subsequently saved. The home card's "+ ADD TASKS" shortcut is also asserted to land on the Add Task dialog directly rather than the Reward Edit screen, so the shortcut takes exactly one tap to reach the dialog.
 
-**Widget nudge dismissal persists** (`WidgetNudgeUiTest`)
-The one-time widget nudge banner on Reward Detail is asserted to disappear immediately on dismiss and to stay hidden after `activityRule.scenario.recreate()`, proving the DataStore flag round-trips rather than just the in-memory Compose state resetting.
-
 **Widget action-button selection** (`WidgetActionButtonTest`, `WidgetContentTest`)
 The button-state decision (`CLAIM` / `LOG` / `LOG_DISABLED` / `ADD_TASK`) is a plain function, unit-tested directly; `WidgetContentTest` renders the actual composables via `glance-testing` + Robolectric to confirm the right button (and only that button) appears with its click action wired — or, for `LOG_DISABLED`, that the button renders with no click action alongside the "all tasks done" hint icon — plus reward name/points text and the hint icon's content description. Neither test can verify the click actually reaches the intended `Intent` extras (`glance-testing`'s click-action matchers don't recognize the raw-`Intent` `actionStartActivity` overload this widget uses) — that part stays manual, per `MANUAL_TEST_PLAN.md`.
 
@@ -217,7 +214,7 @@ When each layer runs, and on what trigger. Update this table as CI/CD workflows 
 
 | Layer | Trigger | Command / Reference |
 |---|---|---|
-| Unit (220 tests) | Every build/push | `./gradlew test` |
+| Unit (225 tests) | Every build/push | `./gradlew test` |
 | Integration + UI, instrumented (120 tests) | Every push/PR via CI (two parallel API 36 emulator jobs, Workflow 2 — sharded by layer); also manually before every release candidate | `./gradlew connectedDebugAndroidTest` |
 | Manual-only journeys (4) | Varies per journey — see each entry | [MANUAL_TEST_PLAN.md](MANUAL_TEST_PLAN.md) |
 

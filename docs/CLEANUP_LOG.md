@@ -8,29 +8,6 @@ Full history isn't lost — every past pass is tracked in git history and in mer
 
 ---
 
-### Pass 73 — `chore/release-v1.3.1-prep` branch (doc sync ahead of the v1.3.1 release cut)
-
-Version bump for the v1.3.1 patch release (fixes since `v1.3.0`: #78 Moshi export serialization, #80 import schema validation, #85 widget edge-to-edge). Confirmed `README.md` and `EARNIT_SPEC.md` were current before cutting, per the `chore/release-vX.Y.Z-prep` pattern established in Pass 69.
-
-Most checklist sections are n/a — this is a version-bump-and-doc-check pass, no source changes beyond `app/build.gradle.kts`.
-
-#### Duplication / Decoupling / Complexity & Pattern Health / Naming Consistency / Hardcoded Values / Accessibility / Deprecated APIs / Dev Seed Data — n/a
-No source code touched this pass.
-
-#### Dead Code & Hygiene ✅ (checked)
-`git status` shows only `app/build.gradle.kts` and this log changed.
-
-#### Spec Review ✅ (checked, no drift found)
-Recomputed test counts against a fresh `@Test` grep, filtering the one false-positive substring match (`@TestInstallIn` in `TestAppModule.kt`): 220 unit tests / 28 files, 122 instrumented tests / 32 files. Matches `EARNIT_SPEC.md`'s documented "220 unit tests across 28 test files. 120 instrumented tests across 32 files" (120 is `TESTING.md`'s intentional round-to-nearest-10 for the instrumented aggregate, not staleness) and `README.md`'s "220+ / 120+" badge and prose. No feature-list or SDK-version drift found in either doc. Nothing to fix.
-
-#### Tests — n/a
-No test files changed. Pre-release gate already run on the merged `fix/widget-edge-to-edge` branch (Pass 72): `test` 220/220, `connectedDebugAndroidTest` 122/122.
-
-#### Release
-Version bump for the v1.3.1 cut: `app/build.gradle.kts` `versionCode` 4→5, `versionName` "1.3.0"→"1.3.1", per `DEV_PLAYBOOK.md`'s release process.
-
----
-
 ### Pass 74 — `feat/about-disclaimer` branch
 
 Added a short liability disclaimer ("as is," no warranty, not liable for data loss/damages) to the About screen, directly below the Privacy policy row, so the app carries the same baseline protection bigger free apps ship with.
@@ -76,3 +53,34 @@ No behavior change — `EARNIT_SPEC.md` doesn't document dependency versions.
 
 #### Tests ✅ (checked, n/a)
 No source change, so no new test warranted. Ran the full pre-merge gate sequentially (never in parallel, per `CLAUDE.md`'s Windows Kotlin-daemon note): `./gradlew ktlintCheck`, `./gradlew test` (passed), `./gradlew assembleDebug` (passed), `./gradlew assembleDebugAndroidTest` (passed — confirms the Hilt graph still resolves against the bumped `hilt-navigation-compose`/`hilt-work` transitive deps).
+
+---
+
+### Pass 76 — `fix/widget-reliability` branch
+
+Two widget correctness bugs, reported by the user: (1) the in-app "Add widget" button on Reward Detail (`requestPinAppWidget`) placed the widget but relied on the launcher to auto-invoke `WidgetConfigActivity` afterward, which isn't guaranteed by the platform — some launchers never ran it, leaving the widget permanently stuck unconfigured with no way to recover (long-press on an already-placed widget only offers resize/remove). (2) a widget tracking a reward that gets hard-deleted (not claimed) showed "Earned and Claimed" instead of reflecting that the reward is gone, because both cases produce an identical `progress == null` with a non-zero stored `rewardId`.
+
+Fix for (1): removed the in-app button entirely rather than patching around the unreliable API — the regular "long-press → Widgets → EarnIt" add flow already works and is already the one covered by the manual test plan. Fix for (2): added a `rewardExists` check and a new "Reward removed" widget state, distinct from both "claimed" and "never configured."
+
+**Regression in the first attempt, caught by the user re-testing manually (not by the automated gate):** the first version of `rewardExists` used `produceState(key1 = rewardId) { value = repo.getRewardOrNull(rewardId) != null }` — a one-shot `suspend` lookup. `produceState`'s producer block only re-runs when its key changes; since `rewardId` doesn't change when the reward is later deleted, the value computed at widget-configure time (`true`) was never re-read, so the widget kept showing "Earned and Claimed" forever instead of flipping to "Reward removed." Fixed by adding `RewardDao.observeReward(id): Flow<RewardEntity?>` and `EarnItRepository.observeRewardExists(id): Flow<Boolean>`, and collecting that Flow inside `produceState` (the same live-collection pattern `allProgress`/`scheme` already use in this same function) instead of doing a one-shot query.
+
+#### Duplication / Decoupling / Naming Consistency / Hardcoded Values / Deprecated APIs ✅ (checked, nothing found)
+No duplication introduced. `WidgetViewStateTest.kt` sits alongside `WidgetContentTest.kt` in the same package, matching existing naming/placement. The two new literal strings ("Reward removed", "Remove and re-add this widget") are inline in `EmptyState` rather than `Strings.kt`, consistent with this composable's existing sibling literals ("EarnIt", "Earned and Claimed", "Logged!") — not migrated to `Strings.kt` as part of this fix, to keep the change scoped; flagging here rather than silently leaving it unconsidered.
+
+#### Complexity & Pattern Health ✅ (checked, one-caller helper justified)
+`resolveWidgetViewState` currently has a single caller (`WidgetContent`) — normally a flag per the "does a new helper with only one caller earn its keep" checklist item, but here the extraction's entire purpose is to pull the exact branching logic the bug lives in out from behind `provideGlance`'s untestable Hilt/Room/Glance pipeline so it can be unit-tested directly; inlining it back would remove that coverage.
+
+#### Dead Code & Hygiene ✅ (checked and fixed)
+Removed now-dead code the button removal left behind: `hasEarnItWidgetPinned`/`requestPinEarnItWidget` (`EarnItWidget.kt`), `widgetNudgeDismissed` (`AppSettings.kt`/`SettingsRepository.kt`), `dismissWidgetNudge()` (`EarnItViewModel.kt`), the `WIDGET_NUDGE_*` `Strings.kt` constants, `DismissibleTipBanner` (its only caller), and the now-unused `AppWidgetManager`/`ComponentName`/`LocalContext`/`Column`/`height` imports it left behind — caught by `ktlintCheck` after the first pass of edits. Deleted `WidgetNudgeUiTest.kt` (androidTest), which tested only the removed flow.
+
+#### Accessibility ✅ (checked, n/a)
+`DismissibleTipBanner`'s dismiss `IconButton` (with content description) was removed along with the feature, not left dangling.
+
+#### Spec Review ✅ — updated
+`EARNIT_SPEC.md`: removed the "Widget Nudge" section; updated the widget Display States list to add "Reward removed" and correct "Empty" state's copy. Test-count summary line recomputed and rounded: 220→225 unit tests, 28→29 files (new `WidgetViewStateTest.kt`); instrumented aggregate unchanged (123 actual still rounds to 120).
+
+#### Tests ✅ — added regression coverage, ran full gate
+Added `WidgetViewStateTest.kt` (5 cases) covering `resolveWidgetViewState` as a pure function — correctly caught the claimed-vs-removed branching logic, but could not and did not catch the one-shot `produceState` regression above, since that bug is entirely in the wiring that computes `rewardExists`, not in what it does with the result. The actual regression test for that is in `DeleteCascadeTest.kt`: `observeRewardExists reflects live changes to the underlying row, not just its value at subscribe time` — stubs `rewardDao.observeReward` with a `MutableStateFlow`, asserts `true`, flips the row to `null`, asserts `false`, which would have failed against the one-shot version. The Compose/Glance recomposition layer above that (does `provideGlance` actually re-render when the Flow emits) is still only verified by the manual test plan step, consistent with this project's established position that `provideGlance`'s pipeline is outside unit-test reach. Updated `WidgetContentTest.kt`'s `emptyState_showsConfigurePrompt` for the new subtitle copy and added a case for `EmptyState`'s new `title` param (12→14 tests). Deleted `WidgetNudgeUiTest.kt` rather than leaving it passing against dead code. Updated `MANUAL_TEST_PLAN.md`: removed the Add Widget button step, added a reward-removed spot-check. Updated `TESTING.md`'s pyramid/section-header counts and per-file table rows. Ran the full gate sequentially after both the initial fix and the correction: `./gradlew ktlintCheck`, `./gradlew test` (227/227), `./gradlew assembleDebug`, `./gradlew assembleDebugAndroidTest` (all passed — the new `RewardDao.observeReward` method changes the Room schema's Dao surface, so `assembleDebugAndroidTest` was worth the re-run beyond just policy).
+
+#### Dev Seed Data ✅ (checked, n/a)
+`TestDataSeeder` only seeds Room data (rewards/tasks/logs); the widget-reward binding this bug is about (`widget_reward_id`/`widget_reward_name`) lives in Glance's own per-widget-instance Preferences DataStore, which the seeder has no access to and can't set up regardless of what Room rows exist. Nothing to add here — the manual test plan step added above is the only way to reach this scenario.

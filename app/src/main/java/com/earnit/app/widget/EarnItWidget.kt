@@ -1,7 +1,5 @@
 package com.earnit.app.widget
 
-import android.appwidget.AppWidgetManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
@@ -142,10 +140,17 @@ class EarnItGlanceWidget : GlanceAppWidget() {
             val scheme by produceState(AppColorScheme.WARM_GOLD) {
                 settingsRepo.settings.collect { value = it.colorScheme }
             }
+            // Must collect the live Flow, not a one-shot suspend lookup — a deleted reward has
+            // to flip this from true to false while the widget is already showing, not just at
+            // the moment this reward was first configured.
+            val rewardExists by produceState(initialValue = false, key1 = rewardId) {
+                if (rewardId == 0L) return@produceState
+                repo.observeRewardExists(rewardId).collect { value = it }
+            }
 
             val colors = widgetColors(context, scheme)
             val progress = allProgress.find { it.reward.id == rewardId }
-            WidgetContent(context, progress, rewardId, rewardName, colors)
+            WidgetContent(context, progress, rewardId, rewardName, rewardExists, colors)
         }
     }
 }
@@ -192,12 +197,32 @@ internal fun widgetColors(
 
 // ── Root ───────────────────────────────────────────────────────────────────────
 
+// internal (not private): covered directly by WidgetContentTest so the branching that decides
+// which state a widget renders is unit-tested without going through the full Hilt/Room/Glance
+// pipeline provideGlance runs.
+internal enum class WidgetViewState { FLASH, STANDARD, CLAIMED, REWARD_REMOVED, EMPTY }
+
+internal fun resolveWidgetViewState(
+    progress: RewardProgress?,
+    rewardId: Long,
+    rewardExists: Boolean,
+    showFlash: Boolean,
+): WidgetViewState =
+    when {
+        progress != null && showFlash -> WidgetViewState.FLASH
+        progress != null -> WidgetViewState.STANDARD
+        rewardId != 0L && rewardExists -> WidgetViewState.CLAIMED
+        rewardId != 0L -> WidgetViewState.REWARD_REMOVED
+        else -> WidgetViewState.EMPTY
+    }
+
 @Composable
 private fun WidgetContent(
     context: Context,
     progress: RewardProgress?,
     rewardId: Long,
     rewardName: String,
+    rewardExists: Boolean,
     colors: WidgetColors,
 ) {
     val showFlash by produceState(
@@ -227,13 +252,12 @@ private fun WidgetContent(
                     .cornerRadius(14.dp)
                     .padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
-            when {
-                progress != null && showFlash ->
-                    FlashContent(context, progress.reward.id, colors)
-                progress != null ->
-                    StandardContent(context, progress, rewardName, colors)
-                rewardId != 0L -> ClaimedState(context, rewardName, colors)
-                else -> EmptyState(colors)
+            when (resolveWidgetViewState(progress, rewardId, rewardExists, showFlash)) {
+                WidgetViewState.FLASH -> FlashContent(context, progress!!.reward.id, colors)
+                WidgetViewState.STANDARD -> StandardContent(context, progress!!, rewardName, colors)
+                WidgetViewState.CLAIMED -> ClaimedState(context, rewardName, colors)
+                WidgetViewState.REWARD_REMOVED -> EmptyState(colors, title = "Reward removed")
+                WidgetViewState.EMPTY -> EmptyState(colors)
             }
         }
     }
@@ -277,20 +301,23 @@ internal fun FlashContent(
 // ── Empty / unconfigured ───────────────────────────────────────────────────────
 
 @Composable
-internal fun EmptyState(colors: WidgetColors) {
+internal fun EmptyState(
+    colors: WidgetColors,
+    title: String = "EarnIt",
+) {
     Column(
         modifier = GlanceModifier.fillMaxSize(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            "EarnIt",
+            title,
             style = TextStyle(color = colors.primary, fontSize = 18.sp, fontWeight = FontWeight.Bold),
             modifier = GlanceModifier.semantics { testTag = WidgetTestTags.EMPTY_TITLE },
         )
         Spacer(GlanceModifier.height(4.dp))
         Text(
-            "Long-press to configure",
+            "Remove and re-add this widget",
             style = TextStyle(color = colors.onSurfaceVar, fontSize = 12.sp),
             modifier = GlanceModifier.semantics { testTag = WidgetTestTags.EMPTY_SUBTITLE },
         )
@@ -555,21 +582,4 @@ private fun ProgressBar(
 
 class EarnItGlanceWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = EarnItGlanceWidget()
-}
-
-// ── Pinning ────────────────────────────────────────────────────────────────────
-
-/** Whether the user has at least one EarnIt widget already placed on a home screen. */
-fun hasEarnItWidgetPinned(context: Context): Boolean {
-    val provider = ComponentName(context, EarnItGlanceWidgetReceiver::class.java)
-    return AppWidgetManager.getInstance(context).getAppWidgetIds(provider).isNotEmpty()
-}
-
-/** Triggers the OS "add to home screen" dialog for the EarnIt widget, if the launcher supports it. */
-fun requestPinEarnItWidget(context: Context) {
-    val appWidgetManager = AppWidgetManager.getInstance(context)
-    if (appWidgetManager.isRequestPinAppWidgetSupported) {
-        val provider = ComponentName(context, EarnItGlanceWidgetReceiver::class.java)
-        appWidgetManager.requestPinAppWidget(provider, null, null)
-    }
 }

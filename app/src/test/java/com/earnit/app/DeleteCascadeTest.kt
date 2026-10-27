@@ -1,11 +1,17 @@
 package com.earnit.app
 
+import com.earnit.app.data.RewardEntity
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
+import io.mockk.every
 import io.mockk.just
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 // Cross-ref cleanup for both deleteTask and deleteReward is handled declaratively by the FK
@@ -38,5 +44,21 @@ class DeleteCascadeTest : RepositoryTestBase() {
                 rewardDao.deleteReward(3L)
             }
             coVerify(exactly = 0) { rewardTaskDao.clearTasksForReward(any()) }
+        }
+
+    // A widget tracking a deleted-but-never-claimed reward needs to find out live, not just at
+    // the moment it first asked — this guards against observeRewardExists silently degrading
+    // back into a one-shot snapshot of whatever the row looked like when first subscribed.
+    @Test
+    fun `observeRewardExists reflects live changes to the underlying row, not just its value at subscribe time`() =
+        runBlocking {
+            val rewardRow = MutableStateFlow<RewardEntity?>(RewardEntity(id = 1L, name = "Movie Night", cost = 10))
+            every { rewardDao.observeReward(1L) } returns rewardRow
+
+            assertTrue(repository.observeRewardExists(1L).first())
+
+            rewardRow.value = null
+
+            assertFalse(repository.observeRewardExists(1L).first())
         }
 }

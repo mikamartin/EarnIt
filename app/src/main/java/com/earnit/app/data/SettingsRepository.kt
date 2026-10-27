@@ -34,7 +34,6 @@ class SettingsRepository
             val USE_RANDOM_NICKNAME = booleanPreferencesKey("use_random_nickname")
             val TASKS_GROUP_VIEW = booleanPreferencesKey("tasks_group_view")
             val DEV_MODE_ENABLED = booleanPreferencesKey("dev_mode_enabled")
-            val WIDGET_NUDGE_DISMISSED = booleanPreferencesKey("widget_nudge_dismissed")
             val NUDGE_STAGE = intPreferencesKey("nudge_stage")
             val NUDGE_ANCHOR_TIMESTAMP = longPreferencesKey("nudge_anchor_timestamp")
             val ONBOARDING_SEEN = booleanPreferencesKey("onboarding_seen")
@@ -75,7 +74,6 @@ class SettingsRepository
                         useRandomNickname = prefs[Keys.USE_RANDOM_NICKNAME] ?: false,
                         tasksGroupView = prefs[Keys.TASKS_GROUP_VIEW] ?: false,
                         devModeEnabled = prefs[Keys.DEV_MODE_ENABLED] ?: false,
-                        widgetNudgeDismissed = prefs[Keys.WIDGET_NUDGE_DISMISSED] ?: false,
                         nudgeStage = prefs[Keys.NUDGE_STAGE] ?: 0,
                         nudgeAnchorTimestamp = prefs[Keys.NUDGE_ANCHOR_TIMESTAMP] ?: 0L,
                         onboardingSeen = prefs[Keys.ONBOARDING_SEEN] ?: false,
@@ -125,10 +123,6 @@ class SettingsRepository
 
         suspend fun disableDevMode() {
             context.dataStore.edit { it[Keys.DEV_MODE_ENABLED] = false }
-        }
-
-        suspend fun dismissWidgetNudge() {
-            context.dataStore.edit { it[Keys.WIDGET_NUDGE_DISMISSED] = true }
         }
 
         suspend fun markOnboardingSeen() {

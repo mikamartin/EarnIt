@@ -209,7 +209,16 @@ class WidgetContentTest {
             provideComposable { EmptyState(colors) }
 
             onNode(hasTestTag(WidgetTestTags.EMPTY_TITLE)).assertHasText("EarnIt")
-            onNode(hasTestTag(WidgetTestTags.EMPTY_SUBTITLE)).assertHasText("Long-press to configure")
+            onNode(hasTestTag(WidgetTestTags.EMPTY_SUBTITLE)).assertHasText("Remove and re-add this widget")
+        }
+
+    @Test
+    fun emptyState_customTitle_overridesDefaultTitle() =
+        runGlanceAppWidgetUnitTest {
+            provideComposable { EmptyState(colors, title = "Reward removed") }
+
+            onNode(hasTestTag(WidgetTestTags.EMPTY_TITLE)).assertHasText("Reward removed")
+            onNode(hasTestTag(WidgetTestTags.EMPTY_SUBTITLE)).assertHasText("Remove and re-add this widget")
         }
 
     @Test
