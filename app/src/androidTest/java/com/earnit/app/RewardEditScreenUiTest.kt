@@ -31,7 +31,9 @@ import org.junit.runner.RunWith
  * task-link pre-population on an already-linked reward, selecting an existing task through
  * AddTaskToRewardDialog's own checkbox list (as opposed to the "create new" shortcut), and
  * the Browse Library entry point. Also pins that adding two new tasks in a row via
- * "Create your own" on an unsaved reward keeps both included across the round-trips.
+ * "Create your own" on an unsaved reward keeps both included across the round-trips, and that
+ * the dialog's empty state distinguishes "no tasks exist at all" from "tasks exist but are all
+ * already linked to this reward".
  */
 @UiTest
 @Reward
@@ -348,9 +350,38 @@ class RewardEditScreenUiTest {
         // No tasks exist yet (fresh app state), so the dialog shows its empty state with the
         // Browse Library shortcut rather than the checkbox list.
         composeTestRule.onNodeWithText(Strings.ADD_TASK_EMPTY).assertIsDisplayed()
+        composeTestRule.onNodeWithText(Strings.ADD_TASK_CREATE).assertIsDisplayed()
+        composeTestRule.onNodeWithText(Strings.ADD_TASK_CREATE_BTN).assertDoesNotExist()
+        composeTestRule.onNodeWithText(Strings.ADD_TASK_CONFIRM_BTN).assertDoesNotExist()
 
         composeTestRule.onNodeWithText(Strings.ADD_TASK_BROWSE).performClick()
 
         composeTestRule.onNodeWithText(Strings.LIBRARY_TITLE).assertIsDisplayed()
+    }
+
+    @Test
+    fun addTaskDialog_allTasksAlreadyLinked_showsDistinctMessageFromNoTasksAtAll() {
+        composeTestRule.createTask("Only Task")
+        composeTestRule.createReward("Game Night")
+        composeTestRule.waitForRewardDetail()
+
+        // Tasks exist in the app, none linked to this reward yet — the checkbox list shows up,
+        // not the empty state.
+        composeTestRule.onNodeWithText(Strings.REWARD_ADD_TASK_BTN).performClick()
+        composeTestRule.onNodeWithText("Only Task").assertIsDisplayed()
+        composeTestRule.onNodeWithText(Strings.ADD_TASK_ALL_LINKED).assertDoesNotExist()
+
+        // Link the only task, then reopen the dialog.
+        composeTestRule.onNodeWithText("Only Task").performClick()
+        composeTestRule.onNodeWithText(Strings.ADD_TASK_CONFIRM_BTN).performClick()
+        composeTestRule.onNodeWithText(Strings.REWARD_ADD_TASK_BTN).performClick()
+
+        // Now every task in the app is already linked to this reward — the message must say so
+        // rather than the misleading "No tasks yet.", since tasks do exist, just not available.
+        composeTestRule.onNodeWithText(Strings.ADD_TASK_ALL_LINKED).assertIsDisplayed()
+        composeTestRule.onNodeWithText(Strings.ADD_TASK_EMPTY).assertDoesNotExist()
+        composeTestRule.onNodeWithText(Strings.ADD_TASK_CREATE).assertIsDisplayed()
+        composeTestRule.onNodeWithText(Strings.ADD_TASK_BROWSE).assertIsDisplayed()
+        composeTestRule.onNodeWithText(Strings.ADD_TASK_CONFIRM_BTN).assertDoesNotExist()
     }
 }

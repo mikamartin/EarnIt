@@ -54,6 +54,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -94,7 +95,7 @@ fun RewardDetailScreen(
 ) {
     var showLogDialog by remember { mutableStateOf(false) }
     var showClaimDialog by remember { mutableStateOf(false) }
-    var showAddTaskDialog by remember { mutableStateOf(autoOpenAddTask) }
+    var showAddTaskDialog by rememberSaveable { mutableStateOf(autoOpenAddTask) }
     var isTasksExpanded by remember { mutableStateOf(true) }
     var isActivityExpanded by remember { mutableStateOf(true) }
 

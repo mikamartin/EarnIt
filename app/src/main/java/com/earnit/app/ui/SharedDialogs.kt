@@ -60,6 +60,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -455,22 +456,22 @@ fun AddTaskToRewardDialog(
                         verticalArrangement = Arrangement.spacedBy(0.dp),
                     ) {
                         Text(
-                            Strings.ADD_TASK_EMPTY,
+                            if (allTasks.isEmpty()) Strings.ADD_TASK_EMPTY else Strings.ADD_TASK_ALL_LINKED,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
                         )
-                        Row {
-                            TextButton(onClick = onCreateNew) {
-                                Text(Strings.ADD_TASK_CREATE, style = MaterialTheme.typography.bodySmall)
-                            }
+                        TextButton(onClick = onCreateNew) {
+                            Text(Strings.ADD_TASK_CREATE, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 "or",
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.align(Alignment.CenterVertically),
                             )
                             TextButton(onClick = onBrowseLibrary) {
-                                Text(Strings.ADD_TASK_BROWSE, style = MaterialTheme.typography.bodySmall)
+                                Text(Strings.ADD_TASK_BROWSE, style = MaterialTheme.typography.bodyMedium)
                             }
                         }
                     }
@@ -575,36 +576,38 @@ fun AddTaskToRewardDialog(
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
-                }
-                OutlinedButton(
-                    onClick = onCreateNew,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary),
-                ) {
-                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        Strings.ADD_TASK_CREATE_BTN,
-                        style = MaterialTheme.typography.labelSmall,
-                        letterSpacing = 0.8.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                    )
+                    OutlinedButton(
+                        onClick = onCreateNew,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary),
+                    ) {
+                        Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            Strings.ADD_TASK_CREATE_BTN,
+                            style = MaterialTheme.typography.labelSmall,
+                            letterSpacing = 0.8.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
+                    }
                 }
             }
         },
         confirmButton = {
-            EarnItPrimaryButton(
-                text = Strings.ADD_TASK_CONFIRM_BTN,
-                enabled = selected.values.any { it },
-                onClick = {
-                    val result =
-                        availableTasks
-                            .filter { selected[it.id] == true }
-                            .map { task -> task to (taskFlags[task.id] ?: TaskEditState(included = true)) }
-                    onAddTasks(result)
-                },
-            )
+            if (availableTasks.isNotEmpty()) {
+                EarnItPrimaryButton(
+                    text = Strings.ADD_TASK_CONFIRM_BTN,
+                    enabled = selected.values.any { it },
+                    onClick = {
+                        val result =
+                            availableTasks
+                                .filter { selected[it.id] == true }
+                                .map { task -> task to (taskFlags[task.id] ?: TaskEditState(included = true)) }
+                        onAddTasks(result)
+                    },
+                )
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
