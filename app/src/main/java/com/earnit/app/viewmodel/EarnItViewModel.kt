@@ -377,10 +377,6 @@ class EarnItViewModel
             viewModelScope.launch { settingsRepository.updateShowQuote(show) }
         }
 
-        fun dismissWidgetNudge() {
-            viewModelScope.launch { settingsRepository.dismissWidgetNudge() }
-        }
-
         fun markOnboardingSeen() {
             viewModelScope.launch { settingsRepository.markOnboardingSeen() }
         }

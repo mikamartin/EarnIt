@@ -66,7 +66,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -82,8 +81,6 @@ import com.earnit.app.ui.theme.EarnItAccents
 import com.earnit.app.ui.theme.LocalEarnItAccents
 import com.earnit.app.ui.theme.cardSurface
 import com.earnit.app.viewmodel.EarnItViewModel
-import com.earnit.app.widget.hasEarnItWidgetPinned
-import com.earnit.app.widget.requestPinEarnItWidget
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -101,8 +98,6 @@ fun RewardDetailScreen(
     var isTasksExpanded by remember { mutableStateOf(true) }
     var isActivityExpanded by remember { mutableStateOf(true) }
 
-    val context = LocalContext.current
-    val hasWidgetPinned = remember { hasEarnItWidgetPinned(context) }
     val detailSettings by viewModel.settings.collectAsState()
 
     RewardDetailDialogs(
@@ -192,11 +187,7 @@ fun RewardDetailScreen(
                     rp = rp,
                     isExpanded = isTasksExpanded,
                     onToggleExpanded = { isTasksExpanded = !isTasksExpanded },
-                    hasWidgetPinned = hasWidgetPinned,
-                    widgetNudgeDismissed = detailSettings.widgetNudgeDismissed,
                     onAddTaskClick = { showAddTaskDialog = true },
-                    onDismissWidgetNudge = { viewModel.dismissWidgetNudge() },
-                    onPinWidget = { requestPinEarnItWidget(context) },
                 )
             }
 
@@ -565,11 +556,7 @@ private fun RewardTasksSection(
     rp: RewardProgress,
     isExpanded: Boolean,
     onToggleExpanded: () -> Unit,
-    hasWidgetPinned: Boolean,
-    widgetNudgeDismissed: Boolean,
     onAddTaskClick: () -> Unit,
-    onDismissWidgetNudge: () -> Unit,
-    onPinWidget: () -> Unit,
 ) {
     HorizontalDivider(color = Color(0xFFD5C9B0), thickness = 1.dp)
 
@@ -670,25 +657,6 @@ private fun RewardTasksSection(
             Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
             Text(Strings.REWARD_ADD_TASK_BTN)
-        }
-        if (rp.allTasks.isNotEmpty() && !hasWidgetPinned && !widgetNudgeDismissed) {
-            Spacer(Modifier.height(8.dp))
-            DismissibleTipBanner(
-                text = Strings.WIDGET_NUDGE_BODY,
-                onDismiss = onDismissWidgetNudge,
-                dismissContentDescription = Strings.WIDGET_NUDGE_DISMISS_DESC,
-            ) {
-                OutlinedButton(
-                    onClick = onPinWidget,
-                    shape = RoundedCornerShape(10.dp),
-                    colors =
-                        ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary,
-                        ),
-                ) {
-                    Text(Strings.WIDGET_NUDGE_ACTION, style = buttonLabelStyle)
-                }
-            }
         }
     }
 }

@@ -115,6 +115,9 @@ interface RewardDao {
     @Query("SELECT * FROM rewards WHERE id = :id")
     suspend fun getReward(id: Long): RewardEntity?
 
+    @Query("SELECT * FROM rewards WHERE id = :id")
+    fun observeReward(id: Long): Flow<RewardEntity?>
+
     @Query("UPDATE rewards SET sortOrder = :sortOrder WHERE id = :id")
     suspend fun updateSortOrder(
         id: Long,
