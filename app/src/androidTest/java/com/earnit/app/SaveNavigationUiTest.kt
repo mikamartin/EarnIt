@@ -47,6 +47,8 @@ import javax.inject.Inject
  *      Add Task dialog directly on Reward Detail, not the Reward Edit screen.
  *   5. The widget's ADD TASK button drives the same dialog-already-open behaviour
  *      via MainActivity intent extras rather than an in-app click.
+ *   6. Creating a task via "Create your own" from that auto-opened dialog and saving
+ *      it does not reopen the dialog on return to Reward Detail.
  */
 @UiTest
 @Task
@@ -174,6 +176,42 @@ class SaveNavigationUiTest {
                 .onAllNodesWithText(Strings.REWARD_EDIT_NEW)
                 .fetchSemanticsNodes()
                 .isEmpty(),
+        )
+    }
+
+    @Test
+    fun homeCardAddTasksButton_createNewTaskDoesNotReopenDialogOnReturn() {
+        // Create a reward with no tasks yet and reach it via the home card's auto-opening
+        // "+ ADD TASKS" shortcut (autoOpenAddTask=true), same entry point as the test above.
+        composeTestRule.createReward("Board Game Night")
+        composeTestRule.waitForRewardDetail()
+        composeTestRule.onNodeWithContentDescription("Prizes").performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.onAllNodesWithText(Strings.HOME_ADD_TASKS_BTN).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithText(Strings.HOME_ADD_TASKS_BTN).performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.onAllNodesWithText(Strings.ADD_TASK_CREATE).fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Create a new task through the dialog's "Create your own" shortcut, then save it.
+        composeTestRule.onNodeWithText(Strings.ADD_TASK_CREATE).performClick()
+        composeTestRule.onNodeWithText(Strings.TASK_NAME_LABEL).performTextInput("Set Up Board")
+        composeTestRule.onNodeWithText("SAVE").performClick()
+
+        // Must land back on Reward Detail with the new (already-linked) task visible, and the
+        // Add Task dialog must NOT reopen — before the fix, autoOpenAddTask being re-read from
+        // the nav argument on recomposition reopened it showing a stale empty state even though
+        // the task had, in fact, already been added.
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.onAllNodesWithText("Set Up Board").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithText("Board Game Night").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Set Up Board").assertIsDisplayed()
+        assertTrue(
+            "Add Task dialog should not reopen after returning from Create your own",
+            composeTestRule.onAllNodesWithText(Strings.ADD_TASK_EMPTY).fetchSemanticsNodes().isEmpty() &&
+                composeTestRule.onAllNodesWithText(Strings.ADD_TASK_ALL_LINKED).fetchSemanticsNodes().isEmpty(),
         )
     }
 

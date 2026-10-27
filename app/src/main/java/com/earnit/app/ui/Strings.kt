@@ -41,6 +41,7 @@ object Strings {
     fun mascotUnlocked(name: String) = "You unlocked $name!"
 
     const val ADD_TASK_EMPTY = "No tasks yet."
+    const val ADD_TASK_ALL_LINKED = "All your tasks are already added to this reward."
     const val ADD_TASK_CREATE = "Create your own"
     const val ADD_TASK_BROWSE = "browse the Library"
 
